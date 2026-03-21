@@ -67,7 +67,7 @@ namespace DotnetGltfViewer.Windows {
         /// 处理鼠标按下事件
         /// </summary>
         public static void OnMouseDown(IMouse mouse, MouseButton button) {
-            if (ImGuiManager.IO.WantCaptureMouse) {
+            if (ImGuiManager.IO.WantCaptureMouse || GizmoManager.IsOver()) {
                 return;
             }
             if (button == MouseButton.Left) {
@@ -96,7 +96,7 @@ namespace DotnetGltfViewer.Windows {
         /// 处理鼠标移动事件
         /// </summary>
         public static void OnMouseMove(IMouse mouse, Vector2 position) {
-            if (ImGuiManager.IO.WantCaptureMouse) {
+            if (ImGuiManager.IO.WantCaptureMouse || GizmoManager.IsUsing()) {
                 return;
             }
             if (!_hasMousePosition) {
@@ -122,7 +122,7 @@ namespace DotnetGltfViewer.Windows {
         /// 处理鼠标滚轮事件
         /// </summary>
         public static void OnMouseScroll(IMouse mouse, ScrollWheel scrollWheel) {
-            if (ImGuiManager.IO.WantCaptureMouse) {
+            if (ImGuiManager.IO.WantCaptureMouse || GizmoManager.IsUsing()) {
                 return;
             }
             // 滚轮：缩放（靠近/远离固定点）

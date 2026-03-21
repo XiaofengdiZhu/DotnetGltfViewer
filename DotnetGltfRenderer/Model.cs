@@ -81,8 +81,10 @@ namespace DotnetGltfRenderer {
                 Mesh = mesh;
                 Skin = skin;
                 WorldMatrix = node.WorldMatrix;
+                OriginalWorldMatrix = node.WorldMatrix;
                 IsVisible = true; // 默认可见
                 _gl = gl;
+                _gizmoTransform = Matrix4x4.Identity;
                 if (skin == null) {
                     _joints = Array.Empty<Node>();
                     _inverseBindMatrices = Array.Empty<Matrix4x4>();
@@ -108,10 +110,19 @@ namespace DotnetGltfRenderer {
             internal readonly Node[] _joints;
             readonly Matrix4x4[] _inverseBindMatrices;
 
+            /// <summary>
+            /// Gizmo 变换矩阵（独立存储，不会被动画覆盖）
+            /// </summary>
+            Matrix4x4 _gizmoTransform;
+
             internal Node Node { get; }
             public Mesh Mesh { get; }
             internal Skin Skin { get; }
             public Matrix4x4 WorldMatrix { get; internal set; }
+            /// <summary>
+            /// 原始世界矩阵（用于 Gizmo 变换计算）
+            /// </summary>
+            public Matrix4x4 OriginalWorldMatrix { get; private set; }
             public Matrix4x4[] JointMatrices { get; }
             public JointTexture JointTexture { get; }
             public bool HasSkinning => Skin != null && Mesh.HasSkinAttributes && JointMatrices.Length > 0;
@@ -121,6 +132,52 @@ namespace DotnetGltfRenderer {
             /// 节点是否可见（用于 KHR_node_visibility 动画）
             /// </summary>
             public bool IsVisible { get; set; }
+
+            /// <summary>
+            /// 设置 Gizmo 变换矩阵
+            /// </summary>
+            /// <param name="transform">Gizmo 变换矩阵</param>
+            public void SetGizmoTransform(Matrix4x4 transform) {
+                _gizmoTransform = transform;
+            }
+
+            /// <summary>
+            /// 获取 Gizmo 变换矩阵
+            /// </summary>
+            public Matrix4x4 GetGizmoTransform() => _gizmoTransform;
+
+            /// <summary>
+            /// 重置 Gizmo 变换矩阵为单位矩阵
+            /// </summary>
+            public void ResetGizmoTransform() {
+                _gizmoTransform = Matrix4x4.Identity;
+            }
+
+            /// <summary>
+            /// 应用 Gizmo 变换到当前世界矩阵（在动画更新后调用）
+            /// </summary>
+            public void ApplyGizmoTransform() {
+                if (_gizmoTransform != Matrix4x4.Identity) {
+                    WorldMatrix *= _gizmoTransform;
+                    IsNegativeScale = WorldMatrix.GetDeterminant() < 0f;
+                }
+            }
+
+            /// <summary>
+            /// 应用额外的变换矩阵（旧方法，保留兼容性）
+            /// </summary>
+            /// <param name="transform">要应用的变换矩阵</param>
+            public void ApplyTransform(Matrix4x4 transform) {
+                WorldMatrix = OriginalWorldMatrix * transform;
+                IsNegativeScale = WorldMatrix.GetDeterminant() < 0f;
+            }
+
+            /// <summary>
+            /// 更新原始世界矩阵（由 Model 类内部调用）
+            /// </summary>
+            internal void UpdateOriginalWorldMatrix() {
+                OriginalWorldMatrix = Node.WorldMatrix;
+            }
 
             /// <summary>
             /// 是否使用 GPU 实例化（EXT_mesh_gpu_instancing）
@@ -711,6 +768,10 @@ namespace DotnetGltfRenderer {
                 else {
                     instance.WorldMatrix = instance.Node.WorldMatrix;
                 }
+                
+                // 在动画更新后应用 Gizmo 变换（如果有）
+                instance.ApplyGizmoTransform();
+                
                 instance.IsNegativeScale = instance.WorldMatrix.GetDeterminant() < 0f;
                 instance.UpdateSkinning(_activeAnimation, _animationTimeSeconds, _nodeWorldMatrixCache);
 

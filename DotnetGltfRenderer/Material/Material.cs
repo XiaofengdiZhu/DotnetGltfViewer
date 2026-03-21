@@ -330,52 +330,27 @@ namespace DotnetGltfRenderer {
 
                 // Load data from glTF
                 extension.LoadFromGltf(material, model);
+                if (!extension.IsEnabled) {
+                    continue;
+                }
 
                 // Store in appropriate property
-                if (extension is ClearCoatExtension cc) {
-                    ClearCoat = cc;
-                }
-                else if (extension is IridescenceExtension irid) {
-                    Iridescence = irid;
-                }
-                else if (extension is TransmissionExtension trans) {
-                    Transmission = trans;
-                }
-                else if (extension is VolumeExtension vol) {
-                    Volume = vol;
-                }
-                else if (extension is SheenExtension sheen) {
-                    Sheen = sheen;
-                }
-                else if (extension is SpecularExtension spec) {
-                    Specular = spec;
-                }
-                else if (extension is IorExtension ior) {
-                    Ior = ior;
-                }
-                else if (extension is EmissiveStrengthExtension emissiveStr) {
-                    EmissiveStrength = emissiveStr;
-                }
-                else if (extension is DispersionExtension disp) {
-                    Dispersion = disp;
-                }
-                else if (extension is AnisotropyExtension aniso) {
-                    Anisotropy = aniso;
-                }
-                else if (extension is DiffuseTransmissionExtension diffTrans) {
-                    DiffuseTransmission = diffTrans;
-                }
-                else if (extension is VolumeScatterExtension volScatter) {
-                    VolumeScatter = volScatter;
-                }
-                else if (extension is UnlitExtension unlit) {
-                    Unlit = unlit;
-                }
-                else if (extension is SpecularGlossinessExtension sg) {
-                    SpecularGlossiness = sg;
-                }
-                else {
-                    _extensions[extName] = extension;
+                switch (extension) {
+                    case ClearCoatExtension cc: ClearCoat = cc; break;
+                    case IridescenceExtension irid: Iridescence = irid; break;
+                    case TransmissionExtension trans: Transmission = trans; break;
+                    case VolumeExtension vol: Volume = vol; break;
+                    case SheenExtension sheen: Sheen = sheen; break;
+                    case SpecularExtension spec: Specular = spec; break;
+                    case IorExtension ior: Ior = ior; break;
+                    case EmissiveStrengthExtension emissiveStr: EmissiveStrength = emissiveStr; break;
+                    case DispersionExtension disp: Dispersion = disp; break;
+                    case AnisotropyExtension aniso: Anisotropy = aniso; break;
+                    case DiffuseTransmissionExtension diffTrans: DiffuseTransmission = diffTrans; break;
+                    case VolumeScatterExtension volScatter: VolumeScatter = volScatter; break;
+                    case UnlitExtension unlit: Unlit = unlit; break;
+                    case SpecularGlossinessExtension sg: SpecularGlossiness = sg; break;
+                    default: _extensions[extName] = extension; break;
                 }
             }
         }

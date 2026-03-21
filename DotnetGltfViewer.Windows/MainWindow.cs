@@ -22,6 +22,8 @@ namespace DotnetGltfViewer.Windows {
         static ModelRenderer _modelRenderer;
         static Camera _camera;
 
+        public static Vector2D<int> Size { get; private set; }
+
         public static float MonitorScale => GetDpiForWindow(_window.Native?.Win32?.Hwnd ?? IntPtr.Zero) / 96f;
 
         /// <summary>
@@ -61,7 +63,6 @@ namespace DotnetGltfViewer.Windows {
             LogManager.Logger.ZLogInformation($"初始化窗口...");
             _gl = GL.GetApi(_window);
             IInputContext input = _window.CreateInput();
-            ImGuiManager.Initialize(_gl, _window, input);
             LogManager.Logger.ZLogInformation($"窗口初始化完成, Size: {_window.Size.X}x{_window.Size.Y}");
             LogManager.Logger.ZLogInformation($"OpenGL ES 版本: {_gl.GetStringS(StringName.Version)}");
             LogManager.Logger.ZLogInformation($"渲染器: {_gl.GetStringS(StringName.Renderer)}");
@@ -70,6 +71,7 @@ namespace DotnetGltfViewer.Windows {
             _model = new Model(_gl, $"Assets/{modelName}/glTF/{modelName}.gltf");
             _modelRenderer = new ModelRenderer(_gl, _model, "Assets/Cannon_Exterior.hdr", "shaders");
             _camera = _modelRenderer.Camera;
+            ImGuiManager.Initialize(_gl, _window, input, _camera, _model);
             OnFramebufferResize(_window.FramebufferSize);
             ResetCameraToModel();
             InputManager.Initialize(_camera, input);
@@ -102,6 +104,7 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         /// <param name="deltaTime">帧间隔时间（秒）。</param>
         static void RenderUI(double deltaTime) {
+            Vector2D<int> size = _window.FramebufferSize;
             ImGuiManager.Render((float)deltaTime);
         }
 
@@ -110,6 +113,7 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         /// <param name="newSize">新的帧缓冲区大小。</param>
         static void OnFramebufferResize(Vector2D<int> newSize) {
+            Size = newSize;
             _gl.Viewport(0, 0, (uint)newSize.X, (uint)newSize.Y);
             _gl.Scissor(0, 0, (uint)newSize.X, (uint)newSize.Y);
             _modelRenderer?.SetFramebufferSize(newSize.X, newSize.Y);
