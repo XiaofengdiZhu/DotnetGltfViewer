@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <NoWarn>CS1591</NoWarn>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>preview</LangVersion>
+        <RootNamespace>DotnetGltfRenderer</RootNamespace>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Nullable>disable</Nullable>
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+        <Configurations>Debug;Release</Configurations>
+        <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="MikkTSpaceSharp" Version="0.5.3" />
+        <PackageReference Include="Silk.NET.OpenGLES" Version="2.23.0" />
+        <PackageReference Include="SharpGLTF.Core" Version="1.0.6" />
+        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+        <PackageReference Include="ZLogger" Version="2.5.10" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Silk.NET.Windowing.Common" Version="2.23.0" />
+        <PackageReference Include="Silk.NET.Windowing.Glfw" Version="2.23.0" />
+        <PackageReference Include="Silk.NET.Input.Common" Version="2.23.0" />
+        <PackageReference Include="Silk.NET.Input.Glfw" Version="2.23.0" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Update="shaders\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+</Project>

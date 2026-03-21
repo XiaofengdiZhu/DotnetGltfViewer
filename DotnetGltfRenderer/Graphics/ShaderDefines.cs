@@ -1,0 +1,234 @@
+using System.Collections.Generic;
+using System.Text;
+
+namespace DotnetGltfRenderer {
+    /// <summary>
+    /// 着色器预处理器定义列表
+    /// 对应官方 renderer.js 中的 defines 数组
+    /// </summary>
+    public class ShaderDefines {
+        readonly List<string> _defines = [];
+
+        /// <summary>
+        /// 添加一个 define（如 "MATERIAL_CLEARCOAT 1"）
+        /// </summary>
+        public void Add(string define, int value = 1) {
+            _defines.Add($"{define} {value}");
+        }
+
+        /// <summary>
+        /// 添加一个完整的 define 字符串（不带额外格式化）
+        /// 如 "SCATTER_SAMPLES_COUNT 55"
+        /// </summary>
+        public void AddRaw(string define) {
+            _defines.Add(define);
+        }
+
+        /// <summary>
+        /// 添加纹理 define（如 "HAS_NORMAL_MAP 1"）
+        /// </summary>
+        public void AddTextureMap(string textureName) {
+            _defines.Add($"HAS_{textureName.ToUpper()}_MAP 1");
+        }
+
+        /// <summary>
+        /// 添加 UV Transform define（如 "HAS_BASECOLOR_UV_TRANSFORM 1"）
+        /// </summary>
+        public void AddUVTransform(string textureName) {
+            _defines.Add($"HAS_{textureName.ToUpper()}_UV_TRANSFORM 1");
+        }
+
+        /// <summary>
+        /// 添加材质扩展 define（如 "MATERIAL_CLEARCOAT 1"）
+        /// </summary>
+        public void AddMaterialExtension(string extensionName) {
+            _defines.Add($"MATERIAL_{extensionName.ToUpper()} 1");
+        }
+
+        /// <summary>
+        /// 添加顶点属性 define
+        /// </summary>
+        public void AddVertexAttribute(string attributeName, int componentCount) {
+            string suffix = componentCount switch {
+                2 => "VEC2",
+                3 => "VEC3",
+                4 => "VEC4",
+                _ => ""
+            };
+            if (!string.IsNullOrEmpty(suffix)) {
+                _defines.Add($"HAS_{attributeName.ToUpper()}_{suffix} 1");
+            }
+        }
+
+        /// <summary>
+        /// 设置权重数量（用于骨骼动画）
+        /// </summary>
+        public void SetWeightCount(int count) {
+            _defines.Add($"WEIGHT_COUNT {count}");
+        }
+
+        /// <summary>
+        /// 设置 Joint 数量（用于骨骼动画）
+        /// </summary>
+        public void SetJointCount(int count) {
+            _defines.Add($"JOINT_COUNT {count}");
+        }
+
+        /// <summary>
+        /// 添加 Morph Target 相关 defines
+        /// </summary>
+        public void SetMorphTargetDefines(int targetCount,
+            bool hasPosition,
+            bool hasNormal,
+            bool hasTangent,
+            bool hasTexCoord0,
+            bool hasTexCoord1,
+            bool hasColor0,
+            int positionOffset,
+            int normalOffset,
+            int tangentOffset,
+            int texCoord0Offset,
+            int texCoord1Offset,
+            int color0Offset) {
+            if (targetCount <= 0) {
+                return;
+            }
+            Add("USE_MORPHING");
+            Add("HAS_MORPH_TARGETS");
+            AddRaw($"WEIGHT_COUNT {targetCount}");
+            if (hasPosition) {
+                Add("HAS_MORPH_TARGET_POSITION");
+                AddRaw($"MORPH_TARGET_POSITION_OFFSET {positionOffset}");
+            }
+            if (hasNormal) {
+                Add("HAS_MORPH_TARGET_NORMAL");
+                AddRaw($"MORPH_TARGET_NORMAL_OFFSET {normalOffset}");
+            }
+            if (hasTangent) {
+                Add("HAS_MORPH_TARGET_TANGENT");
+                AddRaw($"MORPH_TARGET_TANGENT_OFFSET {tangentOffset}");
+            }
+            if (hasTexCoord0) {
+                Add("HAS_MORPH_TARGET_TEXCOORD_0");
+                AddRaw($"MORPH_TARGET_TEXCOORD_0_OFFSET {texCoord0Offset}");
+            }
+            if (hasTexCoord1) {
+                Add("HAS_MORPH_TARGET_TEXCOORD_1");
+                AddRaw($"MORPH_TARGET_TEXCOORD_1_OFFSET {texCoord1Offset}");
+            }
+            if (hasColor0) {
+                Add("HAS_MORPH_TARGET_COLOR_0");
+                AddRaw($"MORPH_TARGET_COLOR_0_OFFSET {color0Offset}");
+            }
+        }
+
+        /// <summary>
+        /// 设置 Alpha 模式
+        /// </summary>
+        public void SetAlphaMode(AlphaMode mode) {
+            int modeValue = mode switch {
+                AlphaMode.Opaque => 0,
+                AlphaMode.Mask => 1,
+                AlphaMode.Blend => 2,
+                _ => 0
+            };
+            // Remove existing ALPHAMODE define if present
+            _defines.RemoveAll(d => d.StartsWith("ALPHAMODE "));
+            _defines.Add($"ALPHAMODE {modeValue}");
+        }
+
+        /// <summary>
+        /// 生成完整的 defines 代码（包含 #version）
+        /// </summary>
+        public string GetDefinesCode() {
+            StringBuilder sb = new();
+            sb.AppendLine("#version 300 es");
+            foreach (string define in _defines) {
+                sb.AppendLine($"#define {define}");
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// 获取 defines 列表（用于 ShaderCache.SelectShader）
+        /// </summary>
+        public List<string> GetDefinesList() => [.._defines];
+
+        /// <summary>
+        /// 计算组合 hash（用于着色器缓存）
+        /// </summary>
+        public int ComputeHash() {
+            unchecked {
+                int hash = 17;
+                foreach (string define in _defines) {
+                    hash = hash * 31 + define.GetHashCode();
+                }
+                return hash;
+            }
+        }
+
+        public override string ToString() => string.Join(", ", _defines);
+
+        /// <summary>
+        /// 创建默认的顶点着色器 defines
+        /// </summary>
+        public static ShaderDefines CreateVertexDefines(bool hasNormals,
+            bool hasTangents,
+            bool hasTexcoord0,
+            bool hasTexcoord1,
+            bool hasColor0,
+            bool useSkinning = false,
+            int weightCount = 4,
+            int jointCount = 4,
+            bool useMorphing = false,
+            int morphTargetCount = 0) {
+            ShaderDefines defines = new();
+            if (hasNormals) {
+                defines.AddVertexAttribute("NORMAL", 3);
+            }
+            if (hasTangents) {
+                defines.AddVertexAttribute("TANGENT", 4);
+            }
+            if (hasTexcoord0) {
+                defines.AddVertexAttribute("TEXCOORD_0", 2);
+            }
+            if (hasTexcoord1) {
+                defines.AddVertexAttribute("TEXCOORD_1", 2);
+            }
+            if (hasColor0) {
+                defines.Add("HAS_COLOR_0_VEC4"); // Assume vec4 by default
+            }
+            if (useSkinning) {
+                defines.Add("USE_SKINNING");
+                defines.Add("HAS_JOINTS_0_VEC4");
+                defines.Add("HAS_WEIGHTS_0_VEC4");
+                defines.SetWeightCount(weightCount);
+                defines.SetJointCount(jointCount);
+            }
+            if (useMorphing && morphTargetCount > 0) {
+                defines.Add("USE_MORPHING");
+                defines.Add($"MORPH_TARGET_COUNT {morphTargetCount}");
+            }
+            return defines;
+        }
+
+        /// <summary>
+        /// 创建默认的片段着色器 defines（仅 PBR 核心）
+        /// </summary>
+        public static ShaderDefines CreateFragmentDefines() {
+            ShaderDefines defines = new();
+
+            // ALPHAMODE_* constants are defined in functions.glsl
+            // ALPHAMODE will be set via SetAlphaMode() based on material
+
+            // Debug mode - DEBUG_* constants are defined in functions.glsl
+            // Only define DEBUG here when a specific debug mode is requested
+
+            // Vertex attribute defines (needed for fragment shader debug views)
+            // These should match what the vertex shader provides
+            defines.Add("HAS_TEXCOORD_0_VEC2");
+            defines.Add("MATERIAL_METALLICROUGHNESS");
+            return defines;
+        }
+    }
+}
