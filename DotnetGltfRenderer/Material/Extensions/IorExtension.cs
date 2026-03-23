@@ -15,9 +15,9 @@ namespace DotnetGltfRenderer {
         public float Ior { get; set; } = 1.5f;
 
         /// <summary>
-        /// IOR 扩展始终启用（如果存在）
+        /// IOR 启用条件：非默认值
         /// </summary>
-        public override bool IsEnabled => true;
+        public override bool IsEnabled => Ior != 1.5f;
 
         public override IEnumerable<MaterialTextureSlot> GetTextureSlots() {
             // IOR 没有纹理

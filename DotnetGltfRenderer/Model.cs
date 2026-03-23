@@ -20,30 +20,6 @@ namespace DotnetGltfRenderer {
     public class Model : IDisposable {
         const int MaxSkinJoints = 64;
 
-        public static ImmutableArray<string> AvailableExtensions = [
-            "KHR_materials_clearcoat",
-            "KHR_materials_iridescence",
-            "KHR_materials_transmission",
-            "KHR_materials_volume",
-            "KHR_materials_sheen",
-            "KHR_materials_specular",
-            "KHR_materials_ior",
-            "KHR_materials_emissive_strength",
-            "KHR_materials_dispersion",
-            "KHR_materials_anisotropy",
-            "KHR_materials_diffuse_transmission",
-            "KHR_materials_volume_scatter",
-            "KHR_materials_unlit",
-            "KHR_materials_pbrSpecularGlossiness",
-            "KHR_lights_punctual",
-            "KHR_materials_variants",
-            "KHR_animation_pointer",
-            "KHR_node_visibility",
-            "EXT_mesh_gpu_instancing",
-            "KHR_mesh_quantization",
-            "EXT_texture_webp"
-        ];
-
         public Model(GL gl, string path, bool gamma = false) {
             _gl = gl;
             LoadModel(path);
@@ -209,6 +185,8 @@ namespace DotnetGltfRenderer {
         public IReadOnlyList<Mesh> Meshes => _uniqueMeshes;
         public IReadOnlyList<MeshInstance> MeshInstances => _meshInstances;
         public IReadOnlyList<Light> Lights => _lights;
+
+        public IEnumerable<string> ExtensionsUsed => _modelRoot.ExtensionsUsed;
 
         // ========== 场景支持 ==========
         /// <summary>
@@ -642,8 +620,8 @@ namespace DotnetGltfRenderer {
 
         void DetectExtensions(ModelRoot modelRoot) {
             foreach (string extension in modelRoot.ExtensionsRequired) {
-                if (!AvailableExtensions.Contains(extension)) {
-                    throw new Exception($"Detected unsupported extension: {extension}");
+                if (!ExtensionManager.IsExtensionEnabled(extension)) {
+                    throw new Exception($"Detected unsupported or disabled extension: {extension}");
                 }
             }
         }

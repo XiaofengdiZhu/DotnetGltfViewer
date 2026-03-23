@@ -66,7 +66,6 @@ namespace DotnetGltfViewer.Windows {
             LogManager.Logger.ZLogInformation($"窗口初始化完成, Size: {_window.Size.X}x{_window.Size.Y}");
             LogManager.Logger.ZLogInformation($"OpenGL ES 版本: {_gl.GetStringS(StringName.Version)}");
             LogManager.Logger.ZLogInformation($"渲染器: {_gl.GetStringS(StringName.Renderer)}");
-            MaterialExtensionRegistry.Initialize();
             string modelName = "CompareTransmission";
             _model = new Model(_gl, $"Assets/{modelName}/glTF/{modelName}.gltf");
             _modelRenderer = new ModelRenderer(_gl, _model, "Assets/Cannon_Exterior.hdr", "shaders");

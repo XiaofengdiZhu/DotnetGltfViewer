@@ -6,13 +6,22 @@ namespace DotnetGltfRenderer {
     /// 材质扩展注册表，支持自动发现和加载扩展
     /// </summary>
     public static class MaterialExtensionRegistry {
-        static readonly Dictionary<string, Type> _extensions = new();
-        static readonly Dictionary<string, Func<MaterialExtension>> _factories = new();
-
-        /// <summary>
-        /// 已注册的扩展名称列表
-        /// </summary>
-        public static IReadOnlyCollection<string> RegisteredExtensions => _extensions.Keys;
+        static readonly Dictionary<string, Func<MaterialExtension>> _factories = new() {
+            { "KHR_materials_clearcoat", () => new ClearCoatExtension() },
+            { "KHR_materials_iridescence", () => new IridescenceExtension() },
+            { "KHR_materials_transmission", () => new TransmissionExtension() },
+            { "KHR_materials_volume", () => new VolumeExtension() },
+            { "KHR_materials_sheen", () => new SheenExtension() },
+            { "KHR_materials_specular", () => new SpecularExtension() },
+            { "KHR_materials_ior", () => new IorExtension() },
+            { "KHR_materials_emissive_strength", () => new EmissiveStrengthExtension() },
+            { "KHR_materials_dispersion", () => new DispersionExtension() },
+            { "KHR_materials_anisotropy", () => new AnisotropyExtension() },
+            { "KHR_materials_diffuse_transmission", () => new DiffuseTransmissionExtension() },
+            { "KHR_materials_volume_scatter", () => new VolumeScatterExtension() },
+            { "KHR_materials_unlit", () => new UnlitExtension() },
+            { "KHR_materials_pbrSpecularGlossiness", () => new SpecularGlossinessExtension() }
+        };
 
         /// <summary>
         /// 注册扩展类型
@@ -21,66 +30,22 @@ namespace DotnetGltfRenderer {
             // 创建临时实例获取扩展名
             T instance = new();
             string name = instance.ExtensionName;
-            _extensions[name] = typeof(T);
             _factories[name] = () => new T();
         }
 
         /// <summary>
         /// 使用工厂函数注册扩展
         /// </summary>
-        public static void Register(string name, Func<MaterialExtension> factory) {
-            _extensions[name] = factory().GetType();
-            _factories[name] = factory;
-        }
+        public static void Register(string name, Func<MaterialExtension> factory) => _factories[name] = factory;
 
         /// <summary>
         /// 创建扩展实例
         /// </summary>
-        public static MaterialExtension Create(string extensionName) {
-            if (_factories.TryGetValue(extensionName, out Func<MaterialExtension> factory)) {
-                return factory();
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 检查扩展是否已注册
-        /// </summary>
-        public static bool IsRegistered(string extensionName) => _extensions.ContainsKey(extensionName);
-
-        /// <summary>
-        /// 获取扩展类型
-        /// </summary>
-        public static Type GetExtensionType(string extensionName) => _extensions.TryGetValue(extensionName, out Type type) ? type : null;
+        public static MaterialExtension Create(string extensionName) => _factories.TryGetValue(extensionName, out Func<MaterialExtension> factory) ? factory() : null;
 
         /// <summary>
         /// 清除所有已注册的扩展
         /// </summary>
-        public static void Clear() {
-            _extensions.Clear();
-            _factories.Clear();
-        }
-
-        /// <summary>
-        /// 初始化材质扩展注册表
-        /// </summary>
-        public static void Initialize() {
-            // Phase 1/2 扩展
-            Register<ClearCoatExtension>();
-            Register<IridescenceExtension>();
-            // Phase 3 扩展
-            Register<TransmissionExtension>();
-            Register<VolumeExtension>();
-            Register<SheenExtension>();
-            Register<SpecularExtension>();
-            Register<IorExtension>();
-            Register<EmissiveStrengthExtension>();
-            Register<DispersionExtension>();
-            Register<AnisotropyExtension>();
-            Register<DiffuseTransmissionExtension>();
-            Register<VolumeScatterExtension>();
-            Register<UnlitExtension>();
-            Register<SpecularGlossinessExtension>();
-        }
+        public static void Clear() => _factories.Clear();
     }
 }

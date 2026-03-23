@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Reflection;
 using SharpGLTF.Schema2;
 using GltfMaterial = SharpGLTF.Schema2.Material;
 
@@ -285,7 +287,7 @@ namespace DotnetGltfRenderer {
             DoubleSided = material.DoubleSided;
 
             // Extensions via registry
-            LoadExtensionsFromRegistry(material, model);
+            LoadMaterialExtensions(material, model);
         }
 
         void LoadCoreProperties(GltfMaterial material, Model model) {
@@ -320,8 +322,25 @@ namespace DotnetGltfRenderer {
             }
         }
 
-        void LoadExtensionsFromRegistry(GltfMaterial material, Model model) {
-            foreach (string extName in MaterialExtensionRegistry.RegisteredExtensions) {
+        void LoadMaterialExtensions(GltfMaterial material, Model model) {
+            foreach (var jsonSerializable in material.Extensions) {
+                Type type = jsonSerializable.GetType();
+                string extName = null;
+                if (jsonSerializable is ExtraProperties extraProperties) {
+                    MethodInfo method = type.GetMethod("GetSchemaName", BindingFlags.Instance | BindingFlags.NonPublic);
+                    extName = (string)method?.Invoke(jsonSerializable, null);
+                }
+                else if (type.FullName == "SharpGLTF.IO.UnknownNode") {
+                    PropertyInfo nameProp = type.GetProperty("Name", BindingFlags.Instance | BindingFlags.Public);
+                    extName = (string)nameProp?.GetValue(jsonSerializable);
+                }
+                if (extName == null) {
+                    continue;
+                }
+                if (!ExtensionManager.IsExtensionEnabled(extName)) {
+                    continue;
+                }
+
                 // Create extension via registry
                 MaterialExtension extension = MaterialExtensionRegistry.Create(extName);
                 if (extension == null) {

@@ -128,7 +128,9 @@ namespace DotnetGltfRenderer {
                 try {
                     return Convert.ToSingle(value);
                 }
-                catch { }
+                catch {
+                    // ignored
+                }
             }
             return defaultValue;
         }

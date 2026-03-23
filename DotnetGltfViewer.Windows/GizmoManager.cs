@@ -236,13 +236,13 @@ namespace DotnetGltfViewer.Windows {
             if (_useSnap) {
                 switch (_currentMode) {
                     case GizmoMode.Translate:
-                        ImGui.DragFloat3("Snap (Translate)", ref _snapTranslate, 0.1f, -10f, 10f);
+                        ImGui.DragFloat3("Snap (Translate)", ref _snapTranslate, 0.1f, 0.1f, 10f);
                         break;
                     case GizmoMode.Rotate:
-                        ImGui.DragFloat("Snap (Rotate)", ref _snapRotate, 1f, -180f, 180f);
+                        ImGui.DragFloat("Snap (Rotate)", ref _snapRotate, 1f, 1f, 45f);
                         break;
                     case GizmoMode.Scale:
-                        ImGui.DragFloat("Snap (Scale)", ref _snapScale, 0.01f, 0.01f, 10f);
+                        ImGui.DragFloat("Snap (Scale)", ref _snapScale, 0.01f, 0.01f, 1f);
                         break;
                 }
             }
