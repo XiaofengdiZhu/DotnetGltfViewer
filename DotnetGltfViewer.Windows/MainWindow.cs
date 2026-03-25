@@ -19,7 +19,7 @@ namespace DotnetGltfViewer.Windows {
         static GL _gl;
 
         static Scene _scene;
-        static ModelRenderer _modelRenderer;
+        static Renderer _renderer;
         static Camera _camera;
 
         // 默认路径
@@ -81,8 +81,8 @@ namespace DotnetGltfViewer.Windows {
             }
 
             // 初始化渲染器
-            _modelRenderer = new ModelRenderer(_gl, _scene, DefaultEnvironmentMapPath, ShadersDirectory);
-            _camera = _modelRenderer.Camera;
+            _renderer = new Renderer(_gl, _scene, DefaultEnvironmentMapPath, ShadersDirectory);
+            _camera = _renderer.Camera;
             ImGuiManager.Initialize(_gl, _window, input, _camera, _scene);
             OnFramebufferResize(_window.FramebufferSize);
             ResetCameraToModel();
@@ -106,7 +106,7 @@ namespace DotnetGltfViewer.Windows {
         /// <param name="deltaTime">帧间隔时间（秒）。</param>
         static void OnRender(double deltaTime) {
             _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            _modelRenderer.RenderModelWithQueue();
+            _renderer.Render();
             RenderUI(deltaTime);
             PerformanceManager.Update(deltaTime);
             _window.SwapBuffers();
@@ -128,7 +128,7 @@ namespace DotnetGltfViewer.Windows {
             Size = newSize;
             _gl.Viewport(0, 0, (uint)newSize.X, (uint)newSize.Y);
             _gl.Scissor(0, 0, (uint)newSize.X, (uint)newSize.Y);
-            _modelRenderer?.SetFramebufferSize(newSize.X, newSize.Y);
+            _renderer?.SetFramebufferSize(newSize.X, newSize.Y);
             LogManager.Logger.ZLogDebug($"帧缓冲区大小变化: {newSize.X}x{newSize.Y}");
         }
 
@@ -152,7 +152,7 @@ namespace DotnetGltfViewer.Windows {
             if (_scene.TryGetSceneBounds(out Vector3 min, out Vector3 max)) {
                 Vector2D<int> size = _window.Size;
                 float aspect = (float)Math.Max(size.X, 1) / Math.Max(size.Y, 1);
-                _modelRenderer.Camera.LookAtBoundingBox(min, max, aspect);
+                _renderer.Camera.LookAtBoundingBox(min, max, aspect);
             }
         }
 
@@ -172,7 +172,7 @@ namespace DotnetGltfViewer.Windows {
             if (result.IsOk) {
                 try {
                     _scene.AddModel(result.Path);
-                    _modelRenderer.UpdateLightsFromScene();
+                    _renderer.UpdateLightsFromScene();
                     ResetCameraToModel();
                     LogManager.Logger.ZLogInformation($"Loaded model: {result.Path}");
                 }
@@ -193,7 +193,7 @@ namespace DotnetGltfViewer.Windows {
             );
             if (result.IsOk) {
                 try {
-                    _modelRenderer.SetEnvironmentMap(result.Path);
+                    _renderer.SetEnvironmentMap(result.Path);
                     LogManager.Logger.ZLogInformation($"Loaded environment map: {result.Path}");
                 }
                 catch (Exception ex) {
@@ -207,7 +207,7 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         public static void ClearScene() {
             _scene.Clear();
-            _modelRenderer.UpdateLightsFromScene();
+            _renderer.UpdateLightsFromScene();
         }
 
         /// <summary>

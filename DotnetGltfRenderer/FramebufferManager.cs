@@ -111,34 +111,27 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
-        /// 绑定 Transmission 纹理到指定着色器
+        /// 绑定 Transmission 纹理
         /// </summary>
-        public void BindTransmissionTexture(Shader shader) {
+        public void BindTransmissionTexture() {
             if (_transmissionFramebuffer == null) {
                 return;
             }
 
-            // 使用专用的 TransmissionFramebuffer 槽位
             _transmissionFramebuffer.BindColorTexture(
                 (TextureUnit)((int)TextureUnit.Texture0 + (int)MaterialTextureSlot.TransmissionFramebuffer));
-
-            // 设置 uniform
-            shader.SetUniform("u_TransmissionFramebufferSampler", (int)MaterialTextureSlot.TransmissionFramebuffer);
-            shader.SetUniformInt2("u_TransmissionFramebufferSize", _transmissionFramebuffer.Width, _transmissionFramebuffer.Height);
         }
 
         /// <summary>
-        /// 绑定 Scatter 纹理到指定着色器
+        /// 绑定 Scatter 纹理
         /// </summary>
-        public void BindScatterTextures(Shader shader) {
+        public void BindScatterTextures() {
             if (_scatterFramebuffer == null) {
                 return;
             }
 
-            // 绑定颜色纹理
             _scatterFramebuffer.BindColorTexture(
                 (TextureUnit)((int)TextureUnit.Texture0 + (int)MaterialTextureSlot.ScatterFramebuffer));
-            // 绑定深度纹理
             _scatterFramebuffer.BindDepthTexture(
                 (TextureUnit)((int)TextureUnit.Texture0 + (int)MaterialTextureSlot.ScatterDepthFramebuffer));
         }
