@@ -56,6 +56,9 @@ namespace DotnetGltfRenderer {
         // Dynamic extensions storage
         readonly Dictionary<string, MaterialExtension> _extensions = new();
 
+        // 缓存的 ShaderDefines
+        ShaderDefines _cachedDefines;
+
         /// <summary>
         /// 获取所有启用的扩展
         /// </summary>
@@ -166,8 +169,13 @@ namespace DotnetGltfRenderer {
 
         /// <summary>
         /// 生成片段着色器 defines（参考官方 material.getDefines()）
+        /// 使用缓存避免每帧重新创建
         /// </summary>
         public ShaderDefines GetDefines() {
+            if (_cachedDefines != null) {
+                return _cachedDefines;
+            }
+
             ShaderDefines defines = ShaderDefines.CreateFragmentDefines();
 
             // Alpha mode
@@ -207,6 +215,8 @@ namespace DotnetGltfRenderer {
 
             // Extensions
             AppendExtensionDefines(defines);
+
+            _cachedDefines = defines;
             return defines;
         }
 

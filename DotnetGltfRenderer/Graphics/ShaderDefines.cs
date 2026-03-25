@@ -169,6 +169,15 @@ namespace DotnetGltfRenderer {
 
         public override string ToString() => string.Join(", ", _defines);
 
+        /// <summary>
+        /// 创建当前 ShaderDefines 的副本
+        /// </summary>
+        public ShaderDefines Clone() {
+            ShaderDefines clone = new();
+            clone._defines.AddRange(_defines);
+            return clone;
+        }
+
         #region Static Factory Methods
 
         /// <summary>
@@ -281,8 +290,8 @@ namespace DotnetGltfRenderer {
             ToneMapMode toneMapMode,
             int lightCount,
             Mesh mesh = null) {
-            // 从材质获取基础 defines
-            ShaderDefines defines = material?.GetDefines() ?? CreateFragmentDefines();
+            // 从材质获取基础 defines（已缓存），然后克隆一份添加上下文相关的 defines
+            ShaderDefines defines = (material?.GetDefines() ?? CreateFragmentDefines()).Clone();
 
             // 片段着色器也需要顶点属性 defines（用于声明 varying 输入变量）
             // 否则 v_TBN/v_Normal/v_Color 不会被声明

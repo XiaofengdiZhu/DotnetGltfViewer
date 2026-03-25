@@ -119,7 +119,8 @@ namespace DotnetGltfRenderer {
         /// 获取或创建着色器变体
         /// </summary>
         Shader GetOrCreateShaderVariant(Mesh mesh, Material material, in RenderContext context) {
-            ShaderDefines vertDefines = ShaderDefines.CreateFromMesh(mesh);
+            // 使用缓存的顶点着色器 defines
+            ShaderDefines vertDefines = mesh.GetVertDefines();
             ShaderDefines fragDefines = ShaderDefines.CreateFromMaterial(
                 material,
                 context.UseIBL,

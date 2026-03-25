@@ -141,6 +141,9 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public bool IsNegativeScaleInstance { get; set; } = false;
 
+        // 缓存的顶点着色器 defines
+        ShaderDefines _cachedVertDefines;
+
         // KHR_materials_variants: mappings from variant index to material
         // Key: variant index, Value: material for that variant
         readonly Dictionary<int, Material> _variantMaterials = new();
@@ -342,6 +345,18 @@ namespace DotnetGltfRenderer {
 
         public void Bind() {
             VAO.Bind();
+        }
+
+        /// <summary>
+        /// 获取缓存的顶点着色器 defines
+        /// </summary>
+        public ShaderDefines GetVertDefines() {
+            if (_cachedVertDefines != null) {
+                return _cachedVertDefines;
+            }
+
+            _cachedVertDefines = ShaderDefines.CreateFromMesh(this);
+            return _cachedVertDefines;
         }
 
         public void Dispose() {
