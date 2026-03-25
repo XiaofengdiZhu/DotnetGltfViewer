@@ -1,4 +1,3 @@
-using System;
 using System.Numerics;
 using DotnetGltfRenderer;
 using Hexa.NET.ImGui;
@@ -16,13 +15,12 @@ namespace DotnetGltfViewer.Windows {
         static GizmoMode _currentMode = GizmoMode.Select;
         static Matrix4x4 _modelMatrix = Matrix4x4.Identity;
         static Matrix4x4 _userTransform = Matrix4x4.Identity;
-        static bool _useSnap = false;
+        static bool _useSnap;
         static Vector3 _snapTranslate = new(0.5f, 0.5f, 0.5f);
         static float _snapRotate = 5f;
         static float _snapScale = 0.1f;
-        static Camera _camera;
         static Scene _scene;
-        static bool _initialized = false;
+        static bool _initialized;
         // 缓存原始局部包围盒（相对于模型中心）
         static Vector3 _cachedLocalMin;
         static Vector3 _cachedLocalMax;
@@ -31,8 +29,7 @@ namespace DotnetGltfViewer.Windows {
         public static Matrix4x4 ModelMatrix => _modelMatrix;
         public static bool UseSnap { get => _useSnap; set => _useSnap = value; }
 
-        public static void Initialize(Camera camera, Scene scene) {
-            _camera = camera;
+        public static void Initialize(Scene scene) {
             _scene = scene;
             _initialized = false;
             _userTransform = Matrix4x4.Identity;

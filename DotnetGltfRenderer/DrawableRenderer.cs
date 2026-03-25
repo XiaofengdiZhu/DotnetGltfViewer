@@ -1,4 +1,3 @@
-using System;
 using System.Numerics;
 using Silk.NET.OpenGLES;
 

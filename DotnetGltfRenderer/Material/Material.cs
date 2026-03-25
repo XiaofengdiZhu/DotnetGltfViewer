@@ -326,7 +326,7 @@ namespace DotnetGltfRenderer {
             foreach (var jsonSerializable in material.Extensions) {
                 Type type = jsonSerializable.GetType();
                 string extName = null;
-                if (jsonSerializable is ExtraProperties extraProperties) {
+                if (jsonSerializable is ExtraProperties) {
                     MethodInfo method = type.GetMethod("GetSchemaName", BindingFlags.Instance | BindingFlags.NonPublic);
                     extName = (string)method?.Invoke(jsonSerializable, null);
                 }

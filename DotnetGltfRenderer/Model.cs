@@ -76,7 +76,7 @@ namespace DotnetGltfRenderer {
 
         public Texture GetTexture(int logicalIndex) => _texturesLoaded.TryGetValue(logicalIndex, out Texture tex) ? tex : null;
 
-        public Model(GL gl, string path, bool gamma = false) {
+        public Model(GL gl, string path) {
             _gl = gl;
             LoadModel(path);
         }
@@ -194,7 +194,7 @@ namespace DotnetGltfRenderer {
             MeshGpuInstancing gpuInstancing = node.GetGpuInstancing();
             if (node.Mesh != null) {
                 if (gpuInstancing != null && gpuInstancing.Count > 0) {
-                    ProcessInstancedNodeForScene(node, gpuInstancing, primitiveMeshCache, worldMatrix, instances);
+                    ProcessInstancedNodeForScene(node, gpuInstancing, primitiveMeshCache, instances);
                 }
                 else {
                     for (int i = 0; i < node.Mesh.Primitives.Count; i++) {
@@ -221,7 +221,6 @@ namespace DotnetGltfRenderer {
         void ProcessInstancedNodeForScene(Node node,
             MeshGpuInstancing gpuInstancing,
             Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> primitiveMeshCache,
-            Matrix4x4 nodeWorldMatrix,
             List<MeshInstance> instances) {
             int instanceCount = gpuInstancing.Count;
             if (instanceCount == 0) return;

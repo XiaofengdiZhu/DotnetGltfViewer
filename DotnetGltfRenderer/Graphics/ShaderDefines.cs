@@ -323,7 +323,7 @@ namespace DotnetGltfRenderer {
                         ToneMapMode.AcesNarkowicz => "TONEMAP_ACES_NARKOWICZ",
                         ToneMapMode.AcesHill => "TONEMAP_ACES_HILL 1",
                         ToneMapMode.AcesHillExposureBoost => "TONEMAP_ACES_HILL_EXPOSURE_BOOST",
-                        ToneMapMode.None or _ => "LINEAR_OUTPUT"
+                        _ => "LINEAR_OUTPUT"
                     }
                 );
             }

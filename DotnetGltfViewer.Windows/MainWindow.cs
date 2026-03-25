@@ -117,7 +117,6 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         /// <param name="deltaTime">帧间隔时间（秒）。</param>
         static void RenderUI(double deltaTime) {
-            Vector2D<int> size = _window.FramebufferSize;
             ImGuiManager.Render((float)deltaTime);
         }
 
@@ -172,7 +171,7 @@ namespace DotnetGltfViewer.Windows {
             );
             if (result.IsOk) {
                 try {
-                    SceneModel model = _scene.AddModel(result.Path);
+                    _scene.AddModel(result.Path);
                     _modelRenderer.UpdateLightsFromScene();
                     ResetCameraToModel();
                     LogManager.Logger.ZLogInformation($"Loaded model: {result.Path}");

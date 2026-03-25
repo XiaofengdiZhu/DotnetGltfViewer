@@ -10,8 +10,6 @@ namespace DotnetGltfRenderer {
     /// 场景中的模型项，包含模型及其元数据
     /// </summary>
     public class SceneModel : IDisposable {
-        readonly GL _gl;
-
         /// <summary>
         /// 模型实例
         /// </summary>
@@ -48,7 +46,6 @@ namespace DotnetGltfRenderer {
         public BoundingBox WorldBounds { get; internal set; }
 
         internal SceneModel(GL gl, string filePath, int id) {
-            _gl = gl;
             FilePath = filePath;
             Id = id;
             Name = Path.GetFileNameWithoutExtension(filePath);

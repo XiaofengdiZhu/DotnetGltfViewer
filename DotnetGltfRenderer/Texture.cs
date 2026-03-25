@@ -229,7 +229,6 @@ namespace DotnetGltfRenderer {
                 GltfTextureMipMapFilter.NEAREST_MIPMAP_NEAREST => TextureMinFilter.NearestMipmapNearest,
                 GltfTextureMipMapFilter.LINEAR_MIPMAP_NEAREST => TextureMinFilter.LinearMipmapNearest,
                 GltfTextureMipMapFilter.NEAREST_MIPMAP_LINEAR => TextureMinFilter.NearestMipmapLinear,
-                GltfTextureMipMapFilter.LINEAR_MIPMAP_LINEAR => TextureMinFilter.LinearMipmapLinear,
                 _ => TextureMinFilter.LinearMipmapLinear
             };
         }

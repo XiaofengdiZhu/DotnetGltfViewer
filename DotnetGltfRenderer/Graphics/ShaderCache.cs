@@ -93,9 +93,7 @@ namespace DotnetGltfRenderer {
                             changed = true;
                         }
                     }
-                    if (src != _sources[key]) {
-                        _sources[key] = src;
-                    }
+                    _sources[key] = src;
                 }
             }
         }
@@ -125,7 +123,7 @@ namespace DotnetGltfRenderer {
             }
 
             // 检查缓存
-            if (_shaderCache.TryGetValue(hash, out uint cachedShader)) {
+            if (_shaderCache.ContainsKey(hash)) {
                 return hash;
             }
 

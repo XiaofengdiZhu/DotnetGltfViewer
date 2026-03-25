@@ -97,7 +97,6 @@ namespace DotnetGltfRenderer {
                 bool hasTransmission = material.Transmission?.IsEnabled == true;
                 // KHR_materials_diffuse_transmission - dense volumes（不需要 framebuffer）
                 bool hasDiffuseTransmission = material.DiffuseTransmission?.IsEnabled == true;
-                bool hasVolume = material.Volume?.IsEnabled == true;
                 bool hasVolumeScatter = material.VolumeScatter?.IsEnabled == true;
                 Drawable drawable = CreateDrawable(instance, variantIndex);
 

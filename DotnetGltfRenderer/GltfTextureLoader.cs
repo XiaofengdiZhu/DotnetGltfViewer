@@ -50,7 +50,7 @@ namespace DotnetGltfRenderer {
 
             void MarkTexture(string channelKey, bool isSrgb) {
                 MaterialChannel? channel = material.FindChannel(channelKey);
-                if (channel?.Texture is GltfTexture tex) {
+                if (channel?.Texture is { } tex) {
                     textureIsSrgb[tex.LogicalIndex] = isSrgb;
                 }
             }

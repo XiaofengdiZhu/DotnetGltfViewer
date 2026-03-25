@@ -337,7 +337,6 @@ namespace DotnetGltfRenderer {
             uint tex = texture == 0 ? _cubemapTexture : texture;
             int size = _textureSize >> mipLevel;
             size = Math.Max(1, size);
-            string[] faceNames = ["px", "nx", "py", "ny", "pz", "nz"];
 
             // 创建合并图像（2x3 布局）
             int combinedWidth = size * 4;
@@ -394,8 +393,8 @@ namespace DotnetGltfRenderer {
                 }
             }
 
-            //string path = Path.Combine(ProgressDirectory, $"{name}.bmp");
-            //SaveBmp(path, combinedData, combinedWidth, combinedHeight);
+            string path = Path.Combine(ProgressDirectory, $"{name}.bmp");
+            SaveBmp(path, combinedData, combinedWidth, combinedHeight);
         }
 
         unsafe byte[] ReadCubemapFace(uint texture, int face, int size, int mipLevel) {
@@ -474,8 +473,8 @@ namespace DotnetGltfRenderer {
                 data[i * 3 + 2] = (byte)Math.Clamp(b * 255, 0, 255);
             }
 
-            //string path = Path.Combine(ProgressDirectory, $"{name}.bmp");
-            //SaveBmp(path, data, _lutResolution, _lutResolution);
+            string path = Path.Combine(ProgressDirectory, $"{name}.bmp");
+            SaveBmp(path, data, _lutResolution, _lutResolution);
         }
 
         float ToneMap(float value) {

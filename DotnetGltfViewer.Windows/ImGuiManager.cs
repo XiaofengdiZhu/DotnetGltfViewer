@@ -1,6 +1,5 @@
 using System;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using DotnetGltfRenderer;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImGuizmo;
@@ -46,14 +45,14 @@ namespace DotnetGltfViewer.Windows {
             ImGuizmo.SetImGuiContext(_controller.Context);
             _camera = camera;
             _scene = scene;
-            GizmoManager.Initialize(camera, scene);
+            GizmoManager.Initialize(scene);
             float scale = MainWindow.MonitorScale;
             if (scale > 1.0f) {
                 ImGuiStylePtr style = ImGui.GetStyle();
                 style.ScaleAllSizes(scale);
                 style.FontScaleMain = scale;
             }
-            DotnetGltfRenderer.LogManager.Logger.ZLogDebug($"ImGui 管理器初始化完成");
+            LogManager.Logger.ZLogDebug($"ImGui 管理器初始化完成");
         }
 
         static void DefaultOnConfigureIO() {
@@ -228,10 +227,7 @@ namespace DotnetGltfViewer.Windows {
         public static void Dispose() {
             GizmoManager.Dispose();
             _controller?.Dispose();
-            DotnetGltfRenderer.LogManager.Logger.ZLogDebug($"ImGui 管理器已释放");
+            LogManager.Logger.ZLogDebug($"ImGui 管理器已释放");
         }
-
-        [DllImport("user32.dll", SetLastError = true)]
-        static extern uint GetDpiForWindow(IntPtr hwnd);
     }
 }

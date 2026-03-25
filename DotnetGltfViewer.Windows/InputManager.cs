@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Numerics;
 using DotnetGltfRenderer;
-using Hexa.NET.ImGui;
 using Silk.NET.Input;
 
 namespace DotnetGltfViewer.Windows {

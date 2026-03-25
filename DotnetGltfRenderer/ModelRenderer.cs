@@ -164,15 +164,6 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
-        /// 开始帧，清除缓冲区并设置默认状态
-        /// </summary>
-        public void BeginFrame() {
-            _gl.Enable(EnableCap.DepthTest);
-            _gl.DepthMask(true);
-            _gl.DepthFunc(DepthFunction.Less);
-        }
-
-        /// <summary>
         /// 准备模型渲染（设置全局 uniform）
         /// </summary>
         public void PrepareModelRender() {
@@ -225,31 +216,6 @@ namespace DotnetGltfRenderer {
         public void RenderSkyLinear(Matrix4x4 view, Matrix4x4 projection, float envIntensity = 1.0f) {
             _skyRenderer?.RenderLinear(view, projection, envIntensity * _environmentStrength,
                 LightingSystem.Exposure, _iblSampler);
-        }
-
-        /// <summary>
-        /// 渲染模型（简单模式，无渲染队列，不渲染天空盒）
-        /// </summary>
-        public void RenderModel() {
-            IEnumerable<MeshInstance> allInstances = Scene?.GetAllMeshInstances() ?? Enumerable.Empty<MeshInstance>();
-            int activeVariantIndex = Scene?.Models.Count > 0 ? Scene.Models[0].Model.ActiveVariantIndex : -1;
-            RenderQueue.Prepare(allInstances, activeVariantIndex);
-            PrepareModelRender();
-
-            Matrix4x4 view = Camera.ViewMatrix;
-            Matrix4x4 projection = Camera.GetProjectionMatrix(_framebufferAspectRatio);
-
-            _drawableRenderer.SetViewProjectionMatrices(view, projection);
-
-            // 渲染所有不透明物体
-            foreach (Drawable drawable in RenderQueue.OpaqueDrawables) {
-                RenderDrawable(drawable);
-            }
-
-            // 渲染透明物体
-            foreach (Drawable drawable in RenderQueue.TransparentDrawables) {
-                RenderDrawable(drawable);
-            }
         }
 
         /// <summary>

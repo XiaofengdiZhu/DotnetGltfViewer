@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using SharpGLTF.Animations;
 using SharpGLTF.Schema2;
 using Silk.NET.OpenGLES;
 
@@ -12,7 +11,6 @@ namespace DotnetGltfRenderer {
     public sealed class MeshInstance {
         const int MaxSkinJoints = 64;
 
-        readonly GL _gl;
         internal readonly Node[] _joints;
         readonly Matrix4x4[] _inverseBindMatrices;
 
@@ -51,7 +49,6 @@ namespace DotnetGltfRenderer {
             WorldMatrix = node.WorldMatrix;
             OriginalWorldMatrix = node.WorldMatrix;
             IsVisible = true;
-            _gl = gl;
             _gizmoTransform = Matrix4x4.Identity;
 
             if (skin == null) {
