@@ -3,7 +3,8 @@
     "allow": [
       "Bash(dotnet build:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(timeout 10 dotnet run --project DotnetGltfViewer.Windows)"
+      "Bash(timeout 10 dotnet run --project DotnetGltfViewer.Windows)",
+      "Bash(cd:*)"
     ]
   }
 }
