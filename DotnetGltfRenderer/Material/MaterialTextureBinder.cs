@@ -9,59 +9,59 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 绑定材质的所有纹理
         /// </summary>
-        public static void BindMaterialTextures(GL gl, Material material, Shader shader) {
+        public static void BindMaterialTextures(Material material, Shader shader) {
             if (material.BaseColorTexture != null) {
-                BindTexture(gl, material.BaseColorTexture, MaterialTextureSlot.BaseColor);
+                BindTexture(material.BaseColorTexture, MaterialTextureSlot.BaseColor);
             }
             if (material.MetallicRoughnessTexture != null) {
-                BindTexture(gl, material.MetallicRoughnessTexture, MaterialTextureSlot.MetallicRoughness);
+                BindTexture(material.MetallicRoughnessTexture, MaterialTextureSlot.MetallicRoughness);
             }
             if (material.NormalTexture != null) {
-                BindTexture(gl, material.NormalTexture, MaterialTextureSlot.Normal);
+                BindTexture(material.NormalTexture, MaterialTextureSlot.Normal);
             }
             if (material.OcclusionTexture != null) {
-                BindTexture(gl, material.OcclusionTexture, MaterialTextureSlot.Occlusion);
+                BindTexture(material.OcclusionTexture, MaterialTextureSlot.Occlusion);
             }
             if (material.EmissiveTexture != null) {
-                BindTexture(gl, material.EmissiveTexture, MaterialTextureSlot.Emissive);
+                BindTexture(material.EmissiveTexture, MaterialTextureSlot.Emissive);
             }
 
             // 扩展纹理
             if (material.ClearCoat?.IsEnabled == true) {
-                BindTexture(gl, material.ClearCoat.Texture, MaterialTextureSlot.ClearCoat);
-                BindTexture(gl, material.ClearCoat.RoughnessTexture, MaterialTextureSlot.ClearCoatRoughness);
-                BindTexture(gl, material.ClearCoat.NormalTexture, MaterialTextureSlot.ClearCoatNormal);
+                BindTexture(material.ClearCoat.Texture, MaterialTextureSlot.ClearCoat);
+                BindTexture(material.ClearCoat.RoughnessTexture, MaterialTextureSlot.ClearCoatRoughness);
+                BindTexture(material.ClearCoat.NormalTexture, MaterialTextureSlot.ClearCoatNormal);
             }
             if (material.Iridescence?.IsEnabled == true) {
-                BindTexture(gl, material.Iridescence.Texture, MaterialTextureSlot.Iridescence);
-                BindTexture(gl, material.Iridescence.ThicknessTexture, MaterialTextureSlot.IridescenceThickness);
+                BindTexture(material.Iridescence.Texture, MaterialTextureSlot.Iridescence);
+                BindTexture(material.Iridescence.ThicknessTexture, MaterialTextureSlot.IridescenceThickness);
             }
             if (material.Transmission?.IsEnabled == true) {
-                BindTexture(gl, material.Transmission.Texture, MaterialTextureSlot.Transmission);
+                BindTexture(material.Transmission.Texture, MaterialTextureSlot.Transmission);
             }
             if (material.Volume?.IsEnabled == true) {
-                BindTexture(gl, material.Volume.ThicknessTexture, MaterialTextureSlot.Thickness);
+                BindTexture(material.Volume.ThicknessTexture, MaterialTextureSlot.Thickness);
             }
             if (material.Sheen?.IsEnabled == true) {
-                BindTexture(gl, material.Sheen.ColorTexture, MaterialTextureSlot.SheenColor);
-                BindTexture(gl, material.Sheen.RoughnessTexture, MaterialTextureSlot.SheenRoughness);
+                BindTexture(material.Sheen.ColorTexture, MaterialTextureSlot.SheenColor);
+                BindTexture(material.Sheen.RoughnessTexture, MaterialTextureSlot.SheenRoughness);
             }
             if (material.Specular?.IsEnabled == true) {
-                BindTexture(gl, material.Specular.SpecularTexture, MaterialTextureSlot.Specular);
-                BindTexture(gl, material.Specular.SpecularColorTexture, MaterialTextureSlot.SpecularColor);
+                BindTexture(material.Specular.SpecularTexture, MaterialTextureSlot.Specular);
+                BindTexture(material.Specular.SpecularColorTexture, MaterialTextureSlot.SpecularColor);
             }
             if (material.Anisotropy?.IsEnabled == true) {
-                BindTexture(gl, material.Anisotropy.AnisotropyTexture, MaterialTextureSlot.Anisotropy);
+                BindTexture(material.Anisotropy.AnisotropyTexture, MaterialTextureSlot.Anisotropy);
             }
             if (material.DiffuseTransmission?.IsEnabled == true) {
-                BindTexture(gl, material.DiffuseTransmission.Texture, MaterialTextureSlot.DiffuseTransmission);
-                BindTexture(gl, material.DiffuseTransmission.ColorTexture, MaterialTextureSlot.DiffuseTransmissionColor);
+                BindTexture(material.DiffuseTransmission.Texture, MaterialTextureSlot.DiffuseTransmission);
+                BindTexture(material.DiffuseTransmission.ColorTexture, MaterialTextureSlot.DiffuseTransmissionColor);
             }
 
             // SpecularGlossiness workflow textures
             if (material.SpecularGlossiness?.IsEnabled == true) {
-                BindTexture(gl, material.SpecularGlossiness.DiffuseTexture, MaterialTextureSlot.Diffuse);
-                BindTexture(gl, material.SpecularGlossiness.SpecularGlossinessTexture, MaterialTextureSlot.SpecularGlossiness);
+                BindTexture(material.SpecularGlossiness.DiffuseTexture, MaterialTextureSlot.Diffuse);
+                BindTexture(material.SpecularGlossiness.SpecularGlossinessTexture, MaterialTextureSlot.SpecularGlossiness);
             }
         }
 
@@ -178,18 +178,18 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 绑定 IBL 纹理
         /// </summary>
-        public static void BindIBLTextures(GL gl, IblSampler iblSampler) {
-            BindCubemapTexture(gl, iblSampler.LambertianTexture, MaterialTextureSlot.IBLLambertian);
-            BindCubemapTexture(gl, iblSampler.GGXTexture, MaterialTextureSlot.IBLGGX);
-            BindCubemapTexture(gl, iblSampler.SheenTexture, MaterialTextureSlot.IBLCharlie);
-            BindTexture2D(gl, iblSampler.GGXLut, MaterialTextureSlot.IBLGGXLUT);
-            BindTexture2D(gl, iblSampler.CharlieLut, MaterialTextureSlot.IBLCharlieLUT);
+        public static void BindIBLTextures(IblSampler iblSampler) {
+            BindCubemapTexture(iblSampler.LambertianTexture, MaterialTextureSlot.IBLLambertian);
+            BindCubemapTexture(iblSampler.GGXTexture, MaterialTextureSlot.IBLGGX);
+            BindCubemapTexture(iblSampler.SheenTexture, MaterialTextureSlot.IBLCharlie);
+            BindTexture2D(iblSampler.GGXLut, MaterialTextureSlot.IBLGGXLUT);
+            BindTexture2D(iblSampler.CharlieLut, MaterialTextureSlot.IBLCharlieLUT);
         }
 
         /// <summary>
         /// 绑定单个纹理
         /// </summary>
-        public static void BindTexture(GL gl, MaterialTexture matTex, MaterialTextureSlot slot) {
+        public static void BindTexture(MaterialTexture matTex, MaterialTextureSlot slot) {
             if (matTex?.Texture != null) {
                 matTex.Texture.Bind((TextureUnit)((int)TextureUnit.Texture0 + (int)slot));
             }
@@ -198,17 +198,17 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 绑定 Cubemap 纹理
         /// </summary>
-        public static void BindCubemapTexture(GL gl, uint texture, MaterialTextureSlot slot) {
-            gl.ActiveTexture((TextureUnit)((int)TextureUnit.Texture0 + (int)slot));
-            gl.BindTexture(TextureTarget.TextureCubeMap, texture);
+        public static void BindCubemapTexture(uint texture, MaterialTextureSlot slot) {
+            GlContext.GL.ActiveTexture((TextureUnit)((int)TextureUnit.Texture0 + (int)slot));
+            GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, texture);
         }
 
         /// <summary>
         /// 绑定 2D 纹理
         /// </summary>
-        public static void BindTexture2D(GL gl, uint texture, MaterialTextureSlot slot) {
-            gl.ActiveTexture((TextureUnit)((int)TextureUnit.Texture0 + (int)slot));
-            gl.BindTexture(TextureTarget.Texture2D, texture);
+        public static void BindTexture2D(uint texture, MaterialTextureSlot slot) {
+            GlContext.GL.ActiveTexture((TextureUnit)((int)TextureUnit.Texture0 + (int)slot));
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, texture);
         }
 
         /// <summary>

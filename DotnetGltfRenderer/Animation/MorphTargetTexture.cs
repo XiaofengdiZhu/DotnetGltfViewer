@@ -14,7 +14,6 @@ namespace DotnetGltfRenderer {
     /// - 层组织：[POSITION targets][NORMAL targets][TANGENT targets]...
     /// </summary>
     public class MorphTargetTexture : IDisposable {
-        readonly GL _gl;
         bool _disposed;
 
         // Attribute offsets (layer index offset for each attribute type)
@@ -118,12 +117,10 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建 Morph Target 纹理
         /// </summary>
-        /// <param name="gl">OpenGL 上下文</param>
         /// <param name="vertexCount">顶点数量</param>
         /// <param name="targetCount">Morph target 数量</param>
         /// <param name="attributes">活跃属性集合</param>
-        public MorphTargetTexture(GL gl, int vertexCount, int targetCount, IReadOnlySet<string> attributes) {
-            _gl = gl;
+        public MorphTargetTexture(int vertexCount, int targetCount, IReadOnlySet<string> attributes) {
             VertexCount = vertexCount;
             TargetCount = targetCount;
 
@@ -160,18 +157,18 @@ namespace DotnetGltfRenderer {
         }
 
         unsafe void CreateTexture() {
-            TextureHandle = _gl.GenTexture();
-            _gl.BindTexture(TextureTarget.Texture2DArray, TextureHandle);
+            TextureHandle = GlContext.GL.GenTexture();
+            GlContext.GL.BindTexture(TextureTarget.Texture2DArray, TextureHandle);
 
             // 设置纹理参数（与官方一致）
-            _gl.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-            _gl.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-            _gl.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            _gl.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+            GlContext.GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+            GlContext.GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+            GlContext.GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+            GlContext.GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
 
             // 分配纹理存储（RGBA32F）
             // 使用 glTexImage3D 创建 2D Array 纹理
-            _gl.TexImage3D(
+            GlContext.GL.TexImage3D(
                 TextureTarget.Texture2DArray,
                 0,
                 InternalFormat.Rgba32f,
@@ -183,7 +180,7 @@ namespace DotnetGltfRenderer {
                 PixelType.Float,
                 null
             );
-            _gl.BindTexture(TextureTarget.Texture2DArray, 0);
+            GlContext.GL.BindTexture(TextureTarget.Texture2DArray, 0);
         }
 
         /// <summary>
@@ -201,7 +198,7 @@ namespace DotnetGltfRenderer {
             IReadOnlyList<Vector2>[] texCoords0,
             IReadOnlyList<Vector2>[] texCoords1,
             IReadOnlyList<Vector4>[] colors0) {
-            _gl.BindTexture(TextureTarget.Texture2DArray, TextureHandle);
+            GlContext.GL.BindTexture(TextureTarget.Texture2DArray, TextureHandle);
 
             // 每层纹理的大小（像素数 * 4 floats）
             int layerPixelCount = TextureSize * TextureSize;
@@ -257,7 +254,7 @@ namespace DotnetGltfRenderer {
                     UploadAttributeLayer(layerData, colors0[t], Color0Offset + t);
                 }
             }
-            _gl.BindTexture(TextureTarget.Texture2DArray, 0);
+            GlContext.GL.BindTexture(TextureTarget.Texture2DArray, 0);
         }
 
         unsafe void UploadAttributeLayer<T>(float[] layerData, IReadOnlyList<T> attributeData, int layerIndex)
@@ -300,7 +297,7 @@ namespace DotnetGltfRenderer {
 
             // 上传到纹理
             fixed (float* ptr = layerData) {
-                _gl.TexSubImage3D(
+                GlContext.GL.TexSubImage3D(
                     TextureTarget.Texture2DArray,
                     0,
                     0,
@@ -320,8 +317,8 @@ namespace DotnetGltfRenderer {
         /// 绑定 morph target 纹理到指定纹理单元
         /// </summary>
         public void Bind(TextureUnit unit) {
-            _gl.ActiveTexture(unit);
-            _gl.BindTexture(TextureTarget.Texture2DArray, TextureHandle);
+            GlContext.GL.ActiveTexture(unit);
+            GlContext.GL.BindTexture(TextureTarget.Texture2DArray, TextureHandle);
         }
 
         public void Dispose() {
@@ -329,7 +326,7 @@ namespace DotnetGltfRenderer {
                 return;
             }
             if (TextureHandle != 0) {
-                _gl.DeleteTexture(TextureHandle);
+                GlContext.GL.DeleteTexture(TextureHandle);
                 TextureHandle = 0;
             }
             _disposed = true;

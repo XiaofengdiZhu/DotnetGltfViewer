@@ -6,7 +6,6 @@ namespace DotnetGltfRenderer {
     /// 离屏帧缓冲区，用于 Transmission 渲染
     /// </summary>
     public class OffscreenFramebuffer : IDisposable {
-        readonly GL _gl;
 
         // Framebuffer
         uint _framebuffer;
@@ -34,11 +33,9 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建离屏帧缓冲区
         /// </summary>
-        /// <param name="gl">GL 实例</param>
         /// <param name="width">宽度</param>
         /// <param name="height">高度</param>
-        public OffscreenFramebuffer(GL gl, int width, int height) {
-            _gl = gl;
+        public OffscreenFramebuffer(int width, int height) {
             Width = width;
             Height = height;
             CreateFramebuffer();
@@ -46,9 +43,9 @@ namespace DotnetGltfRenderer {
 
         unsafe void CreateFramebuffer() {
             // 创建颜色纹理
-            ColorTexture = _gl.GenTexture();
-            _gl.BindTexture(TextureTarget.Texture2D, ColorTexture);
-            _gl.TexImage2D(
+            ColorTexture = GlContext.GL.GenTexture();
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, ColorTexture);
+            GlContext.GL.TexImage2D(
                 TextureTarget.Texture2D,
                 0,
                 InternalFormat.Rgba16f,
@@ -61,25 +58,25 @@ namespace DotnetGltfRenderer {
             );
 
             // 设置纹理参数（支持 Mipmap）
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
 
             // 创建深度 Renderbuffer
-            _depthRenderbuffer = _gl.GenRenderbuffer();
-            _gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _depthRenderbuffer);
-            _gl.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.DepthComponent24, (uint)Width, (uint)Height);
+            _depthRenderbuffer = GlContext.GL.GenRenderbuffer();
+            GlContext.GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _depthRenderbuffer);
+            GlContext.GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.DepthComponent24, (uint)Width, (uint)Height);
 
             // 创建帧缓冲区
-            _framebuffer = _gl.GenFramebuffer();
-            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
+            _framebuffer = GlContext.GL.GenFramebuffer();
+            GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
 
             // 附加颜色纹理
-            _gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, ColorTexture, 0);
+            GlContext.GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, ColorTexture, 0);
 
             // 附加深度 Renderbuffer
-            _gl.FramebufferRenderbuffer(
+            GlContext.GL.FramebufferRenderbuffer(
                 FramebufferTarget.Framebuffer,
                 FramebufferAttachment.DepthAttachment,
                 RenderbufferTarget.Renderbuffer,
@@ -87,21 +84,21 @@ namespace DotnetGltfRenderer {
             );
 
             // 检查帧缓冲区状态
-            FramebufferStatus status = (FramebufferStatus)_gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+            FramebufferStatus status = (FramebufferStatus)GlContext.GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
             if (status != FramebufferStatus.Complete) {
                 throw new InvalidOperationException($"Framebuffer incomplete: {status}");
             }
 
             // 解绑
-            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         }
 
         /// <summary>
         /// 绑定帧缓冲区进行渲染
         /// </summary>
         public void Bind() {
-            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
-            _gl.Viewport(0, 0, (uint)Width, (uint)Height);
+            GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
+            GlContext.GL.Viewport(0, 0, (uint)Width, (uint)Height);
         }
 
         /// <summary>
@@ -110,24 +107,24 @@ namespace DotnetGltfRenderer {
         /// <param name="defaultWidth">默认帧缓冲区宽度</param>
         /// <param name="defaultHeight">默认帧缓冲区高度</param>
         public void Unbind(int defaultWidth, int defaultHeight) {
-            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-            _gl.Viewport(0, 0, (uint)defaultWidth, (uint)defaultHeight);
+            GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            GlContext.GL.Viewport(0, 0, (uint)defaultWidth, (uint)defaultHeight);
         }
 
         /// <summary>
         /// 生成颜色纹理的 Mipmap（用于粗糙度模糊）
         /// </summary>
         public void GenerateMipmap() {
-            _gl.BindTexture(TextureTarget.Texture2D, ColorTexture);
-            _gl.GenerateMipmap(TextureTarget.Texture2D);
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, ColorTexture);
+            GlContext.GL.GenerateMipmap(TextureTarget.Texture2D);
         }
 
         /// <summary>
         /// 绑定颜色纹理到指定纹理单元
         /// </summary>
         public void BindColorTexture(TextureUnit unit) {
-            _gl.ActiveTexture(unit);
-            _gl.BindTexture(TextureTarget.Texture2D, ColorTexture);
+            GlContext.GL.ActiveTexture(unit);
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, ColorTexture);
         }
 
         /// <summary>
@@ -138,21 +135,21 @@ namespace DotnetGltfRenderer {
         /// <param name="b">蓝色分量</param>
         /// <param name="a">透明度</param>
         public void Clear(float r = 0f, float g = 0f, float b = 0f, float a = 1f) {
-            _gl.ClearColor(r, g, b, a);
-            _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            GlContext.GL.ClearColor(r, g, b, a);
+            GlContext.GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         }
 
         public void Dispose() {
             if (ColorTexture != 0) {
-                _gl.DeleteTexture(ColorTexture);
+                GlContext.GL.DeleteTexture(ColorTexture);
                 ColorTexture = 0;
             }
             if (_depthRenderbuffer != 0) {
-                _gl.DeleteRenderbuffer(_depthRenderbuffer);
+                GlContext.GL.DeleteRenderbuffer(_depthRenderbuffer);
                 _depthRenderbuffer = 0;
             }
             if (_framebuffer != 0) {
-                _gl.DeleteFramebuffer(_framebuffer);
+                GlContext.GL.DeleteFramebuffer(_framebuffer);
                 _framebuffer = 0;
             }
         }

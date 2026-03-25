@@ -8,7 +8,6 @@ namespace DotnetGltfRenderer {
     /// IBL 预处理器，用于生成预过滤的环境贴图
     /// </summary>
     public class IblSampler : IDisposable {
-        readonly GL _gl;
 
         // 配置参数
         readonly int _textureSize = 256;
@@ -37,13 +36,6 @@ namespace DotnetGltfRenderer {
         public static string ProgressDirectory { get; set; } = "Progress";
 
         /// <summary>
-        /// 创建 IBL 采样器
-        /// </summary>
-        public IblSampler(GL gl) {
-            _gl = gl;
-        }
-
-        /// <summary>
         /// 初始化并处理环境贴图
         /// </summary>
         public void Process(EnvironmentMap panorama) {
@@ -62,7 +54,7 @@ namespace DotnetGltfRenderer {
             CreateCubemapTextures();
 
             // 创建 Framebuffer
-            _framebuffer = _gl.GenFramebuffer();
+            _framebuffer = GlContext.GL.GenFramebuffer();
 
             // Step 1: Equirectangular -> Cubemap
             PanoramaToCubeMap();
@@ -89,7 +81,7 @@ namespace DotnetGltfRenderer {
             //SaveLutToBmp("ggx_lut", GGXLut);
             GenerateCharlieLut();
             //SaveLutToBmp("charlie_lut", CharlieLut);
-            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
             LogManager.Logger.ZLogInformation($"[IBL] Processing complete!");
         }
 
@@ -102,9 +94,9 @@ namespace DotnetGltfRenderer {
         }
 
         unsafe void CreateInputTexture(EnvironmentMap panorama) {
-            _inputTexture = _gl.GenTexture();
-            _gl.ActiveTexture(TextureUnit.Texture0);
-            _gl.BindTexture(TextureTarget.Texture2D, _inputTexture);
+            _inputTexture = GlContext.GL.GenTexture();
+            GlContext.GL.ActiveTexture(TextureUnit.Texture0);
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, _inputTexture);
 
             // 转换为 RGBA float 数据（OpenGL ES 不支持 RGB32F 作为 render target）
             int numPixels = panorama.Width * panorama.Height;
@@ -116,7 +108,7 @@ namespace DotnetGltfRenderer {
                 rgbaData[i * 4 + 3] = 1.0f;
             }
             fixed (float* d = rgbaData) {
-                _gl.TexImage2D(
+                GlContext.GL.TexImage2D(
                     TextureTarget.Texture2D,
                     0,
                     InternalFormat.Rgba32f,
@@ -128,10 +120,10 @@ namespace DotnetGltfRenderer {
                     d
                 );
             }
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
         }
 
         void CreateCubemapTextures() {
@@ -148,20 +140,20 @@ namespace DotnetGltfRenderer {
             SheenTexture = CreateCubemapTexture(true);
 
             // 预生成 mipmap
-            _gl.BindTexture(TextureTarget.TextureCubeMap, GGXTexture);
-            _gl.GenerateMipmap(TextureTarget.TextureCubeMap);
-            _gl.BindTexture(TextureTarget.TextureCubeMap, SheenTexture);
-            _gl.GenerateMipmap(TextureTarget.TextureCubeMap);
+            GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, GGXTexture);
+            GlContext.GL.GenerateMipmap(TextureTarget.TextureCubeMap);
+            GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, SheenTexture);
+            GlContext.GL.GenerateMipmap(TextureTarget.TextureCubeMap);
 
             // 计算 mipmap 级别数
             MipCount = (int)Math.Floor(Math.Log2(_textureSize)) + 1 - _lowestMipLevel;
         }
 
         unsafe uint CreateCubemapTexture(bool withMipmaps) {
-            uint texture = _gl.GenTexture();
-            _gl.BindTexture(TextureTarget.TextureCubeMap, texture);
+            uint texture = GlContext.GL.GenTexture();
+            GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, texture);
             for (int i = 0; i < 6; i++) {
-                _gl.TexImage2D(
+                GlContext.GL.TexImage2D(
                     TextureTarget.TextureCubeMapPositiveX + i,
                     0,
                     InternalFormat.Rgba16f,
@@ -174,41 +166,41 @@ namespace DotnetGltfRenderer {
                 );
             }
             if (withMipmaps) {
-                _gl.TexParameter(TextureTarget.TextureCubeMap, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
+                GlContext.GL.TexParameter(TextureTarget.TextureCubeMap, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
             }
             else {
-                _gl.TexParameter(TextureTarget.TextureCubeMap, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+                GlContext.GL.TexParameter(TextureTarget.TextureCubeMap, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
             }
-            _gl.TexParameter(TextureTarget.TextureCubeMap, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-            _gl.TexParameter(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-            _gl.TexParameter(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+            GlContext.GL.TexParameter(TextureTarget.TextureCubeMap, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            GlContext.GL.TexParameter(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+            GlContext.GL.TexParameter(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
             return texture;
         }
 
         void PanoramaToCubeMap() {
             for (int i = 0; i < 6; i++) {
-                _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
-                _gl.FramebufferTexture2D(
+                GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
+                GlContext.GL.FramebufferTexture2D(
                     FramebufferTarget.Framebuffer,
                     FramebufferAttachment.ColorAttachment0,
                     TextureTarget.TextureCubeMapPositiveX + i,
                     _cubemapTexture,
                     0
                 );
-                _gl.Viewport(0, 0, (uint)_textureSize, (uint)_textureSize);
-                _gl.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-                _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+                GlContext.GL.Viewport(0, 0, (uint)_textureSize, (uint)_textureSize);
+                GlContext.GL.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                GlContext.GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                 _panoramaToCubemapShader.Use();
-                _gl.ActiveTexture(TextureUnit.Texture0);
-                _gl.BindTexture(TextureTarget.Texture2D, _inputTexture);
+                GlContext.GL.ActiveTexture(TextureUnit.Texture0);
+                GlContext.GL.BindTexture(TextureTarget.Texture2D, _inputTexture);
                 _panoramaToCubemapShader.SetUniform("u_panorama", 0);
                 _panoramaToCubemapShader.SetUniform("u_currentFace", i);
 
                 // 绘制全屏三角形
-                _gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
+                GlContext.GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
             }
-            _gl.BindTexture(TextureTarget.TextureCubeMap, _cubemapTexture);
-            _gl.GenerateMipmap(TextureTarget.TextureCubeMap);
+            GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, _cubemapTexture);
+            GlContext.GL.GenerateMipmap(TextureTarget.TextureCubeMap);
         }
 
         void CubeMapToLambertian() {
@@ -241,20 +233,20 @@ namespace DotnetGltfRenderer {
             int currentTextureSize = _textureSize >> targetMipLevel;
             currentTextureSize = Math.Max(1, currentTextureSize);
             for (int i = 0; i < 6; i++) {
-                _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
-                _gl.FramebufferTexture2D(
+                GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
+                GlContext.GL.FramebufferTexture2D(
                     FramebufferTarget.Framebuffer,
                     FramebufferAttachment.ColorAttachment0,
                     TextureTarget.TextureCubeMapPositiveX + i,
                     targetTexture,
                     targetMipLevel
                 );
-                _gl.Viewport(0, 0, (uint)currentTextureSize, (uint)currentTextureSize);
-                _gl.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-                _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+                GlContext.GL.Viewport(0, 0, (uint)currentTextureSize, (uint)currentTextureSize);
+                GlContext.GL.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                GlContext.GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                 _iblFilteringShader.Use();
-                _gl.ActiveTexture(TextureUnit.Texture0);
-                _gl.BindTexture(TextureTarget.TextureCubeMap, _cubemapTexture);
+                GlContext.GL.ActiveTexture(TextureUnit.Texture0);
+                GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, _cubemapTexture);
                 _iblFilteringShader.SetUniform("u_cubemapTexture", 0);
                 _iblFilteringShader.SetUniform("u_roughness", roughness);
                 _iblFilteringShader.SetUniform("u_sampleCount", sampleCount);
@@ -265,7 +257,7 @@ namespace DotnetGltfRenderer {
                 _iblFilteringShader.SetUniform("u_isGeneratingLUT", 0);
                 _iblFilteringShader.SetUniform("u_floatTexture", 1);
                 _iblFilteringShader.SetUniform("u_intensityScale", 1.0f);
-                _gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
+                GlContext.GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
             }
         }
 
@@ -280,9 +272,9 @@ namespace DotnetGltfRenderer {
         }
 
         unsafe uint CreateLutTexture() {
-            uint texture = _gl.GenTexture();
-            _gl.BindTexture(TextureTarget.Texture2D, texture);
-            _gl.TexImage2D(
+            uint texture = GlContext.GL.GenTexture();
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, texture);
+            GlContext.GL.TexImage2D(
                 TextureTarget.Texture2D,
                 0,
                 InternalFormat.Rgba16f,
@@ -293,28 +285,28 @@ namespace DotnetGltfRenderer {
                 PixelType.HalfFloat,
                 null
             );
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
             return texture;
         }
 
         void SampleLut(int distribution, uint targetTexture) {
-            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
-            _gl.FramebufferTexture2D(
+            GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
+            GlContext.GL.FramebufferTexture2D(
                 FramebufferTarget.Framebuffer,
                 FramebufferAttachment.ColorAttachment0,
                 TextureTarget.Texture2D,
                 targetTexture,
                 0
             );
-            _gl.Viewport(0, 0, (uint)_lutResolution, (uint)_lutResolution);
-            _gl.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-            _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            GlContext.GL.Viewport(0, 0, (uint)_lutResolution, (uint)_lutResolution);
+            GlContext.GL.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            GlContext.GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             _iblFilteringShader.Use();
-            _gl.ActiveTexture(TextureUnit.Texture0);
-            _gl.BindTexture(TextureTarget.TextureCubeMap, _cubemapTexture);
+            GlContext.GL.ActiveTexture(TextureUnit.Texture0);
+            GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, _cubemapTexture);
             _iblFilteringShader.SetUniform("u_cubemapTexture", 0);
             _iblFilteringShader.SetUniform("u_roughness", 0.0f);
             _iblFilteringShader.SetUniform("u_sampleCount", 512);
@@ -325,7 +317,7 @@ namespace DotnetGltfRenderer {
             _iblFilteringShader.SetUniform("u_isGeneratingLUT", 1);
             _iblFilteringShader.SetUniform("u_floatTexture", 1);
             _iblFilteringShader.SetUniform("u_intensityScale", 1.0f);
-            _gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
+            GlContext.GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
         }
 
         #region BMP Saving Methods
@@ -402,9 +394,9 @@ namespace DotnetGltfRenderer {
             float[] floatData = new float[size * size * 4];
 
             // 创建临时 FBO 读取
-            uint fbo = _gl.GenFramebuffer();
-            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
-            _gl.FramebufferTexture2D(
+            uint fbo = GlContext.GL.GenFramebuffer();
+            GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
+            GlContext.GL.FramebufferTexture2D(
                 FramebufferTarget.Framebuffer,
                 FramebufferAttachment.ColorAttachment0,
                 TextureTarget.TextureCubeMapPositiveX + face,
@@ -412,7 +404,7 @@ namespace DotnetGltfRenderer {
                 mipLevel
             );
             fixed (float* d = floatData) {
-                _gl.ReadPixels(
+                GlContext.GL.ReadPixels(
                     0,
                     0,
                     (uint)size,
@@ -422,8 +414,8 @@ namespace DotnetGltfRenderer {
                     d
                 );
             }
-            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-            _gl.DeleteFramebuffer(fbo);
+            GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            GlContext.GL.DeleteFramebuffer(fbo);
 
             // 转换为 RGB 字节（带 HDR tone mapping）
             for (int i = 0; i < size * size; i++) {
@@ -448,11 +440,11 @@ namespace DotnetGltfRenderer {
         public unsafe void SaveLutToBmp(string name, uint texture) {
             byte[] data = new byte[_lutResolution * _lutResolution * 3];
             float[] floatData = new float[_lutResolution * _lutResolution * 4];
-            uint fbo = _gl.GenFramebuffer();
-            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
-            _gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, texture, 0);
+            uint fbo = GlContext.GL.GenFramebuffer();
+            GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
+            GlContext.GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, texture, 0);
             fixed (float* d = floatData) {
-                _gl.ReadPixels(
+                GlContext.GL.ReadPixels(
                     0,
                     0,
                     (uint)_lutResolution,
@@ -462,8 +454,8 @@ namespace DotnetGltfRenderer {
                     d
                 );
             }
-            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-            _gl.DeleteFramebuffer(fbo);
+            GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            GlContext.GL.DeleteFramebuffer(fbo);
             for (int i = 0; i < _lutResolution * _lutResolution; i++) {
                 float r = floatData[i * 4];
                 float g = floatData[i * 4 + 1];
@@ -536,28 +528,28 @@ namespace DotnetGltfRenderer {
         public void Dispose() {
             // 注意：Shader 对象由 static ShaderCache 管理，不需要单独 Dispose
             if (_inputTexture != 0) {
-                _gl.DeleteTexture(_inputTexture);
+                GlContext.GL.DeleteTexture(_inputTexture);
             }
             if (_cubemapTexture != 0) {
-                _gl.DeleteTexture(_cubemapTexture);
+                GlContext.GL.DeleteTexture(_cubemapTexture);
             }
             if (LambertianTexture != 0) {
-                _gl.DeleteTexture(LambertianTexture);
+                GlContext.GL.DeleteTexture(LambertianTexture);
             }
             if (GGXTexture != 0) {
-                _gl.DeleteTexture(GGXTexture);
+                GlContext.GL.DeleteTexture(GGXTexture);
             }
             if (SheenTexture != 0) {
-                _gl.DeleteTexture(SheenTexture);
+                GlContext.GL.DeleteTexture(SheenTexture);
             }
             if (GGXLut != 0) {
-                _gl.DeleteTexture(GGXLut);
+                GlContext.GL.DeleteTexture(GGXLut);
             }
             if (CharlieLut != 0) {
-                _gl.DeleteTexture(CharlieLut);
+                GlContext.GL.DeleteTexture(CharlieLut);
             }
             if (_framebuffer != 0) {
-                _gl.DeleteFramebuffer(_framebuffer);
+                GlContext.GL.DeleteFramebuffer(_framebuffer);
             }
         }
     }

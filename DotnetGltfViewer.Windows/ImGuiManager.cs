@@ -3,7 +3,6 @@ using System.Numerics;
 using DotnetGltfRenderer;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImGuizmo;
-using Silk.NET.OpenGLES;
 using Silk.NET.OpenGLES.Extensions.Hexa.ImGui;
 using Silk.NET.Windowing;
 using ZLogger;
@@ -27,21 +26,19 @@ namespace DotnetGltfViewer.Windows {
         /// <summary>
         /// 初始化 ImGui 管理器。
         /// </summary>
-        /// <param name="gl">OpenGL ES 接口实例。</param>
         /// <param name="window">窗口实例。</param>
         /// <param name="input">输入上下文。</param>
         /// <param name="camera">相机实例。</param>
         /// <param name="scene">场景实例。</param>
         /// <param name="imGuiFontConfig">ImGui 字体配置。</param>
         /// <param name="onConfigureIO">配置 ImGui IO 回调。</param>
-        public static void Initialize(GL gl,
-            IWindow window,
+        public static void Initialize(IWindow window,
             Silk.NET.Input.IInputContext input,
             Camera camera,
             Scene scene,
             ImGuiFontConfig? imGuiFontConfig = null,
             Action onConfigureIO = null) {
-            _controller = new ImGuiController(gl, window, input, imGuiFontConfig, onConfigureIO ?? DefaultOnConfigureIO );
+            _controller = new ImGuiController(GlContext.GL, window, input, imGuiFontConfig, onConfigureIO ?? DefaultOnConfigureIO );
             ImGuizmo.SetImGuiContext(_controller.Context);
             _camera = camera;
             _scene = scene;

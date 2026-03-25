@@ -217,22 +217,22 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建 OpenGL 纹理 (HDR float32 格式)
         /// </summary>
-        public unsafe uint CreateGLTexture(GL gl, bool halfFloat = false) {
-            uint texture = gl.GenTexture();
-            gl.ActiveTexture(TextureUnit.Texture0);
-            gl.BindTexture(TextureTarget.Texture2D, texture);
+        public unsafe uint CreateGLTexture(bool halfFloat = false) {
+            uint texture = GlContext.GL.GenTexture();
+            GlContext.GL.ActiveTexture(TextureUnit.Texture0);
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, texture);
 
             // 设置纹理参数
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
 
             // 上传纹理数据
             InternalFormat internalFormat = halfFloat ? InternalFormat.Rgb16f : InternalFormat.Rgb32f;
             PixelType pixelType = halfFloat ? PixelType.HalfFloat : PixelType.Float;
             fixed (float* data = DataFloat) {
-                gl.TexImage2D(
+                GlContext.GL.TexImage2D(
                     TextureTarget.Texture2D,
                     0,
                     internalFormat,
@@ -244,7 +244,7 @@ namespace DotnetGltfRenderer {
                     data
                 );
             }
-            gl.BindTexture(TextureTarget.Texture2D, 0);
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, 0);
             return texture;
         }
 

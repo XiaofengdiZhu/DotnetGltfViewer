@@ -67,13 +67,15 @@ namespace DotnetGltfViewer.Windows {
         static void OnLoad() {
             LogManager.Logger.ZLogInformation($"初始化窗口...");
             _gl = GL.GetApi(_window);
+            GlContext.GL = _gl; // 设置全局 GL 上下文
+
             IInputContext input = _window.CreateInput();
             LogManager.Logger.ZLogInformation($"窗口初始化完成, Size: {_window.Size.X}x{_window.Size.Y}");
             LogManager.Logger.ZLogInformation($"OpenGL ES 版本: {_gl.GetStringS(StringName.Version)}");
             LogManager.Logger.ZLogInformation($"渲染器: {_gl.GetStringS(StringName.Renderer)}");
 
             // 初始化场景
-            _scene = new Scene(_gl);
+            _scene = new Scene();
 
             // 加载默认模型
             if (File.Exists(DefaultModelPath)) {
@@ -81,9 +83,9 @@ namespace DotnetGltfViewer.Windows {
             }
 
             // 初始化渲染器
-            _renderer = new Renderer(_gl, _scene, DefaultEnvironmentMapPath, ShadersDirectory);
+            _renderer = new Renderer(_scene, DefaultEnvironmentMapPath, ShadersDirectory);
             _camera = _renderer.Camera;
-            ImGuiManager.Initialize(_gl, _window, input, _camera, _scene);
+            ImGuiManager.Initialize(_window, input, _camera, _scene);
             OnFramebufferResize(_window.FramebufferSize);
             ResetCameraToModel();
             InputManager.Initialize(_camera, input);

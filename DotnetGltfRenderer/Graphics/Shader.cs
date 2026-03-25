@@ -6,7 +6,6 @@ using Silk.NET.OpenGLES;
 
 namespace DotnetGltfRenderer {
     public class Shader : IDisposable {
-        readonly GL _gl;
         readonly bool _ownsHandle;
         readonly Dictionary<string, int> _uniformCache = new();
 
@@ -18,14 +17,13 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 从外部程序句柄创建 Shader（用于 ShaderCache）
         /// </summary>
-        internal Shader(GL gl, uint programHandle, uint vertexShader, uint fragmentShader) {
-            _gl = gl;
+        internal Shader(uint programHandle, uint vertexShader, uint fragmentShader) {
             ProgramHandle = programHandle;
             _ownsHandle = true;
 
             // 分离着色器（链接后不再需要）
-            _gl.DetachShader(ProgramHandle, vertexShader);
-            _gl.DetachShader(ProgramHandle, fragmentShader);
+            GlContext.GL.DetachShader(ProgramHandle, vertexShader);
+            GlContext.GL.DetachShader(ProgramHandle, fragmentShader);
 
             // 缓存所有 active uniforms
             CacheActiveUniforms();
@@ -34,8 +32,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 从现有程序句柄创建 Shader（不拥有句柄）
         /// </summary>
-        public Shader(GL gl, uint programHandle) {
-            _gl = gl;
+        public Shader(uint programHandle) {
             ProgramHandle = programHandle;
             _ownsHandle = false;
 
@@ -47,7 +44,7 @@ namespace DotnetGltfRenderer {
         /// 缓存所有 active uniform locations
         /// </summary>
         unsafe void CacheActiveUniforms() {
-            _gl.GetProgram(ProgramHandle, ProgramPropertyARB.ActiveUniforms, out int uniformCount);
+            GlContext.GL.GetProgram(ProgramHandle, ProgramPropertyARB.ActiveUniforms, out int uniformCount);
 
             // 在循环外分配缓冲区，避免堆栈溢出
             const int bufferSize = 256;
@@ -57,7 +54,7 @@ namespace DotnetGltfRenderer {
                 uint length;
                 int size;
                 UniformType type;
-                _gl.GetActiveUniform(
+                GlContext.GL.GetActiveUniform(
                     ProgramHandle,
                     i,
                     bufferSize,
@@ -79,7 +76,7 @@ namespace DotnetGltfRenderer {
                 if (bracketIndex > 0) {
                     string baseName = name.Substring(0, bracketIndex);
                     if (!_uniformCache.ContainsKey(baseName)) {
-                        int location = _gl.GetUniformLocation(ProgramHandle, baseName);
+                        int location = GlContext.GL.GetUniformLocation(ProgramHandle, baseName);
                         if (location >= 0) {
                             _uniformCache[baseName] = location;
                         }
@@ -87,7 +84,7 @@ namespace DotnetGltfRenderer {
                 }
 
                 // 缓存完整名称
-                int loc = _gl.GetUniformLocation(ProgramHandle, name);
+                int loc = GlContext.GL.GetUniformLocation(ProgramHandle, name);
                 if (loc >= 0) {
                     _uniformCache[name] = loc;
                 }
@@ -102,7 +99,7 @@ namespace DotnetGltfRenderer {
                 return location;
             }
             // 如果缓存中没有，直接查询 OpenGL
-            location = _gl.GetUniformLocation(ProgramHandle, name);
+            location = GlContext.GL.GetUniformLocation(ProgramHandle, name);
             if (location >= 0) {
                 _uniformCache[name] = location;
             }
@@ -110,7 +107,7 @@ namespace DotnetGltfRenderer {
         }
 
         public void Use() {
-            _gl.UseProgram(ProgramHandle);
+            GlContext.GL.UseProgram(ProgramHandle);
         }
 
         public void SetUniform(string name, int value) {
@@ -118,13 +115,13 @@ namespace DotnetGltfRenderer {
             if (location == -1) {
                 return;
             }
-            _gl.Uniform1(location, value);
+            GlContext.GL.Uniform1(location, value);
         }
 
         public void SetUniformOptional(string name, int value) {
             int location = GetCachedLocation(name);
             if (location != -1) {
-                _gl.Uniform1(location, value);
+                GlContext.GL.Uniform1(location, value);
             }
         }
 
@@ -133,7 +130,7 @@ namespace DotnetGltfRenderer {
             if (location == -1) {
                 return;
             }
-            _gl.UniformMatrix4(location, 1, false, (float*)&value);
+            GlContext.GL.UniformMatrix4(location, 1, false, (float*)&value);
         }
 
         public unsafe void SetUniformMatrix4Array(string name, ReadOnlySpan<Matrix4x4> values) {
@@ -145,7 +142,7 @@ namespace DotnetGltfRenderer {
                 return;
             }
             fixed (Matrix4x4* valuePtr = values) {
-                _gl.UniformMatrix4(location, (uint)values.Length, false, (float*)valuePtr);
+                GlContext.GL.UniformMatrix4(location, (uint)values.Length, false, (float*)valuePtr);
             }
         }
 
@@ -154,13 +151,13 @@ namespace DotnetGltfRenderer {
             if (location == -1) {
                 return;
             }
-            _gl.Uniform1(location, value);
+            GlContext.GL.Uniform1(location, value);
         }
 
         public void SetUniformOptional(string name, float value) {
             int location = GetCachedLocation(name);
             if (location != -1) {
-                _gl.Uniform1(location, value);
+                GlContext.GL.Uniform1(location, value);
             }
         }
 
@@ -169,7 +166,7 @@ namespace DotnetGltfRenderer {
             if (location == -1) {
                 return;
             }
-            _gl.Uniform4(location, value.X, value.Y, value.Z, value.W);
+            GlContext.GL.Uniform4(location, value.X, value.Y, value.Z, value.W);
         }
 
         public void SetUniform(string name, Vector3 value) {
@@ -177,7 +174,7 @@ namespace DotnetGltfRenderer {
             if (location == -1) {
                 return;
             }
-            _gl.Uniform3(location, value.X, value.Y, value.Z);
+            GlContext.GL.Uniform3(location, value.X, value.Y, value.Z);
         }
 
         public void SetUniform(string name, Vector2 value) {
@@ -185,7 +182,7 @@ namespace DotnetGltfRenderer {
             if (location == -1) {
                 return;
             }
-            _gl.Uniform2(location, value.X, value.Y);
+            GlContext.GL.Uniform2(location, value.X, value.Y);
         }
 
         /// <summary>
@@ -196,7 +193,7 @@ namespace DotnetGltfRenderer {
             if (location == -1) {
                 return;
             }
-            _gl.Uniform2(location, x, y);
+            GlContext.GL.Uniform2(location, x, y);
         }
 
         /// <summary>
@@ -207,7 +204,7 @@ namespace DotnetGltfRenderer {
             if (location == -1) {
                 return;
             }
-            _gl.UniformMatrix3(location, 1, false, value);
+            GlContext.GL.UniformMatrix3(location, 1, false, value);
         }
 
         /// <summary>
@@ -228,7 +225,7 @@ namespace DotnetGltfRenderer {
             ptr[6] = col2.X;
             ptr[7] = col2.Y;
             ptr[8] = col2.Z;
-            _gl.UniformMatrix3(location, 1, false, ptr);
+            GlContext.GL.UniformMatrix3(location, 1, false, ptr);
         }
 
         /// <summary>
@@ -259,12 +256,12 @@ namespace DotnetGltfRenderer {
             ptr[6] = m02;
             ptr[7] = m12;
             ptr[8] = m22;
-            _gl.UniformMatrix3(location, 1, false, ptr);
+            GlContext.GL.UniformMatrix3(location, 1, false, ptr);
         }
 
         public void Dispose() {
             if (_ownsHandle) {
-                _gl.DeleteProgram(ProgramHandle);
+                GlContext.GL.DeleteProgram(ProgramHandle);
             }
         }
     }

@@ -8,7 +8,6 @@ namespace DotnetGltfRenderer {
     /// 参考 glTF-Sample-Renderer 的 skin.js 实现
     /// </summary>
     public class JointTexture : IDisposable {
-        readonly GL _gl;
         bool _disposed;
 
         // 预分配的纹理数据数组，避免每帧 GC
@@ -35,10 +34,8 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建骨骼纹理
         /// </summary>
-        /// <param name="gl">OpenGL 上下文</param>
         /// <param name="maxJoints">最大关节数</param>
-        public JointTexture(GL gl, int maxJoints) {
-            _gl = gl;
+        public JointTexture(int maxJoints) {
             JointCount = maxJoints;
 
             // 每个关节需要 2 个 mat4（jointMatrix + normalMatrix）
@@ -54,18 +51,18 @@ namespace DotnetGltfRenderer {
         }
 
         unsafe void CreateTexture() {
-            TextureHandle = _gl.GenTexture();
-            _gl.BindTexture(TextureTarget.Texture2D, TextureHandle);
+            TextureHandle = GlContext.GL.GenTexture();
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, TextureHandle);
 
             // 设置纹理参数（与官方一致）
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
 
             // 分配纹理存储（RGBA32F）
             // 纹理大小为 textureSize x textureSize
-            _gl.TexImage2D(
+            GlContext.GL.TexImage2D(
                 TextureTarget.Texture2D,
                 0,
                 InternalFormat.Rgba32f,
@@ -76,7 +73,7 @@ namespace DotnetGltfRenderer {
                 PixelType.Float,
                 null
             );
-            _gl.BindTexture(TextureTarget.Texture2D, 0);
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, 0);
         }
 
         /// <summary>
@@ -88,7 +85,7 @@ namespace DotnetGltfRenderer {
                 || jointMatrices.Length == 0) {
                 return;
             }
-            _gl.BindTexture(TextureTarget.Texture2D, TextureHandle);
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, TextureHandle);
             int count = Math.Min(jointMatrices.Length, JointCount);
             for (int i = 0; i < count; i++) {
                 Matrix4x4 jointMatrix = jointMatrices[i];
@@ -107,7 +104,7 @@ namespace DotnetGltfRenderer {
 
             // 上传纹理数据
             fixed (float* ptr = _textureData) {
-                _gl.TexSubImage2D(
+                GlContext.GL.TexSubImage2D(
                     TextureTarget.Texture2D,
                     0,
                     0,
@@ -119,7 +116,7 @@ namespace DotnetGltfRenderer {
                     ptr
                 );
             }
-            _gl.BindTexture(TextureTarget.Texture2D, 0);
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, 0);
         }
 
         /// <summary>
@@ -150,8 +147,8 @@ namespace DotnetGltfRenderer {
         /// 绑定骨骼纹理到指定纹理单元
         /// </summary>
         public void Bind(TextureUnit unit) {
-            _gl.ActiveTexture(unit);
-            _gl.BindTexture(TextureTarget.Texture2D, TextureHandle);
+            GlContext.GL.ActiveTexture(unit);
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, TextureHandle);
         }
 
         public void Dispose() {
@@ -159,7 +156,7 @@ namespace DotnetGltfRenderer {
                 return;
             }
             if (TextureHandle != 0) {
-                _gl.DeleteTexture(TextureHandle);
+                GlContext.GL.DeleteTexture(TextureHandle);
                 TextureHandle = 0;
             }
             _disposed = true;

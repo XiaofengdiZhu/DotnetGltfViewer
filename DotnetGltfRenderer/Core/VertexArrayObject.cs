@@ -4,22 +4,20 @@ using Silk.NET.OpenGLES;
 namespace DotnetGltfRenderer {
     public class VertexArrayObject<TVertexType, TIndexType> : IDisposable where TVertexType : unmanaged where TIndexType : unmanaged {
         readonly uint _handle;
-        readonly GL _gl;
 
-        public VertexArrayObject(GL gl) {
-            _gl = gl;
-            _handle = _gl.GenVertexArray();
+        public VertexArrayObject() {
+            _handle = GlContext.GL.GenVertexArray();
         }
 
-        public VertexArrayObject(GL gl, BufferObject<TVertexType> vbo, BufferObject<TIndexType> ebo) : this(gl) {
+        public VertexArrayObject(BufferObject<TVertexType> vbo, BufferObject<TIndexType> ebo) : this() {
             Bind();
             vbo.Bind();
             ebo.Bind();
         }
 
         public unsafe void VertexAttributePointer(uint index, int count, VertexAttribPointerType type, uint vertexSize, int offSet) {
-            _gl.VertexAttribPointer(index, count, type, false, vertexSize * (uint)sizeof(TVertexType), (void*)(offSet * sizeof(TVertexType)));
-            _gl.EnableVertexAttribArray(index);
+            GlContext.GL.VertexAttribPointer(index, count, type, false, vertexSize * (uint)sizeof(TVertexType), (void*)(offSet * sizeof(TVertexType)));
+            GlContext.GL.EnableVertexAttribArray(index);
         }
 
         /// <summary>
@@ -37,9 +35,9 @@ namespace DotnetGltfRenderer {
             int stride,
             int offSet,
             uint divisor = 1) {
-            _gl.VertexAttribPointer(index, count, type, false, (uint)stride, (void*)offSet);
-            _gl.EnableVertexAttribArray(index);
-            _gl.VertexAttribDivisor(index, divisor);
+            GlContext.GL.VertexAttribPointer(index, count, type, false, (uint)stride, (void*)offSet);
+            GlContext.GL.EnableVertexAttribArray(index);
+            GlContext.GL.VertexAttribDivisor(index, divisor);
         }
 
         /// <summary>
@@ -52,9 +50,9 @@ namespace DotnetGltfRenderer {
             for (int i = 0; i < 4; i++) {
                 uint location = baseIndex + (uint)i;
                 int offset = i * 16; // 每个 vec4 偏移 16 字节
-                _gl.VertexAttribPointer(location, 4, VertexAttribPointerType.Float, false, (uint)stride, (void*)offset);
-                _gl.EnableVertexAttribArray(location);
-                _gl.VertexAttribDivisor(location, 1); // 每个实例读取一次
+                GlContext.GL.VertexAttribPointer(location, 4, VertexAttribPointerType.Float, false, (uint)stride, (void*)offset);
+                GlContext.GL.EnableVertexAttribArray(location);
+                GlContext.GL.VertexAttribDivisor(location, 1); // 每个实例读取一次
             }
         }
 
@@ -64,17 +62,17 @@ namespace DotnetGltfRenderer {
         public void DisableInstancedMatrixAttribute(uint baseIndex) {
             for (int i = 0; i < 4; i++) {
                 uint location = baseIndex + (uint)i;
-                _gl.VertexAttribDivisor(location, 0);
-                _gl.DisableVertexAttribArray(location);
+                GlContext.GL.VertexAttribDivisor(location, 0);
+                GlContext.GL.DisableVertexAttribArray(location);
             }
         }
 
         public void Bind() {
-            _gl.BindVertexArray(_handle);
+            GlContext.GL.BindVertexArray(_handle);
         }
 
         public void Dispose() {
-            _gl.DeleteVertexArray(_handle);
+            GlContext.GL.DeleteVertexArray(_handle);
         }
     }
 }

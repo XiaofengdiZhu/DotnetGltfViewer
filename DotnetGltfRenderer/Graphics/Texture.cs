@@ -20,7 +20,6 @@ namespace DotnetGltfRenderer {
     }
 
     public class Texture : IDisposable {
-        readonly GL _gl;
 
         public string Path { get; set; }
         public ModelTextureType Type { get; }
@@ -37,11 +36,10 @@ namespace DotnetGltfRenderer {
         GltfTextureSampler _pendingSampler;
         readonly bool _pendingIsSrgb;
 
-        public Texture(GL gl, string path, ModelTextureType type = ModelTextureType.None, GltfTextureSampler sampler = null, bool isSrgb = true) {
-            _gl = gl;
+        public Texture(string path, ModelTextureType type = ModelTextureType.None, GltfTextureSampler sampler = null, bool isSrgb = true) {
             Path = path;
             Type = type;
-            Handle = _gl.GenTexture();
+            Handle = GlContext.GL.GenTexture();
             // 文件路径纹理立即上传（通常用于环境贴图等外部资源）
             Bind();
             using (Image<Rgba32> img = Image.Load<Rgba32>(path)) {
@@ -53,15 +51,14 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 从 glTF MemoryImage 创建纹理（延迟上传模式）
         /// </summary>
-        public Texture(GL gl,
+        public Texture(
             MemoryImage image,
             ModelTextureType type = ModelTextureType.None,
             GltfTextureSampler sampler = null,
             bool isSrgb = true) {
-            _gl = gl;
             Path = image.SourcePath;
             Type = type;
-            Handle = _gl.GenTexture();
+            Handle = GlContext.GL.GenTexture();
 
             // 延迟上传：只保存参数，不立即上传纹理数据
             _pendingImage = image;
@@ -72,12 +69,11 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 从原始数据创建纹理（立即上传，用于运行时生成的纹理）
         /// </summary>
-        public unsafe Texture(GL gl, Span<byte> data, uint width, uint height) {
-            _gl = gl;
-            Handle = _gl.GenTexture();
+        public unsafe Texture(Span<byte> data, uint width, uint height) {
+            Handle = GlContext.GL.GenTexture();
             Bind();
             fixed (void* d = data) {
-                _gl.TexImage2D(
+                GlContext.GL.TexImage2D(
                     TextureTarget.Texture2D,
                     0,
                     (int)InternalFormat.Rgba,
@@ -96,13 +92,12 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 从 HDR float 数据创建纹理（立即上传）
         /// </summary>
-        public unsafe Texture(GL gl, Span<float> data, uint width, uint height, bool halfFloat = false) {
-            _gl = gl;
-            Handle = _gl.GenTexture();
+        public unsafe Texture(Span<float> data, uint width, uint height, bool halfFloat = false) {
+            Handle = GlContext.GL.GenTexture();
             IsHDR = true;
             Bind();
             fixed (float* d = data) {
-                _gl.TexImage2D(
+                GlContext.GL.TexImage2D(
                     TextureTarget.Texture2D,
                     0,
                     halfFloat ? InternalFormat.Rgb16f : InternalFormat.Rgb32f,
@@ -121,16 +116,15 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 从 HDR 文件创建纹理
         /// </summary>
-        public static Texture FromHDR(GL gl, string path, bool halfFloat = false) {
+        public static Texture FromHDR(string path, bool halfFloat = false) {
             EnvironmentMap envMap = EnvironmentMap.LoadHDR(path);
-            return new Texture(gl, envMap.DataFloat, (uint)envMap.Width, (uint)envMap.Height, halfFloat);
+            return new Texture(envMap.DataFloat, (uint)envMap.Width, (uint)envMap.Height, halfFloat);
         }
 
         /// <summary>
         /// 从 EnvironmentMap 创建纹理
         /// </summary>
-        public static Texture FromEnvironmentMap(GL gl, EnvironmentMap envMap, bool halfFloat = false) => new(
-            gl,
+        public static Texture FromEnvironmentMap(EnvironmentMap envMap, bool halfFloat = false) => new(
             envMap.DataFloat,
             (uint)envMap.Width,
             (uint)envMap.Height,
@@ -146,7 +140,7 @@ namespace DotnetGltfRenderer {
             }
             if (!_pendingImage.Content.IsEmpty) {
                 // 直接绑定，不走 Bind() 避免循环调用
-                _gl.BindTexture(TextureTarget.Texture2D, Handle);
+                GlContext.GL.BindTexture(TextureTarget.Texture2D, Handle);
                 using (Stream stream = _pendingImage.Open()) {
                     if (stream != null) {
                         using (Image<Rgba32> img = Image.Load<Rgba32>(stream)) {
@@ -163,7 +157,7 @@ namespace DotnetGltfRenderer {
 
         unsafe void UploadImage(Image<Rgba32> image, GltfTextureSampler sampler, bool isSrgb = true) {
             InternalFormat internalFormat = isSrgb ? InternalFormat.Srgb8Alpha8 : InternalFormat.Rgba8;
-            _gl.TexImage2D(
+            GlContext.GL.TexImage2D(
                 TextureTarget.Texture2D,
                 0,
                 internalFormat,
@@ -177,7 +171,7 @@ namespace DotnetGltfRenderer {
             image.ProcessPixelRows(accessor => {
                     for (int y = 0; y < accessor.Height; y++) {
                         fixed (void* data = accessor.GetRowSpan(y)) {
-                            _gl.TexSubImage2D(
+                            GlContext.GL.TexSubImage2D(
                                 TextureTarget.Texture2D,
                                 0,
                                 0,
@@ -205,12 +199,12 @@ namespace DotnetGltfRenderer {
                 && NeedsMipmaps(minFilter)) {
                 resolvedMinFilter = TextureMinFilter.Linear;
             }
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)MapWrapMode(wrapS));
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)MapWrapMode(wrapT));
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)resolvedMinFilter);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)MapMagFilter(magFilter));
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)MapWrapMode(wrapS));
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)MapWrapMode(wrapT));
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)resolvedMinFilter);
+            GlContext.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)MapMagFilter(magFilter));
             if (allowMipmaps && NeedsMipmaps(minFilter)) {
-                _gl.GenerateMipmap(TextureTarget.Texture2D);
+                GlContext.GL.GenerateMipmap(TextureTarget.Texture2D);
             }
         }
 
@@ -249,12 +243,12 @@ namespace DotnetGltfRenderer {
         public void Bind(TextureUnit textureSlot = TextureUnit.Texture0) {
             // 延迟上传：首次绑定时确保纹理数据已上传
             EnsureInitialized();
-            _gl.ActiveTexture(textureSlot);
-            _gl.BindTexture(TextureTarget.Texture2D, Handle);
+            GlContext.GL.ActiveTexture(textureSlot);
+            GlContext.GL.BindTexture(TextureTarget.Texture2D, Handle);
         }
 
         public void Dispose() {
-            _gl.DeleteTexture(Handle);
+            GlContext.GL.DeleteTexture(Handle);
         }
     }
 }

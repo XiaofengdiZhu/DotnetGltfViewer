@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Silk.NET.OpenGLES;
 using SharpGLTF.Schema2;
 using GltfTexture = SharpGLTF.Schema2.Texture;
 
@@ -11,7 +10,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 加载所有纹理
         /// </summary>
-        public static Dictionary<int, Texture> LoadTextures(GL gl, ModelRoot modelRoot) {
+        public static Dictionary<int, Texture> LoadTextures(ModelRoot modelRoot) {
             Dictionary<int, Texture> texturesLoaded = new();
 
             // 首先分析纹理用途，确定 sRGB vs linear
@@ -33,7 +32,7 @@ namespace DotnetGltfRenderer {
 
                 int texIndex = gltfTexture.LogicalIndex;
                 bool isSrgb = textureIsSrgb.GetValueOrDefault(texIndex, true);
-                Texture texture = new(gl, image.Content, ModelTextureType.None, gltfTexture.Sampler, isSrgb);
+                Texture texture = new(image.Content, ModelTextureType.None, gltfTexture.Sampler, isSrgb);
                 texture.Path = image.Content.SourcePath ?? texIndex.ToString();
                 texturesLoaded[texIndex] = texture;
             }

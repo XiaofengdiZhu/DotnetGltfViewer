@@ -6,7 +6,6 @@ namespace DotnetGltfRenderer {
     /// 帧缓冲区管理器
     /// </summary>
     public class FramebufferManager : IDisposable {
-        readonly GL _gl;
         OffscreenFramebuffer _transmissionFramebuffer;
         ScatterFramebuffer _scatterFramebuffer;
 
@@ -30,10 +29,6 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public bool HasScatterFramebuffer => _scatterFramebuffer != null;
 
-        public FramebufferManager(GL gl) {
-            _gl = gl;
-        }
-
         /// <summary>
         /// 设置帧缓冲区尺寸
         /// </summary>
@@ -51,7 +46,7 @@ namespace DotnetGltfRenderer {
                 Width != _transmissionFramebuffer.Width ||
                 Height != _transmissionFramebuffer.Height) {
                 _transmissionFramebuffer?.Dispose();
-                _transmissionFramebuffer = new OffscreenFramebuffer(_gl, Width, Height);
+                _transmissionFramebuffer = new OffscreenFramebuffer(Width, Height);
             }
         }
 
@@ -63,7 +58,7 @@ namespace DotnetGltfRenderer {
                 Width != _scatterFramebuffer.Width ||
                 Height != _scatterFramebuffer.Height) {
                 _scatterFramebuffer?.Dispose();
-                _scatterFramebuffer = new ScatterFramebuffer(_gl, Width, Height);
+                _scatterFramebuffer = new ScatterFramebuffer(Width, Height);
             }
         }
 
@@ -99,8 +94,8 @@ namespace DotnetGltfRenderer {
         /// 解绑帧缓冲区并恢复默认
         /// </summary>
         public void UnbindFramebuffer() {
-            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-            _gl.Viewport(0, 0, (uint)Width, (uint)Height);
+            GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            GlContext.GL.Viewport(0, 0, (uint)Width, (uint)Height);
         }
 
         /// <summary>

@@ -7,7 +7,6 @@ namespace DotnetGltfRenderer {
     /// 负责渲染单个 MeshInstance，包括着色器选择、材质绑定、绘制调用
     /// </summary>
     public class MeshInstanceRenderer {
-        readonly GL _gl;
         readonly UniformBuffer<MaterialData> _materialUBO;
         readonly UniformBuffer<SceneData> _sceneUBO;
         readonly UniformBuffer<LightsData> _lightsUBO;
@@ -30,8 +29,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建 Drawable 渲染器
         /// </summary>
-        public MeshInstanceRenderer(GL gl, UniformBuffer<MaterialData> materialUBO, UniformBuffer<SceneData> sceneUBO, UniformBuffer<LightsData> lightsUBO) {
-            _gl = gl;
+        public MeshInstanceRenderer(UniformBuffer<MaterialData> materialUBO, UniformBuffer<SceneData> sceneUBO, UniformBuffer<LightsData> lightsUBO) {
             _materialUBO = materialUBO;
             _sceneUBO = sceneUBO;
             _lightsUBO = lightsUBO;
@@ -85,7 +83,7 @@ namespace DotnetGltfRenderer {
 
             // 绑定材质纹理
             if (material != null) {
-                MaterialTextureBinder.BindMaterialTextures(_gl, material, shader);
+                MaterialTextureBinder.BindMaterialTextures(material, shader);
                 MaterialTextureBinder.SetUVTransforms(material, shader);
             }
             MaterialTextureBinder.SetTextureSlotUniforms(shader);
@@ -232,11 +230,11 @@ namespace DotnetGltfRenderer {
         /// </summary>
         void SetCullMode(MeshInstance instance) {
             if (instance.CurrentMaterial?.DoubleSided == true) {
-                _gl.Disable(EnableCap.CullFace);
+                GlContext.DisableCullFace();
             }
             else {
-                _gl.Enable(EnableCap.CullFace);
-                _gl.FrontFace(instance.IsNegativeScale ? FrontFaceDirection.CW : FrontFaceDirection.Ccw);
+                GlContext.EnableCullFace();
+                GlContext.FrontFace(instance.IsNegativeScale ? FrontFaceDirection.CW : FrontFaceDirection.Ccw);
             }
         }
 
@@ -245,7 +243,7 @@ namespace DotnetGltfRenderer {
         /// </summary>
         void SetupBlendMode(Material material, in RenderContext context) {
             if (material?.Transmission?.IsEnabled == true && context.UseLinearOutput) {
-                _gl.Disable(EnableCap.Blend);
+                GlContext.DisableBlend();
             }
             else if (material != null) {
                 SetBlendMode(material);
@@ -257,17 +255,12 @@ namespace DotnetGltfRenderer {
         /// </summary>
         void SetBlendMode(Material material) {
             if (material.AlphaMode == AlphaMode.Blend) {
-                _gl.Enable(EnableCap.Blend);
-                _gl.BlendFuncSeparate(
-                    BlendingFactor.SrcAlpha,
-                    BlendingFactor.OneMinusSrcAlpha,
-                    BlendingFactor.One,
-                    BlendingFactor.OneMinusSrcAlpha
-                );
-                _gl.BlendEquation(BlendEquationModeEXT.FuncAdd);
+                GlContext.EnableBlend();
+                GlContext.SetAlphaBlend();
+                GlContext.GL.BlendEquation(BlendEquationModeEXT.FuncAdd);
             }
             else {
-                _gl.Disable(EnableCap.Blend);
+                GlContext.DisableBlend();
             }
         }
 
@@ -277,9 +270,9 @@ namespace DotnetGltfRenderer {
         unsafe void DrawMesh(Mesh mesh) {
             if (mesh.UseInstancing) {
                 if (mesh.IsNegativeScaleInstance) {
-                    _gl.FrontFace(FrontFaceDirection.CW);
+                    GlContext.FrontFace(FrontFaceDirection.CW);
                 }
-                _gl.DrawElementsInstanced(
+                GlContext.GL.DrawElementsInstanced(
                     PrimitiveType.Triangles,
                     (uint)mesh.Indices.Length,
                     DrawElementsType.UnsignedInt,
@@ -287,11 +280,11 @@ namespace DotnetGltfRenderer {
                     (uint)mesh.InstanceCount
                 );
                 if (mesh.IsNegativeScaleInstance) {
-                    _gl.FrontFace(FrontFaceDirection.Ccw);
+                    GlContext.FrontFace(FrontFaceDirection.Ccw);
                 }
             }
             else {
-                _gl.DrawElements(PrimitiveType.Triangles, (uint)mesh.Indices.Length, DrawElementsType.UnsignedInt, null);
+                GlContext.GL.DrawElements(PrimitiveType.Triangles, (uint)mesh.Indices.Length, DrawElementsType.UnsignedInt, null);
             }
         }
     }

@@ -9,7 +9,6 @@ namespace DotnetGltfRenderer {
     /// 使用 std140 布局
     /// </summary>
     public class UniformBuffer<T> : IDisposable where T : unmanaged {
-        readonly GL _gl;
         readonly uint _handle;
         readonly int _size;
 
@@ -18,23 +17,22 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public int BindingPoint { get; }
 
-        public unsafe UniformBuffer(GL gl, int bindingPoint) {
-            _gl = gl;
+        public unsafe UniformBuffer(int bindingPoint) {
             BindingPoint = bindingPoint;
             _size = Marshal.SizeOf<T>();
-            _handle = _gl.GenBuffer();
-            _gl.BindBuffer(BufferTargetARB.UniformBuffer, _handle);
-            _gl.BufferData(BufferTargetARB.UniformBuffer, (nuint)_size, null, BufferUsageARB.DynamicDraw);
-            _gl.BindBufferBase(BufferTargetARB.UniformBuffer, (uint)BindingPoint, _handle);
+            _handle = GlContext.GL.GenBuffer();
+            GlContext.GL.BindBuffer(BufferTargetARB.UniformBuffer, _handle);
+            GlContext.GL.BufferData(BufferTargetARB.UniformBuffer, (nuint)_size, null, BufferUsageARB.DynamicDraw);
+            GlContext.GL.BindBufferBase(BufferTargetARB.UniformBuffer, (uint)BindingPoint, _handle);
         }
 
         /// <summary>
         /// 更新 UBO 数据
         /// </summary>
         public unsafe void Update(ref T data) {
-            _gl.BindBuffer(BufferTargetARB.UniformBuffer, _handle);
+            GlContext.GL.BindBuffer(BufferTargetARB.UniformBuffer, _handle);
             fixed (T* ptr = &data) {
-                _gl.BufferSubData(BufferTargetARB.UniformBuffer, 0, (nuint)_size, ptr);
+                GlContext.GL.BufferSubData(BufferTargetARB.UniformBuffer, 0, (nuint)_size, ptr);
             }
         }
 
@@ -42,14 +40,14 @@ namespace DotnetGltfRenderer {
         /// 绑定到指定着色器的 uniform block
         /// </summary>
         public void BindToShader(uint programHandle, string blockName) {
-            uint blockIndex = _gl.GetUniformBlockIndex(programHandle, blockName);
+            uint blockIndex = GlContext.GL.GetUniformBlockIndex(programHandle, blockName);
             if (blockIndex != uint.MaxValue) {
-                _gl.UniformBlockBinding(programHandle, blockIndex, (uint)BindingPoint);
+                GlContext.GL.UniformBlockBinding(programHandle, blockIndex, (uint)BindingPoint);
             }
         }
 
         public void Dispose() {
-            _gl.DeleteBuffer(_handle);
+            GlContext.GL.DeleteBuffer(_handle);
         }
     }
 
@@ -199,7 +197,7 @@ namespace DotnetGltfRenderer {
         // ============ SpecularGlossiness (KHR_materials_pbrSpecularGlossiness) ============
         // std140 布局中 vec3 需要 16 字节对齐，必须使用 Vector4 来保证正确的内存布局
         public Vector4 SpecularFactorSG; // u_SpecularFactor (vec4 for std140 alignment, only xyz used) - 16 bytes, offset 416
-        public float GlossinessFactor; // u_GlossinessFactor - 4 bytes, offset 432
+        public float GlossinessFactor; // uGlContext.GLossinessFactor - 4 bytes, offset 432
         public float _SGPad0; // padding - 4 bytes, offset 436
         public float _SGPad1; // padding - 4 bytes, offset 440
         public float _SGPad2; // padding - 4 bytes, offset 444

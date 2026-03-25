@@ -7,14 +7,12 @@ namespace DotnetGltfRenderer {
     /// 使用立方体采样 GGX 预过滤环境贴图
     /// </summary>
     public sealed class Skybox : IDisposable {
-        readonly GL _gl;
         readonly uint _vertexBuffer;
         readonly uint _indexBuffer;
         readonly uint _vao;
         const int IndexCount = 36;
 
-        public Skybox(GL gl) {
-            _gl = gl;
+        public Skybox() {
 
             // 立方体顶点（与官方 environment_renderer.js 一致）
             float[] vertices = [
@@ -85,43 +83,43 @@ namespace DotnetGltfRenderer {
             ];
 
             // 创建 VAO
-            _vao = _gl.GenVertexArray();
-            _gl.BindVertexArray(_vao);
+            _vao = GlContext.GL.GenVertexArray();
+            GlContext.GL.BindVertexArray(_vao);
 
             // 创建顶点缓冲区
-            _vertexBuffer = _gl.GenBuffer();
-            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vertexBuffer);
+            _vertexBuffer = GlContext.GL.GenBuffer();
+            GlContext.GL.BindBuffer(BufferTargetARB.ArrayBuffer, _vertexBuffer);
             unsafe {
                 fixed (float* v = vertices) {
-                    _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v, BufferUsageARB.StaticDraw);
+                    GlContext.GL.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v, BufferUsageARB.StaticDraw);
                 }
             }
 
             // 创建索引缓冲区
-            _indexBuffer = _gl.GenBuffer();
-            _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, _indexBuffer);
+            _indexBuffer = GlContext.GL.GenBuffer();
+            GlContext.GL.BindBuffer(BufferTargetARB.ElementArrayBuffer, _indexBuffer);
             unsafe {
                 fixed (ushort* i = indices) {
-                    _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(indices.Length * sizeof(ushort)), i, BufferUsageARB.StaticDraw);
+                    GlContext.GL.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(indices.Length * sizeof(ushort)), i, BufferUsageARB.StaticDraw);
                 }
             }
 
             // 设置顶点属性 (location = 0, a_position)
-            _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
-            _gl.EnableVertexAttribArray(0);
-            _gl.BindVertexArray(0);
+            GlContext.GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+            GlContext.GL.EnableVertexAttribArray(0);
+            GlContext.GL.BindVertexArray(0);
         }
 
         public unsafe void Draw() {
-            _gl.BindVertexArray(_vao);
-            _gl.DrawElements(PrimitiveType.Triangles, IndexCount, DrawElementsType.UnsignedShort, null);
-            _gl.BindVertexArray(0);
+            GlContext.GL.BindVertexArray(_vao);
+            GlContext.GL.DrawElements(PrimitiveType.Triangles, IndexCount, DrawElementsType.UnsignedShort, null);
+            GlContext.GL.BindVertexArray(0);
         }
 
         public void Dispose() {
-            _gl.DeleteVertexArray(_vao);
-            _gl.DeleteBuffer(_vertexBuffer);
-            _gl.DeleteBuffer(_indexBuffer);
+            GlContext.GL.DeleteVertexArray(_vao);
+            GlContext.GL.DeleteBuffer(_vertexBuffer);
+            GlContext.GL.DeleteBuffer(_indexBuffer);
         }
     }
 }

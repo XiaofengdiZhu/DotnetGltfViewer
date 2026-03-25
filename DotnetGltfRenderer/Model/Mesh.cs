@@ -90,7 +90,6 @@ namespace DotnetGltfRenderer {
         public BufferObject<float> SurfaceVBO;
         public BufferObject<float> SkinVBO;
         public BufferObject<uint> EBO;
-        public GL GL;
 
         // Material reference
         public Material Material { get; set; }
@@ -264,25 +263,25 @@ namespace DotnetGltfRenderer {
             ComputeCentroid();
             // 计算局部空间包围盒（用于射线拾取）
             ComputeLocalBounds();
-            VAO = new VertexArrayObject<float, uint>(GL);
+            VAO = new VertexArrayObject<float, uint>();
             VAO.Bind();
-            BaseVBO = new BufferObject<float>(GL, BaseVertices, BufferTargetARB.ArrayBuffer);
+            BaseVBO = new BufferObject<float>(BaseVertices, BufferTargetARB.ArrayBuffer);
             VAO.VertexAttributePointer(0, 3, VertexAttribPointerType.Float, BaseVertexStride, 0);
             VAO.VertexAttributePointer(2, 2, VertexAttribPointerType.Float, BaseVertexStride, 3);
             if (HasUV1) {
-                UV1VBO = new BufferObject<float>(GL, UV1Vertices, BufferTargetARB.ArrayBuffer);
+                UV1VBO = new BufferObject<float>(UV1Vertices, BufferTargetARB.ArrayBuffer);
                 VAO.VertexAttributePointer(7, 2, VertexAttribPointerType.Float, UV1VertexStride, 0);
             }
             if (HasSurfaceAttributes) {
-                SurfaceVBO = new BufferObject<float>(GL, SurfaceVertices, BufferTargetARB.ArrayBuffer);
+                SurfaceVBO = new BufferObject<float>(SurfaceVertices, BufferTargetARB.ArrayBuffer);
                 // SurfaceVertices layout: [Normal(3), Color(4), Tangent(4)]
                 VAO.VertexAttributePointer(1, 3, VertexAttribPointerType.Float, SurfaceVertexStride, 0); // Normal at offset 0
                 VAO.VertexAttributePointer(4, 4, VertexAttribPointerType.Float, SurfaceVertexStride, 3); // Color at offset 3
                 VAO.VertexAttributePointer(3, 4, VertexAttribPointerType.Float, SurfaceVertexStride, 7); // Tangent at offset 7
             }
-            EBO = new BufferObject<uint>(GL, Indices, BufferTargetARB.ElementArrayBuffer);
+            EBO = new BufferObject<uint>(Indices, BufferTargetARB.ElementArrayBuffer);
             if (HasSkinAttributes) {
-                SkinVBO = new BufferObject<float>(GL, SkinVertices, BufferTargetARB.ArrayBuffer);
+                SkinVBO = new BufferObject<float>(SkinVertices, BufferTargetARB.ArrayBuffer);
                 VAO.VertexAttributePointer(5, 4, VertexAttribPointerType.Float, SkinVertexStride, 0);
                 VAO.VertexAttributePointer(6, 4, VertexAttribPointerType.Float, SkinVertexStride, 4);
             }
@@ -291,7 +290,7 @@ namespace DotnetGltfRenderer {
             SetupInstancingBuffer();
 
             // Prevent subsequent mesh setup from accidentally replacing this VAO's EBO binding.
-            GL.BindVertexArray(0);
+            GlContext.GL.BindVertexArray(0);
         }
 
         /// <summary>
@@ -307,7 +306,6 @@ namespace DotnetGltfRenderer {
             // 确保 VAO 已绑定
             VAO.Bind();
             InstanceVBO = new BufferObject<float>(
-                GL,
                 MemoryMarshal.CreateReadOnlySpan(ref InstanceMatrices[0].M11, InstanceMatrices.Length * 16),
                 BufferTargetARB.ArrayBuffer
             );
@@ -318,7 +316,7 @@ namespace DotnetGltfRenderer {
             VAO.SetInstancedMatrixAttribute(instanceMatrixLocation);
 
             // 解绑 VAO 防止后续操作干扰
-            GL.BindVertexArray(0);
+            GlContext.GL.BindVertexArray(0);
         }
 
         public void Bind() {

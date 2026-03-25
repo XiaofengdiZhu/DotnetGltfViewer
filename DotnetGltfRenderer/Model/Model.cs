@@ -7,13 +7,11 @@ using SharpGLTF.Animations;
 using SharpGLTF.Memory;
 using SharpGLTF.Schema2;
 using SharpGLTF.Validation;
-using Silk.NET.OpenGLES;
 using GltfScene = SharpGLTF.Schema2.Scene;
 using GltfPrimitiveType = SharpGLTF.Schema2.PrimitiveType;
 
 namespace DotnetGltfRenderer {
     public class Model : IDisposable {
-        readonly GL _gl;
         Dictionary<int, Texture> _texturesLoaded;
         readonly List<MeshInstance> _meshInstances = [];
         readonly List<Mesh> _uniqueMeshes = [];
@@ -82,8 +80,7 @@ namespace DotnetGltfRenderer {
 
         public Texture GetTexture(int logicalIndex) => _texturesLoaded.TryGetValue(logicalIndex, out Texture tex) ? tex : null;
 
-        public Model(GL gl, string path) {
-            _gl = gl;
+        public Model(string path) {
             LoadModel(path);
         }
 
@@ -103,7 +100,7 @@ namespace DotnetGltfRenderer {
             }
 
             // 加载纹理
-            _texturesLoaded = GltfTextureLoader.LoadTextures(_gl, _modelRoot);
+            _texturesLoaded = GltfTextureLoader.LoadTextures(_modelRoot);
 
             // 预缓存所有场景
             PreloadAllScenes();
@@ -231,7 +228,7 @@ namespace DotnetGltfRenderer {
                             primitiveMeshCache[key] = mesh;
                             _uniqueMeshes.Add(mesh);
                         }
-                        instances.Add(new MeshInstance(node, mesh, node.Skin, _gl));
+                        instances.Add(new MeshInstance(node, mesh, node.Skin));
                     }
                 }
             }
@@ -261,7 +258,7 @@ namespace DotnetGltfRenderer {
                         primitiveMeshCache[key] = mesh;
                         _uniqueMeshes.Add(mesh);
                     }
-                    instances.Add(new MeshInstance(node, mesh, node.Skin, _gl));
+                    instances.Add(new MeshInstance(node, mesh, node.Skin));
                 }
                 return;
             }
@@ -292,7 +289,7 @@ namespace DotnetGltfRenderer {
                         primitiveMeshCache[key] = mesh;
                         _uniqueMeshes.Add(mesh);
                     }
-                    instances.Add(new MeshInstance(node, mesh, node.Skin, _gl));
+                    instances.Add(new MeshInstance(node, mesh, node.Skin));
                     continue;
                 }
 
@@ -327,7 +324,7 @@ namespace DotnetGltfRenderer {
             mesh.SetupInstancingBuffer();
             _uniqueMeshes.Add(mesh);
 
-            MeshInstance instance = new(node, mesh, null, _gl) {
+            MeshInstance instance = new(node, mesh, null) {
                 UseGpuInstancing = true,
                 IsNegativeScale = isNegativeScale
             };
@@ -349,7 +346,7 @@ namespace DotnetGltfRenderer {
         }
 
         Mesh ProcessPrimitive(MeshPrimitive primitive, Dictionary<int, int> variantMatMapping) {
-            Mesh mesh = new() { GL = _gl };
+            Mesh mesh = new();
             SharpGLTF.Schema2.Material material = primitive.Material;
 
             Accessor posAcc = primitive.GetVertexAccessor("POSITION") ?? throw new InvalidOperationException("glTF primitive is missing POSITION accessor.");
@@ -379,7 +376,7 @@ namespace DotnetGltfRenderer {
                 }
 
                 mesh.MorphTargetCount = morphTargetCount;
-                mesh.MorphTargetTexture = new MorphTargetTexture(_gl, positions.Count, morphTargetCount, morphAttributes);
+                mesh.MorphTargetTexture = new MorphTargetTexture(positions.Count, morphTargetCount, morphAttributes);
 
                 List<IReadOnlyList<Vector3>> morphPositions = new();
                 List<IReadOnlyList<Vector3>> morphNormals = new();

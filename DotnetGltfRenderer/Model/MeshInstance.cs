@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using SharpGLTF.Schema2;
-using Silk.NET.OpenGLES;
 
 namespace DotnetGltfRenderer {
     /// <summary>
@@ -69,7 +68,7 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public RenderQueueType QueueType { get; private set; }
 
-        internal MeshInstance(Node node, Mesh mesh, Skin skin, GL gl) {
+        internal MeshInstance(Node node, Mesh mesh, Skin skin) {
             Node = node;
             Mesh = mesh;
             Skin = skin;
@@ -100,7 +99,7 @@ namespace DotnetGltfRenderer {
             }
 
             // 创建骨骼纹理
-            JointTexture = new JointTexture(gl, jointCount);
+            JointTexture = new JointTexture(jointCount);
         }
 
         /// <summary>

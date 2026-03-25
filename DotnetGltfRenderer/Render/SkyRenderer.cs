@@ -7,12 +7,10 @@ namespace DotnetGltfRenderer {
     /// 天空盒渲染器
     /// </summary>
     public class SkyRenderer {
-        readonly GL _gl;
         readonly Skybox _skybox;
         readonly Shader _skyShader;
 
-        public SkyRenderer(GL gl, Skybox skybox, Shader skyShader) {
-            _gl = gl;
+        public SkyRenderer(Skybox skybox, Shader skyShader) {
             _skybox = skybox;
             _skyShader = skyShader;
         }
@@ -43,10 +41,10 @@ namespace DotnetGltfRenderer {
             Vector3 envRotCol2 = new(sinR, 0, cosR);
 
             // 禁用深度测试（官方做法）
-            _gl.Disable(EnableCap.DepthTest);
-            _gl.Disable(EnableCap.Blend);
-            _gl.FrontFace(FrontFaceDirection.Ccw);
-            _gl.Enable(EnableCap.CullFace);
+            GlContext.DisableDepthTest();
+            GlContext.DisableBlend();
+            GlContext.FrontFaceCCW();
+            GlContext.EnableCullFace();
 
             _skyShader.Use();
 
@@ -59,14 +57,14 @@ namespace DotnetGltfRenderer {
             _skyShader.SetUniform("u_Exposure", exposure);
 
             // 绑定 GGX 预过滤环境贴图
-            _gl.ActiveTexture(TextureUnit.Texture0);
-            _gl.BindTexture(TextureTarget.TextureCubeMap, iblSampler.GGXTexture);
+            GlContext.GL.ActiveTexture(TextureUnit.Texture0);
+            GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, iblSampler.GGXTexture);
             _skyShader.SetUniform("u_GGXEnvSampler", 0);
 
             _skybox.Draw();
 
             // 恢复深度测试
-            _gl.Enable(EnableCap.DepthTest);
+            GlContext.EnableDepthTest();
         }
 
         /// <summary>
@@ -94,10 +92,10 @@ namespace DotnetGltfRenderer {
             Vector3 envRotCol2 = new(sinR, 0, cosR);
 
             // 禁用深度测试
-            _gl.Disable(EnableCap.DepthTest);
-            _gl.Disable(EnableCap.Blend);
-            _gl.FrontFace(FrontFaceDirection.Ccw);
-            _gl.Enable(EnableCap.CullFace);
+            GlContext.DisableDepthTest();
+            GlContext.DisableBlend();
+            GlContext.FrontFaceCCW();
+            GlContext.EnableCullFace();
 
             // 使用 LINEAR_OUTPUT 版本的天空盒着色器
             ShaderDefines skyFragDefines = new();
@@ -116,14 +114,14 @@ namespace DotnetGltfRenderer {
             linearSkyShader.SetUniform("u_Exposure", exposure);
 
             // 绑定 GGX 预过滤环境贴图
-            _gl.ActiveTexture(TextureUnit.Texture0);
-            _gl.BindTexture(TextureTarget.TextureCubeMap, iblSampler.GGXTexture);
+            GlContext.GL.ActiveTexture(TextureUnit.Texture0);
+            GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, iblSampler.GGXTexture);
             linearSkyShader.SetUniform("u_GGXEnvSampler", 0);
 
             _skybox.Draw();
 
             // 恢复深度测试
-            _gl.Enable(EnableCap.DepthTest);
+            GlContext.EnableDepthTest();
         }
     }
 }

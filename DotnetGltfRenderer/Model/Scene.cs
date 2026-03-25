@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using Silk.NET.OpenGLES;
 
 namespace DotnetGltfRenderer {
     /// <summary>
@@ -45,11 +44,11 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public BoundingBox WorldBounds { get; internal set; }
 
-        internal SceneModel(GL gl, string filePath, int id) {
+        internal SceneModel(string filePath, int id) {
             FilePath = filePath;
             Id = id;
             Name = Path.GetFileNameWithoutExtension(filePath);
-            Model = new Model(gl, filePath);
+            Model = new Model(filePath);
             UpdateWorldBounds();
         }
 
@@ -90,7 +89,6 @@ namespace DotnetGltfRenderer {
     /// 场景类，管理多个模型的加载、渲染和交互
     /// </summary>
     public class Scene : IDisposable {
-        readonly GL _gl;
         readonly List<SceneModel> _models = new();
         int _nextModelId = 1;
 
@@ -153,9 +151,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建场景
         /// </summary>
-        /// <param name="gl">OpenGL ES 接口</param>
-        public Scene(GL gl) {
-            _gl = gl;
+        public Scene() {
         }
 
         // ========== 渲染队列操作 ==========
@@ -234,7 +230,7 @@ namespace DotnetGltfRenderer {
                 throw new FileNotFoundException($"Model file not found: {filePath}");
             }
 
-            SceneModel sceneModel = new(_gl, filePath, _nextModelId++);
+            SceneModel sceneModel = new(filePath, _nextModelId++);
             _models.Add(sceneModel);
             AddModelInstancesToQueues(sceneModel);
             OnModelAdded?.Invoke(sceneModel);

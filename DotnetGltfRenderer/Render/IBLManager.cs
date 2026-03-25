@@ -7,8 +7,6 @@ namespace DotnetGltfRenderer {
     /// 统一管理环境贴图、IBL Sampler 和相关 uniform 设置
     /// </summary>
     public class IBLManager : IDisposable {
-        readonly GL _gl;
-
         Texture _environmentTexture;
         IblSampler _iblSampler;
         float _environmentStrength = 1.0f;
@@ -46,10 +44,6 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public string EnvironmentMapPath { get; private set; }
 
-        public IBLManager(GL gl) {
-            _gl = gl;
-        }
-
         /// <summary>
         /// 加载 HDR 环境贴图
         /// </summary>
@@ -60,8 +54,8 @@ namespace DotnetGltfRenderer {
 
             // 加载新环境贴图
             EnvironmentMap environmentMap = EnvironmentMap.LoadHDR(hdrPath);
-            _environmentTexture = Texture.FromEnvironmentMap(_gl, environmentMap);
-            _iblSampler = new IblSampler(_gl);
+            _environmentTexture = Texture.FromEnvironmentMap(environmentMap);
+            _iblSampler = new IblSampler();
             _iblSampler.Process(environmentMap);
             EnvironmentMapPath = hdrPath;
 
@@ -81,7 +75,7 @@ namespace DotnetGltfRenderer {
                 new System.Numerics.Vector3(0f, 0f, 1f));
 
             // 绑定 IBL 纹理
-            MaterialTextureBinder.BindIBLTextures(_gl, _iblSampler);
+            MaterialTextureBinder.BindIBLTextures(_iblSampler);
         }
 
         /// <summary>
@@ -90,8 +84,8 @@ namespace DotnetGltfRenderer {
         public void BindGGXTexture() {
             if (!IsEnabled) return;
 
-            _gl.ActiveTexture(TextureUnit.Texture0);
-            _gl.BindTexture(TextureTarget.TextureCubeMap, _iblSampler.GGXTexture);
+            GlContext.GL.ActiveTexture(TextureUnit.Texture0);
+            GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, _iblSampler.GGXTexture);
         }
 
         public void Dispose() {

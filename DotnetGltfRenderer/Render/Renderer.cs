@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Numerics;
-using Silk.NET.OpenGLES;
 using ZLogger;
 
 namespace DotnetGltfRenderer {
@@ -10,8 +8,6 @@ namespace DotnetGltfRenderer {
     /// 协调所有渲染子系统，提供统一的渲染接口
     /// </summary>
     public class Renderer : IDisposable {
-        readonly GL _gl;
-
         // Uniform Buffer Objects
         readonly UniformBuffer<SceneData> _sceneUBO;
         readonly UniformBuffer<MaterialData> _materialUBO;
@@ -70,35 +66,33 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建渲染器
         /// </summary>
-        /// <param name="gl">OpenGL ES 接口</param>
         /// <param name="scene">场景</param>
         /// <param name="environmentTexturePath">HDR 环境贴图路径</param>
         /// <param name="shadersDirectory">着色器目录</param>
-        public Renderer(GL gl, Scene scene, string environmentTexturePath, string shadersDirectory) {
-            _gl = gl;
+        public Renderer(Scene scene, string environmentTexturePath, string shadersDirectory) {
             Scene = scene;
             Camera = new Camera();
             LightingSystem = new LightingSystem();
-            IBLManager = new IBLManager(gl);
-            Skybox = new Skybox(gl);
+            IBLManager = new IBLManager();
+            Skybox = new Skybox();
 
             // 收集场景光源
             UpdateLightsFromScene();
 
             // 初始化着色器缓存
-            ShaderCache.Initialize(gl, shadersDirectory);
+            ShaderCache.Initialize(shadersDirectory);
 
             // 创建 UBO
-            _sceneUBO = new UniformBuffer<SceneData>(gl, 0);
-            _materialUBO = new UniformBuffer<MaterialData>(gl, 1);
-            _lightsUBO = new UniformBuffer<LightsData>(gl, 2);
+            _sceneUBO = new UniformBuffer<SceneData>(0);
+            _materialUBO = new UniformBuffer<MaterialData>(1);
+            _lightsUBO = new UniformBuffer<LightsData>(2);
 
             // 加载环境贴图
             IBLManager.Load(environmentTexturePath);
 
             // 初始化子系统
-            _framebufferManager = new FramebufferManager(gl);
-            _meshInstanceRenderer = new MeshInstanceRenderer(gl, _materialUBO, _sceneUBO, _lightsUBO);
+            _framebufferManager = new FramebufferManager();
+            _meshInstanceRenderer = new MeshInstanceRenderer(_materialUBO, _sceneUBO, _lightsUBO);
             _renderPassManager = new RenderPassManager(_framebufferManager, _meshInstanceRenderer);
 
             // 初始化天空渲染器
@@ -112,7 +106,7 @@ namespace DotnetGltfRenderer {
                 int skyVertHash = ShaderCache.SelectShader("cubemap.vert", skyVertDefines.GetDefinesList());
                 int skyFragHash = ShaderCache.SelectShader("cubemap.frag", skyFragDefines.GetDefinesList());
                 Shader skyShader = ShaderCache.GetShaderProgram(skyVertHash, skyFragHash);
-                SkyRenderer = new SkyRenderer(_gl, Skybox, skyShader);
+                SkyRenderer = new SkyRenderer(Skybox, skyShader);
             }
             catch (Exception ex) {
                 LogManager.Logger.ZLogError($"Failed to initialize sky renderer: {ex.Message}");
@@ -186,7 +180,7 @@ namespace DotnetGltfRenderer {
 
             // 绑定 IBL 纹理（只需绑定一次）
             if (IBLManager.IsEnabled) {
-                MaterialTextureBinder.BindIBLTextures(_gl, IBLManager.IblSampler);
+                MaterialTextureBinder.BindIBLTextures(IBLManager.IblSampler);
             }
 
             // === Scatter Pass ===
