@@ -231,7 +231,7 @@ namespace DotnetGltfRenderer {
         /// 渲染模型（简单模式，无渲染队列，不渲染天空盒）
         /// </summary>
         public void RenderModel() {
-            IEnumerable<Model.MeshInstance> allInstances = Scene?.GetAllMeshInstances() ?? Enumerable.Empty<Model.MeshInstance>();
+            IEnumerable<MeshInstance> allInstances = Scene?.GetAllMeshInstances() ?? Enumerable.Empty<MeshInstance>();
             int activeVariantIndex = Scene?.Models.Count > 0 ? Scene.Models[0].Model.ActiveVariantIndex : -1;
             RenderQueue.Prepare(allInstances, activeVariantIndex);
             PrepareModelRender();
@@ -256,7 +256,7 @@ namespace DotnetGltfRenderer {
         /// 渲染模型（使用渲染队列，支持 Transmission 和 VolumeScatter）
         /// </summary>
         public void RenderModelWithQueue() {
-            IEnumerable<Model.MeshInstance> allInstances = Scene?.GetAllMeshInstances() ?? Enumerable.Empty<Model.MeshInstance>();
+            IEnumerable<MeshInstance> allInstances = Scene?.GetAllMeshInstances() ?? Enumerable.Empty<MeshInstance>();
             int activeVariantIndex = Scene?.Models.Count > 0 ? Scene.Models[0].Model.ActiveVariantIndex : -1;
             RenderQueue.Prepare(allInstances, activeVariantIndex);
 

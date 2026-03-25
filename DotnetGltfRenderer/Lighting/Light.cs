@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using SharpGLTF.Schema2;
 
@@ -91,5 +92,43 @@ namespace DotnetGltfRenderer {
             InnerConeAngle = innerCone,
             OuterConeAngle = outerCone
         };
+
+        /// <summary>
+        /// 从 glTF PunctualLight 转换为 Light
+        /// </summary>
+        public static Light ConvertFromGltf(PunctualLight punctualLight, Matrix4x4 worldMatrix, Node sourceNode) {
+            // 从世界矩阵提取位置
+            Vector3 position = new(worldMatrix.M41, worldMatrix.M42, worldMatrix.M43);
+
+            // 从世界矩阵提取方向（局部空间的前方向是 -Z）
+            Vector3 forward = new(-worldMatrix.M31, -worldMatrix.M32, -worldMatrix.M33);
+            Vector3 direction = Vector3.Normalize(forward);
+
+            Light light = new() {
+                Color = punctualLight.Color,
+                Intensity = punctualLight.Intensity,
+                Range = punctualLight.Range,
+                Position = position,
+                Direction = direction,
+                SourceNode = sourceNode
+            };
+
+            switch (punctualLight.LightType) {
+                case PunctualLightType.Directional:
+                    light.Type = LightType.Directional;
+                    break;
+                case PunctualLightType.Point:
+                    light.Type = LightType.Point;
+                    break;
+                case PunctualLightType.Spot:
+                    light.Type = LightType.Spot;
+                    // 将弧度转换为度数
+                    light.InnerConeAngle = punctualLight.InnerConeAngle * 180f / MathF.PI;
+                    light.OuterConeAngle = punctualLight.OuterConeAngle * 180f / MathF.PI;
+                    break;
+            }
+
+            return light;
+        }
     }
 }

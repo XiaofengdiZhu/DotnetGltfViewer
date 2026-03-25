@@ -214,7 +214,7 @@ namespace DotnetGltfRenderer {
                     && positions != null
                     && t < positions.Length
                     && positions[t] != null) {
-                    UploadAttributeLayer(layerData, positions[t], 3, PositionOffset + t);
+                    UploadAttributeLayer(layerData, positions[t], PositionOffset + t);
                 }
 
                 // NORMAL
@@ -222,7 +222,7 @@ namespace DotnetGltfRenderer {
                     && normals != null
                     && t < normals.Length
                     && normals[t] != null) {
-                    UploadAttributeLayer(layerData, normals[t], 3, NormalOffset + t);
+                    UploadAttributeLayer(layerData, normals[t], NormalOffset + t);
                 }
 
                 // TANGENT
@@ -230,7 +230,7 @@ namespace DotnetGltfRenderer {
                     && tangents != null
                     && t < tangents.Length
                     && tangents[t] != null) {
-                    UploadAttributeLayer(layerData, tangents[t], 4, TangentOffset + t);
+                    UploadAttributeLayer(layerData, tangents[t], TangentOffset + t);
                 }
 
                 // TEXCOORD_0
@@ -238,7 +238,7 @@ namespace DotnetGltfRenderer {
                     && texCoords0 != null
                     && t < texCoords0.Length
                     && texCoords0[t] != null) {
-                    UploadAttributeLayer(layerData, texCoords0[t], 2, TexCoord0Offset + t);
+                    UploadAttributeLayer(layerData, texCoords0[t], TexCoord0Offset + t);
                 }
 
                 // TEXCOORD_1
@@ -246,7 +246,7 @@ namespace DotnetGltfRenderer {
                     && texCoords1 != null
                     && t < texCoords1.Length
                     && texCoords1[t] != null) {
-                    UploadAttributeLayer(layerData, texCoords1[t], 2, TexCoord1Offset + t);
+                    UploadAttributeLayer(layerData, texCoords1[t], TexCoord1Offset + t);
                 }
 
                 // COLOR_0
@@ -254,21 +254,20 @@ namespace DotnetGltfRenderer {
                     && colors0 != null
                     && t < colors0.Length
                     && colors0[t] != null) {
-                    UploadAttributeLayer(layerData, colors0[t], 4, Color0Offset + t);
+                    UploadAttributeLayer(layerData, colors0[t], Color0Offset + t);
                 }
             }
             _gl.BindTexture(TextureTarget.Texture2DArray, 0);
         }
 
-        unsafe void UploadAttributeLayer<T>(float[] layerData, IReadOnlyList<T> attributeData, int componentCount, int layerIndex)
+        unsafe void UploadAttributeLayer<T>(float[] layerData, IReadOnlyList<T> attributeData, int layerIndex)
             where T : unmanaged {
             // 清零层数据
             Array.Clear(layerData, 0, layerData.Length);
             int vertexCount = Math.Min(attributeData.Count, VertexCount);
 
             // 填充数据（VEC2/VEC3 填充为 VEC4/RGBA）
-            if (typeof(T) == typeof(Vector3)) {
-                IReadOnlyList<Vector3> vec3Data = attributeData as IReadOnlyList<Vector3>;
+            if (attributeData is IReadOnlyList<Vector3> vec3Data) {
                 for (int i = 0; i < vertexCount; i++) {
                     int offset = i * 4;
                     Vector3 v = vec3Data[i];
@@ -278,8 +277,7 @@ namespace DotnetGltfRenderer {
                     layerData[offset + 3] = 0f; // padding
                 }
             }
-            else if (typeof(T) == typeof(Vector4)) {
-                IReadOnlyList<Vector4> vec4Data = attributeData as IReadOnlyList<Vector4>;
+            else if (attributeData is IReadOnlyList<Vector4> vec4Data) {
                 for (int i = 0; i < vertexCount; i++) {
                     int offset = i * 4;
                     Vector4 v = vec4Data[i];
@@ -289,8 +287,7 @@ namespace DotnetGltfRenderer {
                     layerData[offset + 3] = v.W;
                 }
             }
-            else if (typeof(T) == typeof(Vector2)) {
-                IReadOnlyList<Vector2> vec2Data = attributeData as IReadOnlyList<Vector2>;
+            else if (attributeData is IReadOnlyList<Vector2> vec2Data) {
                 for (int i = 0; i < vertexCount; i++) {
                     int offset = i * 4;
                     Vector2 v = vec2Data[i];

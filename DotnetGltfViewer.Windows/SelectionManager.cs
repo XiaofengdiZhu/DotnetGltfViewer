@@ -7,7 +7,7 @@ namespace DotnetGltfViewer.Windows {
     /// </summary>
     public static class SelectionManager {
         static SceneModel _selectedModel;
-        static Model.MeshInstance _selectedInstance;
+        static MeshInstance _selectedInstance;
 
         /// <summary>
         /// 当前选中的场景模型
@@ -17,7 +17,7 @@ namespace DotnetGltfViewer.Windows {
         /// <summary>
         /// 当前选中的 MeshInstance（可能为 null）
         /// </summary>
-        public static Model.MeshInstance SelectedInstance => _selectedInstance;
+        public static MeshInstance SelectedInstance => _selectedInstance;
 
         /// <summary>
         /// 是否有选中对象
@@ -27,14 +27,14 @@ namespace DotnetGltfViewer.Windows {
         /// <summary>
         /// 选择变化事件
         /// </summary>
-        public static event Action<SceneModel, Model.MeshInstance> OnSelectionChanged;
+        public static event Action<SceneModel, MeshInstance> OnSelectionChanged;
 
         /// <summary>
         /// 选中模型
         /// </summary>
         /// <param name="model">场景模型</param>
         /// <param name="instance">MeshInstance（可选）</param>
-        public static void Select(SceneModel model, Model.MeshInstance instance = null) {
+        public static void Select(SceneModel model, MeshInstance instance = null) {
             if (_selectedModel == model && _selectedInstance == instance) {
                 return;
             }

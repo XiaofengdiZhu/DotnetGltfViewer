@@ -112,7 +112,7 @@ namespace DotnetGltfRenderer {
                     case "extensions":
                         if (segments.Length > 1
                             && segments[1] == "KHR_lights_punctual") {
-                            return CreateLightTarget(segments, channel, modelRoot, model);
+                            return CreateLightTarget(segments, channel, model);
                         }
                         break;
                 }
@@ -165,8 +165,8 @@ namespace DotnetGltfRenderer {
                 }
 
                 // 查找节点对应的 MeshInstance
-                List<Model.MeshInstance> targetMeshInstances = null;
-                foreach (Model.MeshInstance instance in model.MeshInstances) {
+                List<MeshInstance> targetMeshInstances = null;
+                foreach (MeshInstance instance in model.MeshInstances) {
                     if (instance.Node.LogicalIndex == nodeIndex) {
                         targetMeshInstances ??= [];
                         targetMeshInstances.Add(instance);
@@ -185,7 +185,7 @@ namespace DotnetGltfRenderer {
 
                         // 如果节点关联了 MeshInstance，控制其可见性
                         if (targetMeshInstances != null) {
-                            foreach (Model.MeshInstance instance in targetMeshInstances) {
+                            foreach (MeshInstance instance in targetMeshInstances) {
                                 instance.IsVisible = visible;
                             }
                         }
@@ -529,7 +529,7 @@ namespace DotnetGltfRenderer {
             return null;
         }
 
-        PointerTarget CreateLightTarget(string[] segments, AnimationChannel channel, ModelRoot modelRoot, Model model) {
+        PointerTarget CreateLightTarget(string[] segments, AnimationChannel channel, Model model) {
             // /extensions/KHR_lights_punctual/lights/{index}/{property}
             // /extensions/KHR_lights_punctual/lights/{index}/spot/{property}
             if (segments.Length < 5) {

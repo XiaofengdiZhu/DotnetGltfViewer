@@ -49,7 +49,7 @@ namespace DotnetGltfViewer.Windows {
         /// <summary>
         /// 选择变化时重置 Gizmo 状态
         /// </summary>
-        static void OnSelectionChanged(SceneModel model, Model.MeshInstance instance) {
+        static void OnSelectionChanged(SceneModel model, MeshInstance instance) {
             // 重置 Gizmo 状态
             _initialized = false;
             _userTransform = Matrix4x4.Identity;
@@ -67,14 +67,14 @@ namespace DotnetGltfViewer.Windows {
             }
 
             // 从第一个 MeshInstance 恢复变换状态（如果有的话）
-            Model.MeshInstance firstInstance = selectedModel.Model.MeshInstances[0];
+            MeshInstance firstInstance = selectedModel.Model.MeshInstances[0];
             _userTransform = firstInstance.GetGizmoTransform();
 
             // 基于原始世界矩阵计算包围盒（不包含用户变换）
             Vector3 min = new(float.MaxValue);
             Vector3 max = new(float.MinValue);
 
-            foreach (Model.MeshInstance instance in selectedModel.Model.MeshInstances) {
+            foreach (MeshInstance instance in selectedModel.Model.MeshInstances) {
                 if (!instance.IsVisible) continue;
 
                 BoundingBox localBounds = instance.Mesh.LocalBounds;
@@ -114,7 +114,7 @@ namespace DotnetGltfViewer.Windows {
             // 重置选中模型的变换
             SceneModel selectedModel = _scene?.SelectedModel;
             if (selectedModel?.Model != null) {
-                foreach (Model.MeshInstance instance in selectedModel.Model.MeshInstances) {
+                foreach (MeshInstance instance in selectedModel.Model.MeshInstances) {
                     instance.ResetGizmoTransform();
                 }
                 // 立即更新包围盒
@@ -284,7 +284,7 @@ namespace DotnetGltfViewer.Windows {
             if (selectedModel?.Model == null) return;
 
             // 只对选中模型的 MeshInstance 应用变换
-            foreach (Model.MeshInstance instance in selectedModel.Model.MeshInstances) {
+            foreach (MeshInstance instance in selectedModel.Model.MeshInstances) {
                 instance.SetGizmoTransform(_userTransform);
             }
         }

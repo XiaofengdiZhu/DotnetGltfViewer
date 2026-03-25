@@ -21,7 +21,7 @@ namespace DotnetGltfViewer.Windows {
         /// <summary>
         /// 命中的 MeshInstance（可能为 null）
         /// </summary>
-        public Model.MeshInstance MeshInstance;
+        public MeshInstance MeshInstance;
 
         /// <summary>
         /// 命中距离
@@ -126,7 +126,7 @@ namespace DotnetGltfViewer.Windows {
             }
 
             // 然后检测每个 MeshInstance
-            foreach (Model.MeshInstance instance in sceneModel.Model.MeshInstances) {
+            foreach (MeshInstance instance in sceneModel.Model.MeshInstances) {
                 if (!instance.IsVisible) continue;
 
                 // 获取 MeshInstance 的世界包围盒
@@ -155,7 +155,7 @@ namespace DotnetGltfViewer.Windows {
         /// <summary>
         /// 获取 MeshInstance 的世界空间包围盒
         /// </summary>
-        static BoundingBox GetMeshInstanceWorldBounds(Model.MeshInstance instance) {
+        static BoundingBox GetMeshInstanceWorldBounds(MeshInstance instance) {
             BoundingBox localBounds = instance.Mesh.LocalBounds;
             if (!localBounds.IsValid) {
                 return BoundingBox.Empty;

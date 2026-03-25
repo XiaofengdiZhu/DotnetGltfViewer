@@ -68,7 +68,7 @@ namespace DotnetGltfRenderer {
             Vector3 min = new(float.MaxValue);
             Vector3 max = new(float.MinValue);
 
-            foreach (Model.MeshInstance instance in Model.MeshInstances) {
+            foreach (MeshInstance instance in Model.MeshInstances) {
                 if (!instance.IsVisible) continue;
 
                 // 获取网格的局部包围盒
@@ -207,10 +207,10 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 获取所有可见模型的 MeshInstance
         /// </summary>
-        public IEnumerable<Model.MeshInstance> GetAllMeshInstances() {
+        public IEnumerable<MeshInstance> GetAllMeshInstances() {
             foreach (SceneModel model in _models) {
                 if (!model.IsVisible) continue;
-                foreach (Model.MeshInstance instance in model.Model.MeshInstances) {
+                foreach (MeshInstance instance in model.Model.MeshInstances) {
                     if (instance.IsVisible) {
                         yield return instance;
                     }

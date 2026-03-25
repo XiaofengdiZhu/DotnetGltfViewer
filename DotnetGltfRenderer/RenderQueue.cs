@@ -76,9 +76,9 @@ namespace DotnetGltfRenderer {
         /// </summary>
         /// <param name="instances">网格实例列表</param>
         /// <param name="variantIndex">当前激活的变体索引（-1 表示使用默认材质）</param>
-        public void Prepare(IEnumerable<Model.MeshInstance> instances, int variantIndex = -1) {
+        public void Prepare(IEnumerable<MeshInstance> instances, int variantIndex = -1) {
             Clear();
-            foreach (Model.MeshInstance instance in instances) {
+            foreach (MeshInstance instance in instances) {
                 // 跳过不可见的 MeshInstance（KHR_node_visibility 动画控制）
                 if (!instance.IsVisible) {
                     continue;
@@ -158,7 +158,7 @@ namespace DotnetGltfRenderer {
             drawables.Sort();
         }
 
-        static Drawable CreateDrawable(Model.MeshInstance instance, int variantIndex = -1) => new() {
+        static Drawable CreateDrawable(MeshInstance instance, int variantIndex = -1) => new() {
             Mesh = instance.Mesh,
             WorldMatrix = instance.WorldMatrix,
             Material = instance.Mesh.GetMaterialForVariant(variantIndex),
