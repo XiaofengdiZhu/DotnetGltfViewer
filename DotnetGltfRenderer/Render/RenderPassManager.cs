@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace DotnetGltfRenderer {
@@ -19,8 +20,8 @@ namespace DotnetGltfRenderer {
         /// 执行 Scatter Pass
         /// 渲染 VolumeScatter 物体到 Scatter 帧缓冲区
         /// </summary>
-        public void ExecuteScatterPass(RenderQueue renderQueue, in RenderContext context) {
-            if (!renderQueue.HasScatterDrawables) return;
+        public void ExecuteScatterPass(List<MeshInstance> scatterInstances, in RenderContext context) {
+            if (scatterInstances.Count == 0) return;
 
             _framebufferManager.EnsureScatterFramebuffer();
             _framebufferManager.BindScatterFramebuffer();
@@ -29,8 +30,10 @@ namespace DotnetGltfRenderer {
             _drawableRenderer.SetViewProjectionMatrices(context.View, context.Projection);
 
             RenderContext scatterContext = context.ForScatterPass();
-            foreach (Drawable drawable in renderQueue.ScatterDrawables) {
-                _drawableRenderer.Render(drawable, in scatterContext);
+            foreach (MeshInstance instance in scatterInstances) {
+                if (instance.IsVisible) {
+                    _drawableRenderer.Render(instance, in scatterContext);
+                }
             }
 
             _framebufferManager.UnbindFramebuffer();
@@ -41,10 +44,10 @@ namespace DotnetGltfRenderer {
         /// 渲染场景到 Transmission 帧缓冲区（用于折射效果）
         /// </summary>
         public void ExecuteTransmissionPass(
-            RenderQueue renderQueue,
+            Scene scene,
             in RenderContext context,
             Action<Matrix4x4, Matrix4x4> renderSkyLinear = null) {
-            if (!renderQueue.HasTransmissionDrawables) return;
+            if (scene.TransmissionInstances.Count == 0) return;
 
             _framebufferManager.EnsureTransmissionFramebuffer();
             _framebufferManager.BindTransmissionFramebuffer();
@@ -57,11 +60,15 @@ namespace DotnetGltfRenderer {
 
             // 渲染不透明和透明物体（线性输出）
             RenderContext transmissionContext = context.ForTransmissionPass();
-            foreach (Drawable drawable in renderQueue.OpaqueDrawables) {
-                _drawableRenderer.Render(drawable, in transmissionContext);
+            foreach (MeshInstance instance in scene.OpaqueInstances) {
+                if (instance.IsVisible) {
+                    _drawableRenderer.Render(instance, in transmissionContext);
+                }
             }
-            foreach (Drawable drawable in renderQueue.TransparentDrawables) {
-                _drawableRenderer.Render(drawable, in transmissionContext);
+            foreach (MeshInstance instance in scene.TransparentInstances) {
+                if (instance.IsVisible) {
+                    _drawableRenderer.Render(instance, in transmissionContext);
+                }
             }
 
             _framebufferManager.GenerateTransmissionMipmap();
@@ -73,7 +80,7 @@ namespace DotnetGltfRenderer {
         /// 渲染天空盒和所有物体
         /// </summary>
         public void ExecuteMainPass(
-            RenderQueue renderQueue,
+            Scene scene,
             in RenderContext context,
             Action<Matrix4x4, Matrix4x4> renderSky = null,
             Action onBindScatterTextures = null,
@@ -85,28 +92,34 @@ namespace DotnetGltfRenderer {
             renderSky?.Invoke(context.View, context.Projection);
 
             // 绑定 Scatter 纹理
-            if (renderQueue.HasScatterDrawables) {
+            if (scene.ScatterInstances.Count > 0) {
                 onBindScatterTextures?.Invoke();
             }
 
             RenderContext mainContext = context.ForMainPass();
 
             // 渲染不透明物体
-            foreach (Drawable drawable in renderQueue.OpaqueDrawables) {
-                _drawableRenderer.Render(drawable, in mainContext);
+            foreach (MeshInstance instance in scene.OpaqueInstances) {
+                if (instance.IsVisible) {
+                    _drawableRenderer.Render(instance, in mainContext);
+                }
             }
 
             // 渲染 Transmission 物体
-            if (renderQueue.HasTransmissionDrawables) {
+            if (scene.TransmissionInstances.Count > 0) {
                 onBindTransmissionTexture?.Invoke();
-                foreach (Drawable drawable in renderQueue.TransmissionDrawables) {
-                    _drawableRenderer.Render(drawable, in mainContext);
+                foreach (MeshInstance instance in scene.TransmissionInstances) {
+                    if (instance.IsVisible) {
+                        _drawableRenderer.Render(instance, in mainContext);
+                    }
                 }
             }
 
             // 渲染透明物体
-            foreach (Drawable drawable in renderQueue.TransparentDrawables) {
-                _drawableRenderer.Render(drawable, in mainContext);
+            foreach (MeshInstance instance in scene.TransparentInstances) {
+                if (instance.IsVisible) {
+                    _drawableRenderer.Render(instance, in mainContext);
+                }
             }
         }
     }

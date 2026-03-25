@@ -3,8 +3,8 @@ using Silk.NET.OpenGLES;
 
 namespace DotnetGltfRenderer {
     /// <summary>
-    /// Drawable 渲染器
-    /// 负责渲染单个 Drawable，包括着色器选择、材质绑定、绘制调用
+    /// MeshInstance 渲染器
+    /// 负责渲染单个 MeshInstance，包括着色器选择、材质绑定、绘制调用
     /// </summary>
     public class DrawableRenderer {
         readonly GL _gl;
@@ -47,11 +47,11 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
-        /// 渲染单个 Drawable
+        /// 渲染单个 MeshInstance
         /// </summary>
-        public void Render(Drawable drawable, in RenderContext context) {
-            Mesh mesh = drawable.Mesh;
-            Material material = drawable.Material;
+        public void Render(MeshInstance instance, in RenderContext context) {
+            Mesh mesh = instance.Mesh;
+            Material material = instance.CurrentMaterial;
 
             // 根据材质获取着色器变体
             Shader shader = GetOrCreateShaderVariant(mesh, material, in context);
@@ -74,7 +74,7 @@ namespace DotnetGltfRenderer {
             mesh.Bind();
 
             // 设置变换 uniform
-            SetTransformUniformsFromDrawable(drawable, shader);
+            SetTransformUniforms(instance, shader);
 
             // 设置 Morph Target
             SetupMorphTargets(mesh, shader);
@@ -97,7 +97,7 @@ namespace DotnetGltfRenderer {
             SetupVolumeScatterUniforms(material, shader, context);
 
             // 设置剔除模式
-            SetCullModeFromDrawable(drawable);
+            SetCullMode(instance);
 
             // 设置混合模式
             SetupBlendMode(material, context);
@@ -143,14 +143,14 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 设置变换 uniform
         /// </summary>
-        void SetTransformUniformsFromDrawable(Drawable drawable, Shader shader) {
-            if (drawable.Mesh.UseInstancing) return;
+        void SetTransformUniforms(MeshInstance instance, Shader shader) {
+            if (instance.Mesh.UseInstancing) return;
 
-            Matrix4x4 modelMatrix = drawable.HasSkinning ? Matrix4x4.Identity : drawable.WorldMatrix;
+            Matrix4x4 modelMatrix = instance.HasSkinning ? Matrix4x4.Identity : instance.WorldMatrix;
 
-            if (drawable.HasSkinning) {
+            if (instance.HasSkinning) {
                 const int jointTextureSlot = 30;
-                drawable.JointTexture?.Bind((TextureUnit)((int)TextureUnit.Texture0 + jointTextureSlot));
+                instance.JointTexture?.Bind((TextureUnit)((int)TextureUnit.Texture0 + jointTextureSlot));
                 shader.SetUniform("u_jointsSampler", jointTextureSlot);
             }
 
@@ -229,13 +229,13 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 设置剔除模式
         /// </summary>
-        void SetCullModeFromDrawable(Drawable drawable) {
-            if (drawable.Material?.DoubleSided == true) {
+        void SetCullMode(MeshInstance instance) {
+            if (instance.CurrentMaterial?.DoubleSided == true) {
                 _gl.Disable(EnableCap.CullFace);
             }
             else {
                 _gl.Enable(EnableCap.CullFace);
-                _gl.FrontFace(drawable.IsNegativeScale ? FrontFaceDirection.CW : FrontFaceDirection.Ccw);
+                _gl.FrontFace(instance.IsNegativeScale ? FrontFaceDirection.CW : FrontFaceDirection.Ccw);
             }
         }
 

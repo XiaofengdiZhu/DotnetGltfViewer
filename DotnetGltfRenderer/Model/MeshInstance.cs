@@ -6,6 +6,17 @@ using Silk.NET.OpenGLES;
 
 namespace DotnetGltfRenderer {
     /// <summary>
+    /// 渲染队列类型
+    /// </summary>
+    public enum RenderQueueType {
+        None,       // 未初始化
+        Opaque,
+        Transparent,
+        Transmission,
+        Scatter
+    }
+
+    /// <summary>
     /// 场景中的网格实例
     /// </summary>
     public sealed class MeshInstance {
@@ -41,6 +52,22 @@ namespace DotnetGltfRenderer {
         /// 是否使用 GPU 实例化（EXT_mesh_gpu_instancing）
         /// </summary>
         public bool UseGpuInstancing { get; set; }
+
+        // ========== 渲染队列相关 ==========
+        /// <summary>
+        /// 视图空间深度（用于排序）
+        /// </summary>
+        public float Depth { get; set; }
+
+        /// <summary>
+        /// 当前材质（根据变体索引确定）
+        /// </summary>
+        public Material CurrentMaterial { get; internal set; }
+
+        /// <summary>
+        /// 渲染队列类型
+        /// </summary>
+        public RenderQueueType QueueType { get; private set; }
 
         internal MeshInstance(Node node, Mesh mesh, Skin skin, GL gl) {
             Node = node;
@@ -141,6 +168,46 @@ namespace DotnetGltfRenderer {
 
             // 更新骨骼纹理
             JointTexture?.Update(JointMatrices);
+        }
+
+        /// <summary>
+        /// 更新当前材质和队列类型（变体索引变化时调用）
+        /// </summary>
+        internal void UpdateMaterialAndQueueType(int variantIndex, Scene scene) {
+            Material newMaterial = Mesh?.GetMaterialForVariant(variantIndex);
+            RenderQueueType newQueueType = ComputeQueueType(newMaterial);
+
+            if (scene != null) {
+                if (QueueType == RenderQueueType.None) {
+                    // 第一次初始化，直接添加到队列
+                    scene.AddInstanceToQueue(this, newQueueType);
+                }
+                else if (newQueueType != QueueType) {
+                    // 队列类型变化，从旧队列移除并添加到新队列
+                    scene.RemoveInstanceFromQueue(this, QueueType);
+                    scene.AddInstanceToQueue(this, newQueueType);
+                }
+            }
+
+            CurrentMaterial = newMaterial;
+            QueueType = newQueueType;
+        }
+
+        /// <summary>
+        /// 根据材质计算渲染队列类型
+        /// </summary>
+        public static RenderQueueType ComputeQueueType(Material mat) {
+            if (mat == null) return RenderQueueType.Opaque;
+
+            bool isTransparent = mat.AlphaMode == AlphaMode.Blend;
+            bool hasTransmission = mat.Transmission?.IsEnabled == true;
+            bool hasDiffuseTransmission = mat.DiffuseTransmission?.IsEnabled == true;
+            bool hasVolumeScatter = mat.VolumeScatter?.IsEnabled == true;
+
+            if (hasVolumeScatter && hasDiffuseTransmission) return RenderQueueType.Scatter;
+            if (hasTransmission) return RenderQueueType.Transmission;
+            if (isTransparent) return RenderQueueType.Transparent;
+            return RenderQueueType.Opaque;
         }
     }
 }

@@ -58,11 +58,6 @@ namespace DotnetGltfRenderer {
         public SkyRenderer SkyRenderer { get; private set; }
 
         /// <summary>
-        /// 渲染队列
-        /// </summary>
-        public RenderQueue RenderQueue { get; } = new();
-
-        /// <summary>
         /// 帧缓冲区管理器
         /// </summary>
         public FramebufferManager FramebufferManager => _framebufferManager;
@@ -162,15 +157,12 @@ namespace DotnetGltfRenderer {
         public void Render() {
             if (Scene == null) return;
 
-            // 准备渲染队列
-            IEnumerable<MeshInstance> allInstances = Scene.GetAllMeshInstances();
-            int activeVariantIndex = Scene.Models.Count > 0 ? Scene.Models[0].Model.ActiveVariantIndex : -1;
-            RenderQueue.Prepare(allInstances, activeVariantIndex);
-
             // 计算视图投影矩阵
             Matrix4x4 view = Camera.ViewMatrix;
             Matrix4x4 projection = Camera.GetProjectionMatrix(_framebufferAspectRatio);
-            RenderQueue.SortByDepth(view);
+
+            // 排序渲染队列
+            Scene.SortByDepth(view);
 
             // 构建渲染上下文
             RenderContext context = new() {
@@ -198,14 +190,14 @@ namespace DotnetGltfRenderer {
             }
 
             // === Scatter Pass ===
-            if (RenderQueue.HasScatterDrawables) {
-                _renderPassManager.ExecuteScatterPass(RenderQueue, in context);
+            if (Scene.HasScatterInstances) {
+                _renderPassManager.ExecuteScatterPass(Scene.ScatterInstances, in context);
             }
 
             // === Transmission Pass ===
-            if (RenderQueue.HasTransmissionDrawables) {
+            if (Scene.HasTransmissionInstances) {
                 _renderPassManager.ExecuteTransmissionPass(
-                    RenderQueue,
+                    Scene,
                     in context,
                     renderSkyLinear: (v, p) => RenderSkyLinear(v, p)
                 );
@@ -213,7 +205,7 @@ namespace DotnetGltfRenderer {
 
             // === Main Pass ===
             _renderPassManager.ExecuteMainPass(
-                RenderQueue,
+                Scene,
                 in context,
                 renderSky: (v, p) => RenderSky(v, p),
                 onBindScatterTextures: () => _framebufferManager.BindScatterTextures(),

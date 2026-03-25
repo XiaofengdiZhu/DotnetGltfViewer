@@ -104,6 +104,37 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public SceneModel SelectedModel { get; private set; }
 
+        // ========== 渲染队列分类 ==========
+        /// <summary>
+        /// 不透明物体队列
+        /// </summary>
+        public List<MeshInstance> OpaqueInstances { get; } = new();
+
+        /// <summary>
+        /// 透明物体队列
+        /// </summary>
+        public List<MeshInstance> TransparentInstances { get; } = new();
+
+        /// <summary>
+        /// Transmission 物体队列
+        /// </summary>
+        public List<MeshInstance> TransmissionInstances { get; } = new();
+
+        /// <summary>
+        /// Scatter 物体队列
+        /// </summary>
+        public List<MeshInstance> ScatterInstances { get; } = new();
+
+        /// <summary>
+        /// 是否存在 Transmission 物体
+        /// </summary>
+        public bool HasTransmissionInstances => TransmissionInstances.Count > 0;
+
+        /// <summary>
+        /// 是否存在 Scatter 物体
+        /// </summary>
+        public bool HasScatterInstances => ScatterInstances.Count > 0;
+
         /// <summary>
         /// 模型添加事件
         /// </summary>
@@ -127,6 +158,72 @@ namespace DotnetGltfRenderer {
             _gl = gl;
         }
 
+        // ========== 渲染队列操作 ==========
+        /// <summary>
+        /// 添加实例到指定队列
+        /// </summary>
+        internal void AddInstanceToQueue(MeshInstance instance, RenderQueueType queueType) {
+            GetQueueList(queueType).Add(instance);
+        }
+
+        /// <summary>
+        /// 从指定队列移除实例
+        /// </summary>
+        internal void RemoveInstanceFromQueue(MeshInstance instance, RenderQueueType queueType) {
+            GetQueueList(queueType).Remove(instance);
+        }
+
+        List<MeshInstance> GetQueueList(RenderQueueType queueType) => queueType switch {
+            RenderQueueType.Transparent => TransparentInstances,
+            RenderQueueType.Transmission => TransmissionInstances,
+            RenderQueueType.Scatter => ScatterInstances,
+            _ => OpaqueInstances
+        };
+
+        /// <summary>
+        /// 添加模型的所有实例到渲染队列
+        /// </summary>
+        void AddModelInstancesToQueues(SceneModel sceneModel) {
+            int variantIndex = sceneModel.Model.ActiveVariantIndex;
+            foreach (MeshInstance instance in sceneModel.Model.MeshInstances) {
+                instance.UpdateMaterialAndQueueType(variantIndex, this);
+            }
+        }
+
+        /// <summary>
+        /// 从渲染队列移除模型的所有实例
+        /// </summary>
+        void RemoveModelInstancesFromQueues(Model model) {
+            foreach (MeshInstance instance in model.MeshInstances) {
+                RemoveInstanceFromQueue(instance, instance.QueueType);
+            }
+        }
+
+        /// <summary>
+        /// 按视图空间深度排序所有队列
+        /// </summary>
+        public void SortByDepth(Matrix4x4 viewMatrix) {
+            SortInstancesByDepth(OpaqueInstances, viewMatrix);
+            SortInstancesByDepth(TransparentInstances, viewMatrix);
+            SortInstancesByDepth(TransmissionInstances, viewMatrix);
+            SortInstancesByDepth(ScatterInstances, viewMatrix);
+        }
+
+        void SortInstancesByDepth(List<MeshInstance> instances, Matrix4x4 viewMatrix) {
+            if (instances.Count <= 1) return;
+
+            for (int i = 0; i < instances.Count; i++) {
+                MeshInstance inst = instances[i];
+                Vector3 centroid = inst.Mesh.Centroid;
+                Matrix4x4 modelView = inst.WorldMatrix * viewMatrix;
+                Vector3 viewPos = Vector3.Transform(centroid, modelView);
+                inst.Depth = viewPos.Z;
+            }
+
+            // 从远到近排序（Z 值大的在前）
+            instances.Sort((a, b) => b.Depth.CompareTo(a.Depth));
+        }
+
         /// <summary>
         /// 添加模型到场景
         /// </summary>
@@ -139,6 +236,7 @@ namespace DotnetGltfRenderer {
 
             SceneModel sceneModel = new(_gl, filePath, _nextModelId++);
             _models.Add(sceneModel);
+            AddModelInstancesToQueues(sceneModel);
             OnModelAdded?.Invoke(sceneModel);
             return sceneModel;
         }
@@ -154,6 +252,7 @@ namespace DotnetGltfRenderer {
                 ClearSelection();
             }
 
+            RemoveModelInstancesFromQueues(model.Model);
             _models.Remove(model);
             OnModelRemoved?.Invoke(model);
             model.Dispose();
@@ -198,20 +297,6 @@ namespace DotnetGltfRenderer {
             ClearSelection();
             foreach (SceneModel model in _models.ToList()) {
                 RemoveModel(model);
-            }
-        }
-
-        /// <summary>
-        /// 获取所有可见模型的 MeshInstance
-        /// </summary>
-        public IEnumerable<MeshInstance> GetAllMeshInstances() {
-            foreach (SceneModel model in _models) {
-                if (!model.IsVisible) continue;
-                foreach (MeshInstance instance in model.Model.MeshInstances) {
-                    if (instance.IsVisible) {
-                        yield return instance;
-                    }
-                }
             }
         }
 
