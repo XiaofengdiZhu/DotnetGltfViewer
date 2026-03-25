@@ -1,13 +1,13 @@
 using System;
-using System.Linq;
+using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using DotnetGltfRenderer;
-using Hexa.NET.ImGui;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGLES;
 using Silk.NET.Windowing;
+using NativeFileDialogCore;
 using ZLogger;
 
 namespace DotnetGltfViewer.Windows {
@@ -18,9 +18,14 @@ namespace DotnetGltfViewer.Windows {
         static IWindow _window;
         static GL _gl;
 
-        static Model _model;
+        static Scene _scene;
         static ModelRenderer _modelRenderer;
         static Camera _camera;
+
+        // 默认路径
+        const string DefaultModelPath = "Assets/DamagedHelmet/glTF/DamagedHelmet.gltf";
+        const string DefaultEnvironmentMapPath = "Assets/Cannon_Exterior.hdr";
+        const string ShadersDirectory = "shaders";
 
         public static Vector2D<int> Size { get; private set; }
 
@@ -66,14 +71,23 @@ namespace DotnetGltfViewer.Windows {
             LogManager.Logger.ZLogInformation($"窗口初始化完成, Size: {_window.Size.X}x{_window.Size.Y}");
             LogManager.Logger.ZLogInformation($"OpenGL ES 版本: {_gl.GetStringS(StringName.Version)}");
             LogManager.Logger.ZLogInformation($"渲染器: {_gl.GetStringS(StringName.Renderer)}");
-            string modelName = "CompareTransmission";
-            _model = new Model(_gl, $"Assets/{modelName}/glTF/{modelName}.gltf");
-            _modelRenderer = new ModelRenderer(_gl, _model, "Assets/Cannon_Exterior.hdr", "shaders");
+
+            // 初始化场景
+            _scene = new Scene(_gl);
+
+            // 加载默认模型
+            if (File.Exists(DefaultModelPath)) {
+                _scene.AddModel(DefaultModelPath);
+            }
+
+            // 初始化渲染器
+            _modelRenderer = new ModelRenderer(_gl, _scene, DefaultEnvironmentMapPath, ShadersDirectory);
             _camera = _modelRenderer.Camera;
-            ImGuiManager.Initialize(_gl, _window, input, _camera, _model);
+            ImGuiManager.Initialize(_gl, _window, input, _camera, _scene);
             OnFramebufferResize(_window.FramebufferSize);
             ResetCameraToModel();
             InputManager.Initialize(_camera, input);
+            InputManager.SetScene(_scene);
             PerformanceManager.Initialize();
         }
 
@@ -83,7 +97,7 @@ namespace DotnetGltfViewer.Windows {
         /// <param name="deltaTime">帧间隔时间（秒）。</param>
         static void OnUpdate(double deltaTime) {
             InputManager.Update((float)deltaTime);
-            _model.Update((float)deltaTime);
+            _scene.Update((float)deltaTime);
         }
 
         /// <summary>
@@ -136,7 +150,7 @@ namespace DotnetGltfViewer.Windows {
         }
 
         public static void ResetCameraToModel() {
-            if (TryGetSceneBounds(out Vector3 min, out Vector3 max)) {
+            if (_scene.TryGetSceneBounds(out Vector3 min, out Vector3 max)) {
                 Vector2D<int> size = _window.Size;
                 float aspect = (float)Math.Max(size.X, 1) / Math.Max(size.Y, 1);
                 _modelRenderer.Camera.LookAtBoundingBox(min, max, aspect);
@@ -144,21 +158,63 @@ namespace DotnetGltfViewer.Windows {
         }
 
         public static bool TryGetSceneBounds(out Vector3 min, out Vector3 max) {
-            min = new Vector3(float.MaxValue);
-            max = new Vector3(float.MinValue);
-            bool hasAnyVertex = false;
-            foreach (Model.MeshInstance instance in _model.MeshInstances) {
-                float[] vertices = instance.Mesh.BaseVertices;
-                for (int i = 0; i <= vertices.Length - Mesh.BaseVertexStride; i += Mesh.BaseVertexStride) {
-                    Vector3 localPos = new(vertices[i], vertices[i + 1], vertices[i + 2]);
-                    Vector3 worldPos = Vector3.Transform(localPos, instance.WorldMatrix);
-                    min = Vector3.Min(min, worldPos);
-                    max = Vector3.Max(max, worldPos);
-                    hasAnyVertex = true;
+            return _scene.TryGetSceneBounds(out min, out max);
+        }
+
+        /// <summary>
+        /// 打开模型文件对话框
+        /// </summary>
+        public static void OpenModelFileDialog() {
+            DialogResult result = Dialog.FileOpenEx(
+                "[glTF Files (*.gltf;*.glb)|*.gltf;*.glb]",
+                null,
+                "Open glTF Model"
+            );
+            if (result.IsOk) {
+                try {
+                    SceneModel model = _scene.AddModel(result.Path);
+                    _modelRenderer.UpdateLightsFromScene();
+                    ResetCameraToModel();
+                    LogManager.Logger.ZLogInformation($"Loaded model: {result.Path}");
+                }
+                catch (Exception ex) {
+                    LogManager.Logger.ZLogError($"Failed to load model: {ex.Message}");
                 }
             }
-            return hasAnyVertex;
         }
+
+        /// <summary>
+        /// 打开环境贴图文件对话框
+        /// </summary>
+        public static void OpenEnvironmentMapDialog() {
+            DialogResult result = Dialog.FileOpenEx(
+                "[HDR Files (*.hdr)|*.hdr]",
+                null,
+                "Open Environment Map"
+            );
+            if (result.IsOk) {
+                try {
+                    _modelRenderer.SetEnvironmentMap(result.Path);
+                    LogManager.Logger.ZLogInformation($"Loaded environment map: {result.Path}");
+                }
+                catch (Exception ex) {
+                    LogManager.Logger.ZLogError($"Failed to load environment map: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 清除场景中的所有模型
+        /// </summary>
+        public static void ClearScene() {
+            _scene.Clear();
+            _modelRenderer.UpdateLightsFromScene();
+        }
+
+        /// <summary>
+        /// 获取当前场景
+        /// </summary>
+        public static Scene GetScene() => _scene;
 
         [DllImport("user32.dll", SetLastError = true)]
         static extern uint GetDpiForWindow(IntPtr hwnd);

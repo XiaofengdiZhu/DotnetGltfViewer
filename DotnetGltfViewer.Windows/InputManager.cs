@@ -13,6 +13,7 @@ namespace DotnetGltfViewer.Windows {
         static IInputContext _input;
         static IKeyboard _primaryKeyboard;
         static Camera _camera;
+        static Scene _scene;
 
         static Vector2 _lastMousePosition;
         static bool _hasMousePosition;
@@ -54,6 +55,13 @@ namespace DotnetGltfViewer.Windows {
             }
         }
 
+        /// <summary>
+        /// 设置场景引用（用于射线拾取）
+        /// </summary>
+        public static void SetScene(Scene scene) {
+            _scene = scene;
+        }
+
         public static void OnKeyDown(IKeyboard keyboard, Key key, int arg3) {
             if (ImGuiManager.IO.WantCaptureKeyboard) {
                 return;
@@ -70,6 +78,23 @@ namespace DotnetGltfViewer.Windows {
             if (ImGuiManager.IO.WantCaptureMouse || GizmoManager.IsOver()) {
                 return;
             }
+
+            // 选择模式：左键点击进行射线拾取，但仍然允许相机操作
+            if (button == MouseButton.Left && GizmoManager.CurrentMode == GizmoMode.Select) {
+                if (_scene != null && _camera != null) {
+                    Vector2 screenPos = mouse.Position;
+                    Vector2 screenSize = new Vector2(MainWindow.Size.X, MainWindow.Size.Y);
+                    Ray ray = RayPicker.CreateRayFromScreen(screenPos, screenSize, _camera);
+                    PickingResult result = RayPicker.Pick(_scene, ray);
+
+                    if (result.Hit) {
+                        SelectionManager.Select(result.Model, result.MeshInstance);
+                    }
+                    // 点击空白处不清除选择，保持当前选择状态
+                }
+                // 不再 return，继续处理相机操作
+            }
+
             if (button == MouseButton.Left) {
                 _leftMouseDown = true;
                 _hasMousePosition = false;

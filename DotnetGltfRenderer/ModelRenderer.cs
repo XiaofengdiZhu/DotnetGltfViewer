@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using Silk.NET.OpenGLES;
 using ZLogger;
@@ -38,7 +39,15 @@ namespace DotnetGltfRenderer {
 
         public Skybox Skybox { get; }
 
-        public Model Model { get; }
+        /// <summary>
+        /// 场景实例（支持多模型）
+        /// </summary>
+        public Scene Scene { get; private set; }
+
+        /// <summary>
+        /// 当前环境贴图路径
+        /// </summary>
+        public string EnvironmentMapPath { get; private set; }
 
         /// <summary>
         /// 着色器缓存
@@ -75,19 +84,18 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
-        /// 构造函数（ShaderCache 模式，用于官方着色器）
+        /// 构造函数（Scene 模式，支持多模型）
         /// </summary>
-        public ModelRenderer(GL gl, Model model, string environmentTexturePath, string shadersDirectory) {
+        public ModelRenderer(GL gl, Scene scene, string environmentTexturePath, string shadersDirectory) {
             _gl = gl;
-            Model = model;
+            Scene = scene;
+            EnvironmentMapPath = environmentTexturePath;
             Camera = new Camera();
             LightingSystem = new LightingSystem();
             Skybox = new Skybox(gl);
-            if (model.Lights.Count > 0) {
-                foreach (Light light in model.Lights) {
-                    LightingSystem.AddLight(light);
-                }
-            }
+
+            // 收集所有模型的光源
+            UpdateLightsFromScene();
 
             // 加载着色器缓存
             ShaderCache = new ShaderCache(gl, shadersDirectory);
@@ -140,6 +148,31 @@ namespace DotnetGltfRenderer {
             _iblSampler.Process(environmentMap);
             _useIBL = true;
             environmentMap.Dispose();
+        }
+
+        /// <summary>
+        /// 从场景中更新光源
+        /// </summary>
+        public void UpdateLightsFromScene() {
+            LightingSystem.ClearLights();
+            if (Scene != null) {
+                foreach (SceneModel sceneModel in Scene.Models) {
+                    if (!sceneModel.IsVisible) continue;
+                    foreach (Light light in sceneModel.Model.Lights) {
+                        LightingSystem.AddLight(light);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 设置新的环境贴图
+        /// </summary>
+        public void SetEnvironmentMap(string environmentTexturePath) {
+            _environmentTexture?.Dispose();
+            _iblSampler?.Dispose();
+            ProcessIBL(environmentTexturePath);
+            EnvironmentMapPath = environmentTexturePath;
         }
 
         /// <summary>
@@ -386,8 +419,13 @@ namespace DotnetGltfRenderer {
         /// 适用于不需要 Transmission/透明物体排序的场景
         /// </summary>
         public void RenderModel() {
+            // 收集所有可见模型的 MeshInstance
+            IEnumerable<Model.MeshInstance> allInstances = Scene?.GetAllMeshInstances() ?? Enumerable.Empty<Model.MeshInstance>();
+
             // 准备渲染队列但不使用 Transmission 流程
-            RenderQueue.Prepare(Model.MeshInstances, Model.ActiveVariantIndex);
+            // 注意：多模型场景使用第一个模型的变体索引
+            int activeVariantIndex = Scene?.Models.Count > 0 ? Scene.Models[0].Model.ActiveVariantIndex : -1;
+            RenderQueue.Prepare(allInstances, activeVariantIndex);
             PrepareModelRender();
             Matrix4x4 view = Camera.ViewMatrix;
             Matrix4x4 projection = Camera.GetProjectionMatrix(_framebufferAspectRatio);
@@ -408,8 +446,13 @@ namespace DotnetGltfRenderer {
         /// 渲染模型（使用渲染队列，支持 Transmission 和 VolumeScatter）
         /// </summary>
         public void RenderModelWithQueue() {
+            // 收集所有可见模型的 MeshInstance
+            IEnumerable<Model.MeshInstance> allInstances = Scene?.GetAllMeshInstances() ?? Enumerable.Empty<Model.MeshInstance>();
+
             // 准备渲染队列
-            RenderQueue.Prepare(Model.MeshInstances, Model.ActiveVariantIndex);
+            // 注意：多模型场景使用第一个模型的变体索引
+            int activeVariantIndex = Scene?.Models.Count > 0 ? Scene.Models[0].Model.ActiveVariantIndex : -1;
+            RenderQueue.Prepare(allInstances, activeVariantIndex);
             Matrix4x4 view = Camera.ViewMatrix;
             Matrix4x4 projection = Camera.GetProjectionMatrix(_framebufferAspectRatio);
             RenderQueue.SortByDepth(view);
@@ -1305,7 +1348,7 @@ namespace DotnetGltfRenderer {
         }
 
         public void Dispose() {
-            Model?.Dispose();
+            Scene?.Dispose();
             Skybox?.Dispose();
             _environmentTexture?.Dispose();
             _iblSampler?.Dispose();
@@ -1315,6 +1358,7 @@ namespace DotnetGltfRenderer {
             _materialUBO?.Dispose();
             _lightsUBO?.Dispose();
             _transmissionFramebuffer?.Dispose();
+            _scatterFramebuffer?.Dispose();
         }
     }
 }

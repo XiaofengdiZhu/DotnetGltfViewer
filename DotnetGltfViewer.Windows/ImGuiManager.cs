@@ -19,7 +19,9 @@ namespace DotnetGltfViewer.Windows {
         static bool _showDemoWindow;
         static bool _showMetricsWindow;
         static bool _showGizmoOptions;
+        static bool _showScenePanel;
         static Camera _camera;
+        static Scene _scene;
 
         public static ImGuiIOPtr IO => _io;
 
@@ -30,20 +32,21 @@ namespace DotnetGltfViewer.Windows {
         /// <param name="window">窗口实例。</param>
         /// <param name="input">输入上下文。</param>
         /// <param name="camera">相机实例。</param>
-        /// <param name="model">模型实例。</param>
+        /// <param name="scene">场景实例。</param>
         /// <param name="imGuiFontConfig">ImGui 字体配置。</param>
         /// <param name="onConfigureIO">配置 ImGui IO 回调。</param>
         public static void Initialize(GL gl,
             IWindow window,
             Silk.NET.Input.IInputContext input,
             Camera camera,
-            DotnetGltfRenderer.Model model,
+            Scene scene,
             ImGuiFontConfig? imGuiFontConfig = null,
             Action onConfigureIO = null) {
             _controller = new ImGuiController(gl, window, input, imGuiFontConfig, onConfigureIO ?? DefaultOnConfigureIO );
             ImGuizmo.SetImGuiContext(_controller.Context);
             _camera = camera;
-            GizmoManager.Initialize(camera, model);
+            _scene = scene;
+            GizmoManager.Initialize(camera, scene);
             float scale = MainWindow.MonitorScale;
             if (scale > 1.0f) {
                 ImGuiStylePtr style = ImGui.GetStyle();
@@ -106,7 +109,17 @@ namespace DotnetGltfViewer.Windows {
         public static void RenderMainMenuBar() {
             if (ImGui.BeginMainMenuBar()) {
                 if (ImGui.BeginMenu("File")) {
-                    if (ImGui.MenuItem("Open", "Ctrl+O")) { }
+                    if (ImGui.MenuItem("Open Model...", "Ctrl+O")) {
+                        MainWindow.OpenModelFileDialog();
+                    }
+                    if (ImGui.MenuItem("Open Environment Map...", "Ctrl+E")) {
+                        MainWindow.OpenEnvironmentMapDialog();
+                    }
+                    ImGui.Separator();
+                    if (ImGui.MenuItem("Clear Scene")) {
+                        MainWindow.ClearScene();
+                    }
+                    ImGui.Separator();
                     if (ImGui.MenuItem("Quit", "Alt+F4")) {
                         MainWindow.Close();
                     }
@@ -116,11 +129,18 @@ namespace DotnetGltfViewer.Windows {
                     ImGui.MenuItem("Demo", string.Empty, ref _showDemoWindow);
                     ImGui.MenuItem("Metrics", string.Empty, ref _showMetricsWindow);
                     ImGui.MenuItem("Gizmo Options", string.Empty, ref _showGizmoOptions);
+                    ImGui.MenuItem("Scene Panel", string.Empty, ref _showScenePanel);
                     ImGui.EndMenu();
                 }
                 if (ImGui.BeginMenu("Edit")) {
                     if (ImGui.MenuItem("Reset Transform", "")) {
                         GizmoManager.ResetModelMatrix();
+                    }
+                    ImGui.EndMenu();
+                }
+                if (ImGui.BeginMenu("Camera")) {
+                    if (ImGui.MenuItem("Reset to Model", "Home")) {
+                        MainWindow.ResetCameraToModel();
                     }
                     ImGui.EndMenu();
                 }
@@ -143,6 +163,63 @@ namespace DotnetGltfViewer.Windows {
                 GizmoManager.RenderOptionsPanel();
                 ImGui.End();
             }
+            if (_showScenePanel) {
+                RenderScenePanel();
+            }
+        }
+
+        /// <summary>
+        /// 渲染场景面板
+        /// </summary>
+        static void RenderScenePanel() {
+            ImGui.Begin("Scene", ref _showScenePanel);
+
+            if (_scene == null) {
+                ImGui.Text("No scene loaded");
+                ImGui.End();
+                return;
+            }
+
+            // 模型列表
+            ImGui.Text($"Models: {_scene.Models.Count}");
+            ImGui.Separator();
+
+            for (int i = 0; i < _scene.Models.Count; i++) {
+                SceneModel model = _scene.Models[i];
+                bool isSelected = _scene.SelectedModel == model;
+
+                // 可见性复选框
+                bool isVisible = model.IsVisible;
+                ImGui.PushID($"visible_{i}");
+                if (ImGui.Checkbox("##visible", ref isVisible)) {
+                    model.IsVisible = isVisible;
+                }
+                ImGui.PopID();
+                ImGui.SameLine();
+
+                // 选中状态
+                if (ImGui.Selectable($"{model.Name}", isSelected)) {
+                    _scene.SelectModel(model);
+                }
+
+                // 右键菜单
+                if (ImGui.BeginPopupContextItem()) {
+                    if (ImGui.MenuItem("Remove")) {
+                        _scene.RemoveModel(model);
+                        break; // 避免在枚举时修改集合
+                    }
+                    ImGui.EndPopup();
+                }
+            }
+
+            ImGui.Separator();
+
+            // 添加模型按钮
+            if (ImGui.Button("Add Model...")) {
+                MainWindow.OpenModelFileDialog();
+            }
+
+            ImGui.End();
         }
 
         /// <summary>

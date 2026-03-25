@@ -176,6 +176,11 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public Vector3 Centroid { get; private set; }
 
+        /// <summary>
+        /// 局部空间包围盒（用于射线拾取）
+        /// </summary>
+        public BoundingBox LocalBounds { get; private set; }
+
         void ComputeCentroid() {
             if (BaseVertices == null
                 || BaseVertices.Length < 3) {
@@ -221,12 +226,40 @@ namespace DotnetGltfRenderer {
             }
         }
 
+        /// <summary>
+        /// 计算局部空间包围盒
+        /// </summary>
+        void ComputeLocalBounds() {
+            if (BaseVertices == null || BaseVertices.Length < BaseVertexStride) {
+                LocalBounds = BoundingBox.Empty;
+                return;
+            }
+
+            Vector3 min = new(float.MaxValue);
+            Vector3 max = new(float.MinValue);
+
+            int vertexCount = BaseVertices.Length / BaseVertexStride;
+            for (int i = 0; i < vertexCount; i++) {
+                int offset = i * BaseVertexStride;
+                float x = BaseVertices[offset];
+                float y = BaseVertices[offset + 1];
+                float z = BaseVertices[offset + 2];
+
+                min = Vector3.Min(min, new Vector3(x, y, z));
+                max = Vector3.Max(max, new Vector3(x, y, z));
+            }
+
+            LocalBounds = min.X != float.MaxValue ? new BoundingBox(min, max) : BoundingBox.Empty;
+        }
+
         public void SetupMesh() {
             HasSurfaceAttributes = SurfaceVertices != null && SurfaceVertices.Length > 0;
             HasSkinAttributes = SkinVertices != null && SkinVertices.Length > 0;
 
             // 预计算质心（在加载时完成，避免渲染时计算）
             ComputeCentroid();
+            // 计算局部空间包围盒（用于射线拾取）
+            ComputeLocalBounds();
             VAO = new VertexArrayObject<float, uint>(GL);
             VAO.Bind();
             BaseVBO = new BufferObject<float>(GL, BaseVertices, BufferTargetARB.ArrayBuffer);

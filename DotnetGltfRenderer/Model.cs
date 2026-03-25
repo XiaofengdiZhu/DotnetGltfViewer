@@ -15,6 +15,7 @@ using SharpGLTF.Memory;
 using SharpGLTF.Schema2;
 using SharpGLTF.Validation;
 using Silk.NET.OpenGLES;
+using GltfScene = SharpGLTF.Schema2.Scene;
 
 namespace DotnetGltfRenderer {
     public class Model : IDisposable {
@@ -127,6 +128,9 @@ namespace DotnetGltfRenderer {
             /// </summary>
             public void ResetGizmoTransform() {
                 _gizmoTransform = Matrix4x4.Identity;
+                // 同时重置 WorldMatrix 到原始值
+                WorldMatrix = OriginalWorldMatrix;
+                IsNegativeScale = WorldMatrix.GetDeterminant() < 0f;
             }
 
             /// <summary>
@@ -292,7 +296,7 @@ namespace DotnetGltfRenderer {
         void PreloadAllScenes() {
             // 收集场景名称
             _sceneNames.Clear();
-            foreach (Scene scene in _modelRoot.LogicalScenes) {
+            foreach (GltfScene scene in _modelRoot.LogicalScenes) {
                 _sceneNames.Add(scene.Name ?? $"Scene {scene.LogicalIndex}");
             }
 
@@ -308,7 +312,7 @@ namespace DotnetGltfRenderer {
             // 预处理每个场景
             Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> primitiveMeshCache = new();
             for (int sceneIndex = 0; sceneIndex < _modelRoot.LogicalScenes.Count; sceneIndex++) {
-                Scene scene = _modelRoot.LogicalScenes[sceneIndex];
+                GltfScene scene = _modelRoot.LogicalScenes[sceneIndex];
                 ProcessScene(scene, sceneIndex, primitiveMeshCache);
             }
 
@@ -321,7 +325,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 处理单个场景，缓存其 MeshInstance 和 Light
         /// </summary>
-        void ProcessScene(Scene scene, int sceneIndex, Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> primitiveMeshCache) {
+        void ProcessScene(GltfScene scene, int sceneIndex, Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> primitiveMeshCache) {
             List<MeshInstance> instances = new();
             List<Light> lights = new();
             if (scene != null) {
