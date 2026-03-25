@@ -19,7 +19,7 @@ namespace DotnetGltfRenderer {
 
         // Subsystems
         readonly FramebufferManager _framebufferManager;
-        readonly DrawableRenderer _drawableRenderer;
+        readonly MeshInstanceRenderer _meshInstanceRenderer;
         readonly RenderPassManager _renderPassManager;
 
         // Frame state
@@ -98,8 +98,8 @@ namespace DotnetGltfRenderer {
 
             // 初始化子系统
             _framebufferManager = new FramebufferManager(gl);
-            _drawableRenderer = new DrawableRenderer(gl, _materialUBO, _sceneUBO, _lightsUBO);
-            _renderPassManager = new RenderPassManager(_framebufferManager, _drawableRenderer);
+            _meshInstanceRenderer = new MeshInstanceRenderer(gl, _materialUBO, _sceneUBO, _lightsUBO);
+            _renderPassManager = new RenderPassManager(_framebufferManager, _meshInstanceRenderer);
 
             // 初始化天空渲染器
             InitializeSkyRenderer();

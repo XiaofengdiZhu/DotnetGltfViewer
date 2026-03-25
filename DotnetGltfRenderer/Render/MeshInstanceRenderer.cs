@@ -6,7 +6,7 @@ namespace DotnetGltfRenderer {
     /// MeshInstance 渲染器
     /// 负责渲染单个 MeshInstance，包括着色器选择、材质绑定、绘制调用
     /// </summary>
-    public class DrawableRenderer {
+    public class MeshInstanceRenderer {
         readonly GL _gl;
         readonly UniformBuffer<MaterialData> _materialUBO;
         readonly UniformBuffer<SceneData> _sceneUBO;
@@ -30,7 +30,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建 Drawable 渲染器
         /// </summary>
-        public DrawableRenderer(GL gl, UniformBuffer<MaterialData> materialUBO, UniformBuffer<SceneData> sceneUBO, UniformBuffer<LightsData> lightsUBO) {
+        public MeshInstanceRenderer(GL gl, UniformBuffer<MaterialData> materialUBO, UniformBuffer<SceneData> sceneUBO, UniformBuffer<LightsData> lightsUBO) {
             _gl = gl;
             _materialUBO = materialUBO;
             _sceneUBO = sceneUBO;

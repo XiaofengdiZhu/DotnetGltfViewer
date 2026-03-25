@@ -9,11 +9,11 @@ namespace DotnetGltfRenderer {
     /// </summary>
     public class RenderPassManager {
         readonly FramebufferManager _framebufferManager;
-        readonly DrawableRenderer _drawableRenderer;
+        readonly MeshInstanceRenderer _meshInstanceRenderer;
 
-        public RenderPassManager(FramebufferManager framebufferManager, DrawableRenderer drawableRenderer) {
+        public RenderPassManager(FramebufferManager framebufferManager, MeshInstanceRenderer meshInstanceRenderer) {
             _framebufferManager = framebufferManager;
-            _drawableRenderer = drawableRenderer;
+            _meshInstanceRenderer = meshInstanceRenderer;
         }
 
         /// <summary>
@@ -27,12 +27,12 @@ namespace DotnetGltfRenderer {
             _framebufferManager.BindScatterFramebuffer();
             _framebufferManager.ClearScatterFramebuffer();
 
-            _drawableRenderer.SetViewProjectionMatrices(context.View, context.Projection);
+            _meshInstanceRenderer.SetViewProjectionMatrices(context.View, context.Projection);
 
             RenderContext scatterContext = context.ForScatterPass();
             foreach (MeshInstance instance in scatterInstances) {
                 if (instance.IsVisible) {
-                    _drawableRenderer.Render(instance, in scatterContext);
+                    _meshInstanceRenderer.Render(instance, in scatterContext);
                 }
             }
 
@@ -53,7 +53,7 @@ namespace DotnetGltfRenderer {
             _framebufferManager.BindTransmissionFramebuffer();
             _framebufferManager.ClearTransmissionFramebuffer();
 
-            _drawableRenderer.SetViewProjectionMatrices(context.View, context.Projection);
+            _meshInstanceRenderer.SetViewProjectionMatrices(context.View, context.Projection);
 
             // 渲染天空盒（线性输出）
             renderSkyLinear?.Invoke(context.View, context.Projection);
@@ -62,12 +62,12 @@ namespace DotnetGltfRenderer {
             RenderContext transmissionContext = context.ForTransmissionPass();
             foreach (MeshInstance instance in scene.OpaqueInstances) {
                 if (instance.IsVisible) {
-                    _drawableRenderer.Render(instance, in transmissionContext);
+                    _meshInstanceRenderer.Render(instance, in transmissionContext);
                 }
             }
             foreach (MeshInstance instance in scene.TransparentInstances) {
                 if (instance.IsVisible) {
-                    _drawableRenderer.Render(instance, in transmissionContext);
+                    _meshInstanceRenderer.Render(instance, in transmissionContext);
                 }
             }
 
@@ -86,7 +86,7 @@ namespace DotnetGltfRenderer {
             Action onBindScatterTextures = null,
             Action onBindTransmissionTexture = null) {
 
-            _drawableRenderer.SetViewProjectionMatrices(context.View, context.Projection);
+            _meshInstanceRenderer.SetViewProjectionMatrices(context.View, context.Projection);
 
             // 渲染天空盒
             renderSky?.Invoke(context.View, context.Projection);
@@ -101,7 +101,7 @@ namespace DotnetGltfRenderer {
             // 渲染不透明物体
             foreach (MeshInstance instance in scene.OpaqueInstances) {
                 if (instance.IsVisible) {
-                    _drawableRenderer.Render(instance, in mainContext);
+                    _meshInstanceRenderer.Render(instance, in mainContext);
                 }
             }
 
@@ -110,7 +110,7 @@ namespace DotnetGltfRenderer {
                 onBindTransmissionTexture?.Invoke();
                 foreach (MeshInstance instance in scene.TransmissionInstances) {
                     if (instance.IsVisible) {
-                        _drawableRenderer.Render(instance, in mainContext);
+                        _meshInstanceRenderer.Render(instance, in mainContext);
                     }
                 }
             }
@@ -118,7 +118,7 @@ namespace DotnetGltfRenderer {
             // 渲染透明物体
             foreach (MeshInstance instance in scene.TransparentInstances) {
                 if (instance.IsVisible) {
-                    _drawableRenderer.Render(instance, in mainContext);
+                    _meshInstanceRenderer.Render(instance, in mainContext);
                 }
             }
         }

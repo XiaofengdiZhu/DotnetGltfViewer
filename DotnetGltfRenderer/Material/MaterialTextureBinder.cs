@@ -10,11 +10,21 @@ namespace DotnetGltfRenderer {
         /// 绑定材质的所有纹理
         /// </summary>
         public static void BindMaterialTextures(GL gl, Material material, Shader shader) {
-            BindTexture(gl, material.BaseColorTexture, MaterialTextureSlot.BaseColor);
-            BindTexture(gl, material.MetallicRoughnessTexture, MaterialTextureSlot.MetallicRoughness);
-            BindTexture(gl, material.NormalTexture, MaterialTextureSlot.Normal);
-            BindTexture(gl, material.OcclusionTexture, MaterialTextureSlot.Occlusion);
-            BindTexture(gl, material.EmissiveTexture, MaterialTextureSlot.Emissive);
+            if (material.BaseColorTexture != null) {
+                BindTexture(gl, material.BaseColorTexture, MaterialTextureSlot.BaseColor);
+            }
+            if (material.MetallicRoughnessTexture != null) {
+                BindTexture(gl, material.MetallicRoughnessTexture, MaterialTextureSlot.MetallicRoughness);
+            }
+            if (material.NormalTexture != null) {
+                BindTexture(gl, material.NormalTexture, MaterialTextureSlot.Normal);
+            }
+            if (material.OcclusionTexture != null) {
+                BindTexture(gl, material.OcclusionTexture, MaterialTextureSlot.Occlusion);
+            }
+            if (material.EmissiveTexture != null) {
+                BindTexture(gl, material.EmissiveTexture, MaterialTextureSlot.Emissive);
+            }
 
             // 扩展纹理
             if (material.ClearCoat?.IsEnabled == true) {

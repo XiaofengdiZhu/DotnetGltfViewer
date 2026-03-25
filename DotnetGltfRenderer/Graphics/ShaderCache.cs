@@ -14,6 +14,8 @@ namespace DotnetGltfRenderer {
         static Dictionary<int, uint> _shaderCache;
         static Dictionary<string, Shader> _programCache;
         static GL _gl;
+        static string _shaderDirectory;
+        static string _cacheDirectory;
         static bool _initialized;
 
         /// <summary>
@@ -30,9 +32,14 @@ namespace DotnetGltfRenderer {
             }
 
             _gl = gl;
+            _shaderDirectory = shadersDirectory;
+            _cacheDirectory = Path.Combine(shadersDirectory, "caches");
             _sources = new Dictionary<string, string>();
             _shaderCache = new Dictionary<int, uint>();
             _programCache = new Dictionary<string, Shader>();
+
+            // 确保缓存目录存在
+            Directory.CreateDirectory(_cacheDirectory);
 
             LoadShaderSources(shadersDirectory);
             ResolveIncludes();
@@ -178,19 +185,50 @@ namespace DotnetGltfRenderer {
             if (_programCache.TryGetValue(cacheKey, out Shader program)) {
                 return program;
             }
-            if (!_shaderCache.TryGetValue(vertexShaderHash, out uint vertShader)) {
-                throw new InvalidOperationException($"Vertex shader not found: {vertexShaderHash}");
+
+            // 尝试从二进制缓存加载
+            uint programHandle = TryLoadProgramBinary(cacheKey);
+            bool fromCache = programHandle != 0;
+
+            if (!fromCache) {
+                // 缓存加载失败，走原有编译链接流程
+                if (!_shaderCache.TryGetValue(vertexShaderHash, out uint vertShader)) {
+                    throw new InvalidOperationException($"Vertex shader not found: {vertexShaderHash}");
+                }
+                if (!_shaderCache.TryGetValue(fragmentShaderHash, out uint fragShader)) {
+                    throw new InvalidOperationException($"Fragment shader not found: {fragmentShaderHash}");
+                }
+
+                programHandle = _gl.CreateProgram();
+                _gl.AttachShader(programHandle, vertShader);
+                _gl.AttachShader(programHandle, fragShader);
+
+                // Bind vertex attribute locations (must be done BEFORE linking)
+                BindAttributeLocations(programHandle);
+
+                _gl.LinkProgram(programHandle);
+                _gl.GetProgram(programHandle, ProgramPropertyARB.LinkStatus, out int status);
+                if (status == 0) {
+                    string log = _gl.GetProgramInfoLog(programHandle);
+                    throw new Exception($"Program link failed: {log}");
+                }
+
+                // 保存二进制缓存
+                SaveProgramBinary(programHandle, cacheKey);
+
+                // 创建 Shader 对象（需要着色器句柄用于清理）
+                program = new Shader(_gl, programHandle, vertShader, fragShader);
             }
-            if (!_shaderCache.TryGetValue(fragmentShaderHash, out uint fragShader)) {
-                throw new InvalidOperationException($"Fragment shader not found: {fragmentShaderHash}");
+            else {
+                // 从缓存加载成功，创建 Shader 对象（着色器句柄设为 0，因为不再需要）
+                program = new Shader(_gl, programHandle, 0, 0);
             }
 
-            // 链接程序
-            uint programHandle = _gl.CreateProgram();
-            _gl.AttachShader(programHandle, vertShader);
-            _gl.AttachShader(programHandle, fragShader);
+            _programCache[cacheKey] = program;
+            return program;
+        }
 
-            // Bind vertex attribute locations (must be done BEFORE linking)
+        static void BindAttributeLocations(uint programHandle) {
             // Layout matches Mesh.cs: 0=position, 1=normal, 2=texcoord_0, 3=tangent,
             //                         4=color, 5=joints, 6=weights, 7=texcoord_1
             //                         8-11=instance_matrix (mat4, 4 columns)
@@ -204,20 +242,73 @@ namespace DotnetGltfRenderer {
             _gl.BindAttribLocation(programHandle, 7, "a_texcoord_1");
 
             // Instance matrix attributes (mat4 requires 4 vec4 slots)
-            // a_instance_model_matrix is declared as "in mat4" in primitive.vert
-            // For mat4, we only bind the base name, OpenGL automatically uses consecutive locations
             _gl.BindAttribLocation(programHandle, 8, "a_instance_model_matrix");
-            _gl.LinkProgram(programHandle);
-            _gl.GetProgram(programHandle, ProgramPropertyARB.LinkStatus, out int status);
-            if (status == 0) {
-                string log = _gl.GetProgramInfoLog(programHandle);
-                throw new Exception($"Program link failed: {log}");
+        }
+
+        static uint TryLoadProgramBinary(string cacheKey) {
+            string cacheFile = Path.Combine(_cacheDirectory, $"{cacheKey}.bin");
+            if (!File.Exists(cacheFile)) {
+                return 0;
             }
 
-            // 创建 Shader 对象
-            program = new Shader(_gl, programHandle, vertShader, fragShader);
-            _programCache[cacheKey] = program;
-            return program;
+            try {
+                byte[] fileData = File.ReadAllBytes(cacheFile);
+                if (fileData.Length < 8) {
+                    return 0;
+                }
+
+                // 前 4 字节是格式
+                uint formatValue = BitConverter.ToUInt32(fileData, 0);
+                // 剩余是二进制数据
+                int binaryLength = fileData.Length - 4;
+
+                uint programHandle = _gl.CreateProgram();
+                _gl.ProgramBinary(programHandle, (GLEnum)formatValue, fileData.AsSpan(4, binaryLength), (uint)binaryLength);
+
+                _gl.GetProgram(programHandle, ProgramPropertyARB.LinkStatus, out int status);
+                if (status == 0) {
+                    _gl.DeleteProgram(programHandle);
+                    return 0;
+                }
+
+                return programHandle;
+            }
+            catch {
+                try {
+                    if (File.Exists(cacheFile)) {
+                        File.Delete(cacheFile);
+                    }
+                }
+                catch {
+                    // ignored
+                }
+                return 0;
+            }
+        }
+
+        static unsafe void SaveProgramBinary(uint programHandle, string cacheKey) {
+            try {
+                _gl.GetProgram(programHandle, ProgramPropertyARB.ProgramBinaryLength, out int binaryLength);
+                if (binaryLength <= 0) {
+                    return;
+                }
+
+                byte[] binary = new byte[binaryLength + 4];
+                uint formatValue;
+                fixed (byte* ptr = &binary[4]) {
+                    _gl.GetProgramBinary(programHandle, (uint)binaryLength, out _, out GLEnum format, ptr);
+                    formatValue = (uint)format;
+                }
+
+                // 前 4 字节存储格式
+                BitConverter.TryWriteBytes(binary, formatValue);
+
+                string cacheFile = Path.Combine(_cacheDirectory, $"{cacheKey}.bin");
+                File.WriteAllBytes(cacheFile, binary);
+            }
+            catch {
+                // 保存失败不影响正常流程
+            }
         }
 
         static uint CompileShader(ShaderType type, string source, string shaderName) {
