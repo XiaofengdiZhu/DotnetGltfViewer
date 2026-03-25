@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using ZLogger;
 using GltfMaterial = SharpGLTF.Schema2.Material;
 
 namespace DotnetGltfRenderer {
@@ -35,7 +36,7 @@ namespace DotnetGltfRenderer {
             // SharpGLTF 不原生支持 KHR_materials_volume_scatter，需要通过反射读取未知扩展
             object volumeScatterExt = GetUnknownExtension(material, "KHR_materials_volume_scatter");
             if (volumeScatterExt == null) {
-                Console.WriteLine("[VolumeScatter] Extension not found");
+                LogManager.Logger.ZLogWarning($"[VolumeScatter] Extension not found");
                 return;
             }
 
@@ -44,7 +45,6 @@ namespace DotnetGltfRenderer {
 
             // 读取 scatterAnisotropy
             ScatterAnisotropy = GetExtensionFloat(volumeScatterExt, "scatterAnisotropy");
-            Console.WriteLine($"[VolumeScatter] Loaded: MultiscatterColor={MultiscatterColor}, Anisotropy={ScatterAnisotropy}");
         }
 
         public override void AppendDefines(ShaderDefines defines) {

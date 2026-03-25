@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Silk.NET.OpenGLES;
+using ZLogger;
 
 namespace DotnetGltfRenderer {
     /// <summary>
@@ -101,7 +102,7 @@ namespace DotnetGltfRenderer {
                 MainShader = ShaderCache.GetShaderProgram(vertHash, fragHash);
             }
             catch (Exception ex) {
-                Console.WriteLine($"[ERROR] Failed to compile main shader: {ex.Message}");
+                LogManager.Logger.ZLogError($"Failed to compile main shader: {ex.Message}");
                 throw;
             }
 
@@ -115,7 +116,7 @@ namespace DotnetGltfRenderer {
                 SkyShader = ShaderCache.GetShaderProgram(skyVertHash, skyFragHash);
             }
             catch (Exception ex) {
-                Console.WriteLine($"[ERROR] Failed to compile sky shader: {ex.Message}");
+                LogManager.Logger.ZLogError($"Failed to compile sky shader: {ex.Message}");
                 throw;
             }
 
@@ -154,7 +155,7 @@ namespace DotnetGltfRenderer {
                 return ShaderCache.GetShaderProgram(vertHash, fragHash);
             }
             catch (Exception ex) {
-                Console.WriteLine($"[ERROR] Failed to compile shader variant for {vertShader} and {fragShader}: {ex.Message}");
+                LogManager.Logger.ZLogError($"Failed to compile shader variant for {vertShader} and {fragShader}: {ex.Message}");
                 return null;
             }
         }

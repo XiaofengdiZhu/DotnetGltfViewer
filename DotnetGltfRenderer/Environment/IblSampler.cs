@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Silk.NET.OpenGLES;
+using ZLogger;
 
 namespace DotnetGltfRenderer {
     /// <summary>
@@ -77,37 +78,32 @@ namespace DotnetGltfRenderer {
             _framebuffer = _gl.GenFramebuffer();
 
             // Step 1: Equirectangular -> Cubemap
-            //Console.WriteLine("[IBL] Step 1: Converting Equirectangular to Cubemap...");
             PanoramaToCubeMap();
             //SaveCubemapToBmp("cubemap");
 
             // Step 2: Lambertian Irradiance
-            //Console.WriteLine("[IBL] Step 2: Generating Lambertian Irradiance...");
             CubeMapToLambertian();
             //SaveCubemapToBmp("lambertian", LambertianTexture, 1);
 
             // Step 3: GGX 预过滤
-            //Console.WriteLine("[IBL] Step 3: Generating GGX Prefilter...");
             CubeMapToGGX();
-            for (int mip = 0; mip <= MipCount; mip++) {
-                //SaveCubemapToBmp($"ggx_mip{mip}", GGXTexture, 1, mip);
-            }
+            /*for (int mip = 0; mip <= MipCount; mip++) {
+                SaveCubemapToBmp($"ggx_mip{mip}", GGXTexture, 1, mip);
+            }*/
 
             // Step 4: Charlie (Sheen) 预过滤
-            //Console.WriteLine("[IBL] Step 4: Generating Charlie Prefilter...");
             CubeMapToSheen();
-            for (int mip = 0; mip <= MipCount; mip++) {
-                //SaveCubemapToBmp($"sheen_mip{mip}", SheenTexture, 1, mip);
-            }
+            /*for (int mip = 0; mip <= MipCount; mip++) {
+                SaveCubemapToBmp($"sheen_mip{mip}", SheenTexture, 1, mip);
+            }*/
 
             // Step 5: BRDF LUT
-            //Console.WriteLine("[IBL] Step 5: Generating BRDF LUT...");
             GenerateGGXLut();
             //SaveLutToBmp("ggx_lut", GGXLut);
             GenerateCharlieLut();
             //SaveLutToBmp("charlie_lut", CharlieLut);
             _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-            //Console.WriteLine("[IBL] Processing complete!");
+            LogManager.Logger.ZLogInformation($"[IBL] Processing complete!");
         }
 
         void InitShaders() {
@@ -413,7 +409,6 @@ namespace DotnetGltfRenderer {
 
             //string path = Path.Combine(ProgressDirectory, $"{name}.bmp");
             //SaveBmp(path, combinedData, combinedWidth, combinedHeight);
-            //Console.WriteLine($"[IBL] Saved: {path}");
         }
 
         unsafe byte[] ReadCubemapFace(uint texture, int face, int size, int mipLevel) {
@@ -494,7 +489,6 @@ namespace DotnetGltfRenderer {
 
             //string path = Path.Combine(ProgressDirectory, $"{name}.bmp");
             //SaveBmp(path, data, _lutResolution, _lutResolution);
-            //Console.WriteLine($"[IBL] Saved: {path}");
         }
 
         float ToneMap(float value) {

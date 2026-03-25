@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using SharpGLTF.Animations;
 using SharpGLTF.Schema2;
+using ZLogger;
 
 namespace DotnetGltfRenderer {
     /// <summary>
@@ -54,7 +55,6 @@ namespace DotnetGltfRenderer {
                 PointerTarget target = CreatePointerTarget(pointerPath, channel, modelRoot, model);
                 if (target != null) {
                     _targets.Add(target);
-                    //Console.WriteLine($"[KHR_animation_pointer] Found: {pointerPath}");
                 }
             }
         }
@@ -118,7 +118,7 @@ namespace DotnetGltfRenderer {
                 }
             }
             catch (Exception ex) {
-                Console.WriteLine($"[Warning] Failed to create pointer target for {path}: {ex.Message}");
+                LogManager.Logger.ZLogWarning($"Failed to create pointer target for {path}: {ex.Message}");
             }
             return null;
         }
@@ -172,9 +172,6 @@ namespace DotnetGltfRenderer {
                         targetMeshInstances.Add(instance);
                     }
                 }
-                Console.WriteLine(
-                    $"[KHR_animation_pointer] Node visibility target: node {nodeIndex}, hasLight: {targetLight != null}, meshCount: {targetMeshInstances?.Count ?? 0}"
-                );
                 return new PointerTarget {
                     PointerPath = string.Join("/", segments),
                     UpdateAtTime = time => {
@@ -547,7 +544,7 @@ namespace DotnetGltfRenderer {
 
             // 使用映射表找到正确的 Model.Lights 索引
             if (!_gltfLightIndexToModelLightIndex.TryGetValue(gltfLightIndex, out int modelLightIndex)) {
-                Console.WriteLine($"[KHR_animation_pointer] Warning: No mapping found for glTF light index {gltfLightIndex}");
+                LogManager.Logger.ZLogWarning($"[KHR_animation_pointer] No mapping found for glTF light index {gltfLightIndex}");
                 return null;
             }
             if (modelLightIndex >= model.Lights.Count) {
