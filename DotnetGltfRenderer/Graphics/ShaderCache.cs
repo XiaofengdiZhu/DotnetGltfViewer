@@ -83,13 +83,25 @@ namespace DotnetGltfRenderer {
                     foreach ((string includeName, string includeSource) in _sources) {
                         string pattern = $"#include <{includeName}>";
                         if (src.Contains(pattern)) {
-                            // 替换第一次出现的 include
-                            src = src.Replace(pattern, includeSource);
+                            var sb = new StringBuilder(src.Length + includeSource.Length);
+                            int index = 0;
+                            int patternLength = pattern.Length;
 
-                            // 删除后续重复的 include（防止重复包含）
-                            while (src.Contains(pattern)) {
-                                src = src.Replace(pattern, "");
+                            // 替换所有出现的 include
+                            while (true) {
+                                int foundIndex = src.IndexOf(pattern, index);
+                                if (foundIndex < 0) {
+                                    sb.Append(src, index, src.Length - index);
+                                    break;
+                                }
+                                // 只替换第一次出现，后续的删除
+                                if (sb.Length == 0 || foundIndex > index) {
+                                    sb.Append(src, index, foundIndex - index);
+                                    sb.Append(includeSource);
+                                }
+                                index = foundIndex + patternLength;
                             }
+                            src = sb.ToString();
                             changed = true;
                         }
                     }
@@ -196,7 +208,7 @@ namespace DotnetGltfRenderer {
             // For mat4, we only bind the base name, OpenGL automatically uses consecutive locations
             _gl.BindAttribLocation(programHandle, 8, "a_instance_model_matrix");
             _gl.LinkProgram(programHandle);
-            _gl.GetProgram(programHandle, GLEnum.LinkStatus, out int status);
+            _gl.GetProgram(programHandle, ProgramPropertyARB.LinkStatus, out int status);
             if (status == 0) {
                 string log = _gl.GetProgramInfoLog(programHandle);
                 throw new Exception($"Program link failed: {log}");
@@ -212,7 +224,7 @@ namespace DotnetGltfRenderer {
             uint shader = _gl.CreateShader(type);
             _gl.ShaderSource(shader, source);
             _gl.CompileShader(shader);
-            _gl.GetShader(shader, GLEnum.CompileStatus, out int status);
+            _gl.GetShader(shader, ShaderParameterName.CompileStatus, out int status);
             if (status == 0) {
                 string log = _gl.GetShaderInfoLog(shader);
                 _gl.DeleteShader(shader);

@@ -233,10 +233,10 @@ namespace DotnetGltfRenderer {
             };
         }
 
-        static GLEnum MapMagFilter(GltfTextureInterpolationFilter magFilter) {
+        static TextureMagFilter MapMagFilter(GltfTextureInterpolationFilter magFilter) {
             return magFilter switch {
-                GltfTextureInterpolationFilter.NEAREST => GLEnum.Nearest,
-                _ => GLEnum.Linear
+                GltfTextureInterpolationFilter.NEAREST => TextureMagFilter.Nearest,
+                _ => TextureMagFilter.Linear
             };
         }
 

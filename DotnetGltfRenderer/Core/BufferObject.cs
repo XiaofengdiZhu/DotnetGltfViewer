@@ -7,7 +7,7 @@ namespace DotnetGltfRenderer {
         readonly BufferTargetARB _bufferType;
         readonly GL _gl;
 
-        public unsafe BufferObject(GL gl, Span<TDataType> data, BufferTargetARB bufferType) {
+        public unsafe BufferObject(GL gl, ReadOnlySpan<TDataType> data, BufferTargetARB bufferType) {
             _gl = gl;
             _bufferType = bufferType;
             _handle = _gl.GenBuffer();

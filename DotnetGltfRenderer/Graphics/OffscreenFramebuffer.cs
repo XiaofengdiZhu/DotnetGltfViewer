@@ -87,8 +87,8 @@ namespace DotnetGltfRenderer {
             );
 
             // 检查帧缓冲区状态
-            GLEnum status = _gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
-            if (status != GLEnum.FramebufferComplete) {
+            FramebufferStatus status = (FramebufferStatus)_gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+            if (status != FramebufferStatus.Complete) {
                 throw new InvalidOperationException($"Framebuffer incomplete: {status}");
             }
 

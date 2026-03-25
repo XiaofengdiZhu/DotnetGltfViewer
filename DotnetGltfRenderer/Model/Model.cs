@@ -32,6 +32,12 @@ namespace DotnetGltfRenderer {
         // 节点世界矩阵缓存（用于优化动画性能）
         readonly Dictionary<Node, Matrix4x4> _nodeWorldMatrixCache = new();
 
+        // 动画更新用的临时集合（避免每帧分配）
+        readonly HashSet<Node> _nodesToUpdate = new();
+
+        // morph target 动画 channel 缓存（Node -> weights channel）
+        readonly Dictionary<Node, IAnimationSampler<float[]>> _morphSamplerCache = new();
+
         // ========== 场景缓存支持 ==========
         readonly List<string> _sceneNames = new();
         int _activeSceneIndex;
@@ -116,10 +122,27 @@ namespace DotnetGltfRenderer {
             _activeAnimation = _modelRoot.LogicalAnimations.FirstOrDefault();
             AnimationDurationSeconds = _activeAnimation?.Duration ?? 0f;
 
+            // 构建 morph target sampler 缓存
+            BuildMorphSamplerCache();
+
             // Initialize KHR_animation_pointer processor
             _pointerProcessor = new AnimationPointerProcessor();
             _pointerProcessor.ProcessAnimation(_activeAnimation, _modelRoot, this);
             UpdateMeshInstanceTransforms();
+        }
+
+        void BuildMorphSamplerCache() {
+            _morphSamplerCache.Clear();
+            if (_activeAnimation == null) return;
+
+            foreach (AnimationChannel channel in _activeAnimation.Channels) {
+                if (channel.TargetNodePath == PropertyPath.weights) {
+                    IAnimationSampler<float[]> sampler = channel.GetMorphSampler();
+                    if (sampler != null) {
+                        _morphSamplerCache[channel.TargetNode] = sampler;
+                    }
+                }
+            }
         }
 
         void DetectExtensions(ModelRoot modelRoot) {
@@ -448,22 +471,22 @@ namespace DotnetGltfRenderer {
 
         void UpdateMeshInstanceTransforms() {
             if (_activeAnimation != null) {
-                HashSet<Node> nodesToUpdate = new();
+                _nodesToUpdate.Clear();
                 foreach (MeshInstance instance in _meshInstances) {
-                    nodesToUpdate.Add(instance.Node);
+                    _nodesToUpdate.Add(instance.Node);
                     if (instance.HasSkinning && instance._joints != null) {
                         foreach (Node joint in instance._joints) {
-                            nodesToUpdate.Add(joint);
+                            _nodesToUpdate.Add(joint);
                         }
                     }
                 }
                 foreach (Light light in _lights) {
                     if (light.SourceNode != null) {
-                        nodesToUpdate.Add(light.SourceNode);
+                        _nodesToUpdate.Add(light.SourceNode);
                     }
                 }
 
-                foreach (Node node in nodesToUpdate) {
+                foreach (Node node in _nodesToUpdate) {
                     _nodeWorldMatrixCache[node] = node.GetWorldMatrix(_activeAnimation, _animationTimeSeconds);
                 }
             }
@@ -480,23 +503,15 @@ namespace DotnetGltfRenderer {
                 instance.IsNegativeScale = instance.WorldMatrix.GetDeterminant() < 0f;
                 instance.UpdateSkinning(_activeAnimation, _animationTimeSeconds, _nodeWorldMatrixCache);
 
-                // Update morph weights
+                // Update morph weights (使用缓存的 sampler)
                 if (_activeAnimation != null && instance.Mesh.HasMorphTargets) {
                     float[] weights = instance.Mesh.MorphWeights;
-                    if (weights != null) {
-                        foreach (AnimationChannel channel in _activeAnimation.Channels) {
-                            if (channel.TargetNode == instance.Node && channel.TargetNodePath == PropertyPath.weights) {
-                                IAnimationSampler<float[]> sampler = channel.GetMorphSampler();
-                                if (sampler != null) {
-                                    ICurveSampler<float[]> curveSampler = sampler.CreateCurveSampler();
-                                    float[] animatedWeights = curveSampler.GetPoint(_animationTimeSeconds);
-                                    if (animatedWeights != null) {
-                                        for (int i = 0; i < Math.Min(weights.Length, animatedWeights.Length); i++) {
-                                            weights[i] = animatedWeights[i];
-                                        }
-                                    }
-                                }
-                                break;
+                    if (weights != null && _morphSamplerCache.TryGetValue(instance.Node, out IAnimationSampler<float[]> sampler)) {
+                        ICurveSampler<float[]> curveSampler = sampler.CreateCurveSampler();
+                        float[] animatedWeights = curveSampler.GetPoint(_animationTimeSeconds);
+                        if (animatedWeights != null) {
+                            for (int i = 0; i < Math.Min(weights.Length, animatedWeights.Length); i++) {
+                                weights[i] = animatedWeights[i];
                             }
                         }
                     }

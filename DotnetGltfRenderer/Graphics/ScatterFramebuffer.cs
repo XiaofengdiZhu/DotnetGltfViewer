@@ -103,8 +103,8 @@ namespace DotnetGltfRenderer {
             _gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2D, DepthTexture, 0);
 
             // 检查帧缓冲区状态
-            GLEnum status = _gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
-            if (status != GLEnum.FramebufferComplete) {
+            FramebufferStatus status = (FramebufferStatus)_gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+            if (status != FramebufferStatus.Complete) {
                 throw new InvalidOperationException($"Scatter Framebuffer incomplete: {status}");
             }
 

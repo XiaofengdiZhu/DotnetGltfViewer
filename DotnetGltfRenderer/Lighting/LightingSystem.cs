@@ -55,31 +55,32 @@ namespace DotnetGltfRenderer {
         /// 获取光源数据用于 UBO
         /// </summary>
         public LightsData GetLightsData() {
-            LightsData data = new() { LightCount = Math.Min(_lights.Count, MaxLightCount), Pad0 = 0, Pad1 = 0, Pad2 = 0 };
+            int lightCount = Math.Min(_lights.Count, MaxLightCount);
+            LightsData data = new() { LightCount = lightCount, Pad0 = 0, Pad1 = 0, Pad2 = 0 };
 
             // 填充光源数据
-            if (_lights.Count > 0) {
+            if (lightCount > 0) {
                 data.Light0 = ConvertLight(_lights[0]);
             }
-            if (_lights.Count > 1) {
+            if (lightCount > 1) {
                 data.Light1 = ConvertLight(_lights[1]);
             }
-            if (_lights.Count > 2) {
+            if (lightCount > 2) {
                 data.Light2 = ConvertLight(_lights[2]);
             }
-            if (_lights.Count > 3) {
+            if (lightCount > 3) {
                 data.Light3 = ConvertLight(_lights[3]);
             }
-            if (_lights.Count > 4) {
+            if (lightCount > 4) {
                 data.Light4 = ConvertLight(_lights[4]);
             }
-            if (_lights.Count > 5) {
+            if (lightCount > 5) {
                 data.Light5 = ConvertLight(_lights[5]);
             }
-            if (_lights.Count > 6) {
+            if (lightCount > 6) {
                 data.Light6 = ConvertLight(_lights[6]);
             }
-            if (_lights.Count > 7) {
+            if (lightCount > 7) {
                 data.Light7 = ConvertLight(_lights[7]);
             }
             return data;

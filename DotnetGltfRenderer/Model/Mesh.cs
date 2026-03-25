@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Silk.NET.OpenGLES;
 
 namespace DotnetGltfRenderer {
@@ -296,7 +297,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 设置 GPU 实例化缓冲区
         /// </summary>
-        public void SetupInstancingBuffer() {
+        public unsafe void SetupInstancingBuffer() {
             if (!UseInstancing
                 || InstanceMatrices == null
                 || InstanceMatrices.Length == 0) {
@@ -305,34 +306,11 @@ namespace DotnetGltfRenderer {
 
             // 确保 VAO 已绑定
             VAO.Bind();
-
-            // 将 Matrix4x4 数组转换为 float 数组
-            // 每个矩阵是 16 个 float（4x4）
-            float[] matrixData = new float[InstanceMatrices.Length * 16];
-            for (int i = 0; i < InstanceMatrices.Length; i++) {
-                Matrix4x4 m = InstanceMatrices[i];
-                int offset = i * 16;
-
-                // Matrix4x4 是行主序，OpenGL mat4 是列主序
-                // 直接复制（行主序的"列"对应列主序的"列"）
-                matrixData[offset + 0] = m.M11;
-                matrixData[offset + 1] = m.M12;
-                matrixData[offset + 2] = m.M13;
-                matrixData[offset + 3] = m.M14;
-                matrixData[offset + 4] = m.M21;
-                matrixData[offset + 5] = m.M22;
-                matrixData[offset + 6] = m.M23;
-                matrixData[offset + 7] = m.M24;
-                matrixData[offset + 8] = m.M31;
-                matrixData[offset + 9] = m.M32;
-                matrixData[offset + 10] = m.M33;
-                matrixData[offset + 11] = m.M34;
-                matrixData[offset + 12] = m.M41;
-                matrixData[offset + 13] = m.M42;
-                matrixData[offset + 14] = m.M43;
-                matrixData[offset + 15] = m.M44;
-            }
-            InstanceVBO = new BufferObject<float>(GL, matrixData, BufferTargetARB.ArrayBuffer);
+            InstanceVBO = new BufferObject<float>(
+                GL,
+                MemoryMarshal.CreateReadOnlySpan(ref InstanceMatrices[0].M11, InstanceMatrices.Length * 16),
+                BufferTargetARB.ArrayBuffer
+            );
             InstanceVBO.Bind();
 
             // 实例矩阵属性使用位置 8, 9, 10, 11（mat4 需要 4 个 vec4）
