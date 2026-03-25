@@ -152,7 +152,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 获取 defines 列表（用于 ShaderCache.SelectShader）
         /// </summary>
-        public List<string> GetDefinesList() => [.._defines];
+        public List<string> GetDefinesList() => [.. _defines];
 
         /// <summary>
         /// 计算组合 hash（用于着色器缓存）
@@ -168,6 +168,8 @@ namespace DotnetGltfRenderer {
         }
 
         public override string ToString() => string.Join(", ", _defines);
+
+        #region Static Factory Methods
 
         /// <summary>
         /// 创建默认的顶点着色器 defines
@@ -221,14 +223,117 @@ namespace DotnetGltfRenderer {
             // ALPHAMODE_* constants are defined in functions.glsl
             // ALPHAMODE will be set via SetAlphaMode() based on material
 
-            // Debug mode - DEBUG_* constants are defined in functions.glsl
-            // Only define DEBUG here when a specific debug mode is requested
-
             // Vertex attribute defines (needed for fragment shader debug views)
             // These should match what the vertex shader provides
             defines.Add("HAS_TEXCOORD_0_VEC2");
             defines.Add("MATERIAL_METALLICROUGHNESS");
             return defines;
         }
+
+        /// <summary>
+        /// 从网格创建顶点着色器 defines
+        /// </summary>
+        public static ShaderDefines CreateFromMesh(Mesh mesh) {
+            ShaderDefines defines = CreateVertexDefines(
+                mesh.HasSurfaceAttributes,
+                mesh.HasSurfaceAttributes, // SurfaceVertices contains tangents (original or generated)
+                true,
+                mesh.HasUV1,
+                mesh.HasColor0,
+                mesh.HasSkinAttributes
+            );
+
+            // 添加 GPU 实例化支持
+            if (mesh.UseInstancing) {
+                defines.Add("USE_INSTANCING");
+            }
+
+            // 添加 Morph Target 支持
+            if (mesh.HasMorphTargets && mesh.MorphTargetTexture != null) {
+                MorphTargetTexture tex = mesh.MorphTargetTexture;
+                defines.SetMorphTargetDefines(
+                    mesh.MorphTargetCount,
+                    tex.HasPosition,
+                    tex.HasNormal,
+                    tex.HasTangent,
+                    tex.HasTexCoord0,
+                    tex.HasTexCoord1,
+                    tex.HasColor0,
+                    tex.PositionOffset,
+                    tex.NormalOffset,
+                    tex.TangentOffset,
+                    tex.TexCoord0Offset,
+                    tex.TexCoord1Offset,
+                    tex.Color0Offset
+                );
+            }
+
+            return defines;
+        }
+
+        /// <summary>
+        /// 从材质和渲染状态创建片段着色器 defines
+        /// </summary>
+        public static ShaderDefines CreateFromMaterial(Material material,
+            bool useIBL,
+            bool useLinearOutput,
+            bool isScatterPass,
+            ToneMapMode toneMapMode,
+            int lightCount,
+            Mesh mesh = null) {
+            // 从材质获取基础 defines
+            ShaderDefines defines = material?.GetDefines() ?? CreateFragmentDefines();
+
+            // 片段着色器也需要顶点属性 defines（用于声明 varying 输入变量）
+            // 否则 v_TBN/v_Normal/v_Color 不会被声明
+            if (mesh != null) {
+                if (mesh.HasSurfaceAttributes) {
+                    defines.AddVertexAttribute("NORMAL", 3);
+                    defines.AddVertexAttribute("TANGENT", 4);
+                }
+                if (mesh.HasUV1) {
+                    defines.AddVertexAttribute("TEXCOORD_1", 2);
+                }
+                if (mesh.HasColor0) {
+                    defines.Add("HAS_COLOR_0_VEC4");
+                }
+            }
+
+            // 添加 IBL 支持
+            // 注意：Diffuse Transmission 也需要 IBL 来采样背面环境光
+            if (useIBL || material?.DiffuseTransmission?.IsEnabled == true) {
+                defines.Add("USE_IBL");
+            }
+
+            // 添加 Punctual Lights 支持 (KHR_lights_punctual)
+            // 注意：Unlit 材质不需要灯光计算
+            // 重要：LIGHT_COUNT 必须与 ubos.glsl 中的固定数组大小一致（8）
+            // 但我们使用 u_LightCount 动态控制实际光源数量
+            if (lightCount > 0 && !(material?.Unlit?.IsEnabled ?? false)) {
+                defines.Add("USE_PUNCTUAL");
+                // 使用固定的 LIGHT_COUNT（与 ubos.glsl 中数组大小一致）
+                // 实际光源数量由 u_LightCount 控制
+            }
+
+            // 添加色调映射（当 useLinearOutput 为 true 时跳过，输出保持线性空间）
+            if (!useLinearOutput) {
+                defines.Add(
+                    toneMapMode switch {
+                        ToneMapMode.KhrPbrNeutral => "TONEMAP_KHR_PBR_NEUTRAL",
+                        ToneMapMode.AcesNarkowicz => "TONEMAP_ACES_NARKOWICZ",
+                        ToneMapMode.AcesHill => "TONEMAP_ACES_HILL 1",
+                        ToneMapMode.AcesHillExposureBoost => "TONEMAP_ACES_HILL_EXPOSURE_BOOST",
+                        ToneMapMode.None or _ => "LINEAR_OUTPUT"
+                    }
+                );
+            }
+            else {
+                defines.Add("LINEAR_OUTPUT");
+            }
+
+            return defines;
+        }
+
+        #endregion
     }
 }

@@ -9,22 +9,40 @@ namespace DotnetGltfRenderer {
     /// 着色器缓存系统，参考官方 shader_cache.js 实现
     /// 支持 #include &lt;filename.glsl&gt; 语法和着色器变体编译
     /// </summary>
-    public class ShaderCache : IDisposable {
-        readonly Dictionary<string, string> _sources = new();
-        readonly Dictionary<int, uint> _shaderCache = new();
-        readonly Dictionary<string, Shader> _programCache = new();
-        readonly GL _gl;
+    public static class ShaderCache {
+        static Dictionary<string, string> _sources;
+        static Dictionary<int, uint> _shaderCache;
+        static Dictionary<string, Shader> _programCache;
+        static GL _gl;
+        static bool _initialized;
 
-        public ShaderCache(GL gl, string shadersDirectory) {
+        /// <summary>
+        /// 是否已初始化
+        /// </summary>
+        public static bool IsInitialized => _initialized;
+
+        /// <summary>
+        /// 初始化着色器缓存（应用启动时调用一次）
+        /// </summary>
+        public static void Initialize(GL gl, string shadersDirectory) {
+            if (_initialized) {
+                return;
+            }
+
             _gl = gl;
+            _sources = new Dictionary<string, string>();
+            _shaderCache = new Dictionary<int, uint>();
+            _programCache = new Dictionary<string, Shader>();
+
             LoadShaderSources(shadersDirectory);
             ResolveIncludes();
+            _initialized = true;
         }
 
         /// <summary>
         /// 加载着色器源文件
         /// </summary>
-        void LoadShaderSources(string directory) {
+        static void LoadShaderSources(string directory) {
             if (!Directory.Exists(directory)) {
                 throw new DirectoryNotFoundException($"Shader directory not found: {directory}");
             }
@@ -33,7 +51,7 @@ namespace DotnetGltfRenderer {
             LoadFromDirectory(directory);
         }
 
-        void LoadFromDirectory(string dir) {
+        static void LoadFromDirectory(string dir) {
             foreach (string file in Directory.GetFiles(dir, "*.vert")) {
                 string name = Path.GetFileName(file);
                 _sources[name] = File.ReadAllText(file);
@@ -56,7 +74,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 解析 #include 指令（官方 shader_cache.js 第 12-35 行）
         /// </summary>
-        void ResolveIncludes() {
+        static void ResolveIncludes() {
             bool changed = true;
             while (changed) {
                 changed = false;
@@ -88,7 +106,11 @@ namespace DotnetGltfRenderer {
         /// <param name="shaderName">着色器文件名（如 "pbr.frag", "primitive.vert"）</param>
         /// <param name="defines">预处理器定义列表</param>
         /// <returns>着色器 hash</returns>
-        public int SelectShader(string shaderName, List<string> defines) {
+        public static int SelectShader(string shaderName, List<string> defines) {
+            if (!_initialized) {
+                throw new InvalidOperationException("ShaderCache not initialized. Call Initialize() first.");
+            }
+
             if (!_sources.TryGetValue(shaderName, out string src)) {
                 throw new FileNotFoundException($"Shader source not found: {shaderName}");
             }
@@ -137,7 +159,11 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 获取或链接着色器程序
         /// </summary>
-        public Shader GetShaderProgram(int vertexShaderHash, int fragmentShaderHash) {
+        public static Shader GetShaderProgram(int vertexShaderHash, int fragmentShaderHash) {
+            if (!_initialized) {
+                throw new InvalidOperationException("ShaderCache not initialized. Call Initialize() first.");
+            }
+
             string cacheKey = $"{vertexShaderHash},{fragmentShaderHash}";
             if (_programCache.TryGetValue(cacheKey, out Shader program)) {
                 return program;
@@ -178,13 +204,13 @@ namespace DotnetGltfRenderer {
                 throw new Exception($"Program link failed: {log}");
             }
 
-            // 创建 Shader 对象（注意：这里简化处理，实际可能需要调整 Shader 类以支持外部程序句柄）
+            // 创建 Shader 对象
             program = new Shader(_gl, programHandle, vertShader, fragShader);
             _programCache[cacheKey] = program;
             return program;
         }
 
-        uint CompileShader(ShaderType type, string source, string shaderName) {
+        static uint CompileShader(ShaderType type, string source, string shaderName) {
             uint shader = _gl.CreateShader(type);
             _gl.ShaderSource(shader, source);
             _gl.CompileShader(shader);
@@ -211,9 +237,16 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 获取已解析的着色器源代码
         /// </summary>
-        public string GetSource(string shaderName) => _sources.TryGetValue(shaderName, out string src) ? src : null;
+        public static string GetSource(string shaderName) => _sources.TryGetValue(shaderName, out string src) ? src : null;
 
-        public void Dispose() {
+        /// <summary>
+        /// 释放资源
+        /// </summary>
+        public static void Dispose() {
+            if (!_initialized) {
+                return;
+            }
+
             // 删除着色器
             foreach (uint shader in _shaderCache.Values) {
                 _gl.DeleteShader(shader);
@@ -225,6 +258,9 @@ namespace DotnetGltfRenderer {
                 program.Dispose();
             }
             _programCache.Clear();
+
+            _sources.Clear();
+            _initialized = false;
         }
     }
 }

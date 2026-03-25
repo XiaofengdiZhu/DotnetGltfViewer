@@ -9,8 +9,6 @@ namespace DotnetGltfRenderer {
     /// </summary>
     public class IblSampler : IDisposable {
         readonly GL _gl;
-        readonly ShaderCache _shaderCache;
-        readonly bool _ownsShaderCache;
 
         // 配置参数
         readonly int _textureSize = 256;
@@ -41,19 +39,8 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建 IBL 采样器
         /// </summary>
-        /// <param name="gl">OpenGL 上下文</param>
-        /// <param name="shaderCache">可选的 ShaderCache 实例，如果为 null 则创建新的</param>
-        /// <param name="shadersDirectory">着色器目录，仅当 shaderCache 为 null 时使用</param>
-        public IblSampler(GL gl, ShaderCache shaderCache = null, string shadersDirectory = "shaders") {
+        public IblSampler(GL gl) {
             _gl = gl;
-            if (shaderCache != null) {
-                _shaderCache = shaderCache;
-                _ownsShaderCache = false;
-            }
-            else {
-                _shaderCache = new ShaderCache(gl, shadersDirectory);
-                _ownsShaderCache = true;
-            }
         }
 
         /// <summary>
@@ -107,11 +94,11 @@ namespace DotnetGltfRenderer {
         }
 
         void InitShaders() {
-            int vertHash = _shaderCache.SelectShader("fullscreen.vert", []);
-            int fragHash = _shaderCache.SelectShader("panorama_to_cubemap.frag", []);
-            _panoramaToCubemapShader = _shaderCache.GetShaderProgram(vertHash, fragHash);
-            int iblFragHash = _shaderCache.SelectShader("ibl_filtering.frag", []);
-            _iblFilteringShader = _shaderCache.GetShaderProgram(vertHash, iblFragHash);
+            int vertHash = ShaderCache.SelectShader("fullscreen.vert", []);
+            int fragHash = ShaderCache.SelectShader("panorama_to_cubemap.frag", []);
+            _panoramaToCubemapShader = ShaderCache.GetShaderProgram(vertHash, fragHash);
+            int iblFragHash = ShaderCache.SelectShader("ibl_filtering.frag", []);
+            _iblFilteringShader = ShaderCache.GetShaderProgram(vertHash, iblFragHash);
         }
 
         unsafe void CreateInputTexture(EnvironmentMap panorama) {
@@ -548,11 +535,7 @@ namespace DotnetGltfRenderer {
         #endregion
 
         public void Dispose() {
-            // 注意：Shader 对象由 ShaderCache 管理，不需要单独 Dispose
-            // 如果我们自己创建了 ShaderCache，则需要 Dispose
-            if (_ownsShaderCache) {
-                _shaderCache?.Dispose();
-            }
+            // 注意：Shader 对象由 static ShaderCache 管理，不需要单独 Dispose
             if (_inputTexture != 0) {
                 _gl.DeleteTexture(_inputTexture);
             }

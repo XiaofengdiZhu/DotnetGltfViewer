@@ -187,10 +187,10 @@ namespace DotnetGltfViewer.Windows {
 
         static string GetShortcut(GizmoMode mode) {
             return mode switch {
-                GizmoMode.Select => "Q",
-                GizmoMode.Translate => "W",
-                GizmoMode.Rotate => "E",
-                GizmoMode.Scale => "R",
+                GizmoMode.Select => "Num 1",
+                GizmoMode.Translate => "Num 2",
+                GizmoMode.Rotate => "Num 3",
+                GizmoMode.Scale => "Num 4",
                 _ => ""
             };
         }
@@ -200,10 +200,10 @@ namespace DotnetGltfViewer.Windows {
                 return;
             }
 
-            if (ImGui.IsKeyPressed(ImGuiKey.Q)) _currentMode = GizmoMode.Select;
-            else if (ImGui.IsKeyPressed(ImGuiKey.W)) _currentMode = GizmoMode.Translate;
-            else if (ImGui.IsKeyPressed(ImGuiKey.E)) _currentMode = GizmoMode.Rotate;
-            else if (ImGui.IsKeyPressed(ImGuiKey.R)) _currentMode = GizmoMode.Scale;
+            if (ImGui.IsKeyPressed(ImGuiKey.Keypad1)) _currentMode = GizmoMode.Select;
+            else if (ImGui.IsKeyPressed(ImGuiKey.Keypad2)) _currentMode = GizmoMode.Translate;
+            else if (ImGui.IsKeyPressed(ImGuiKey.Keypad3)) _currentMode = GizmoMode.Rotate;
+            else if (ImGui.IsKeyPressed(ImGuiKey.Keypad4)) _currentMode = GizmoMode.Scale;
         }
 
         public static unsafe bool Manipulate(Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix) {
