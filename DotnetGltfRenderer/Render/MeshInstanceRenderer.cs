@@ -91,8 +91,7 @@ namespace DotnetGltfRenderer {
 
             shader.Use();
 
-            // 绑定 UBO
-            BindUBOsToShader(shader);
+            // UBO binding points 已在 ShaderCache.GetShaderProgram 链接时设置，无需每帧绑定
 
             // 绑定网格
             mesh.Bind();
@@ -166,19 +165,6 @@ namespace DotnetGltfRenderer {
             UVTransformData uvTransformData = MaterialTextureBinder.BuildUVTransformData(material);
             _uvTransformUBO.Update(ref uvTransformData);
             _uvTransformDirty = false;
-        }
-
-        /// <summary>
-        /// 绑定 UBO 到着色器
-        /// </summary>
-        void BindUBOsToShader(Shader shader) {
-            _sceneUBO.BindToShader(shader.ProgramHandle, "SceneData");
-            _materialCoreUBO.BindToShader(shader.ProgramHandle, "MaterialCoreData");
-            _materialExtUBO.BindToShader(shader.ProgramHandle, "MaterialExtensionData");
-            _lightsUBO.BindToShader(shader.ProgramHandle, "LightsData");
-            _renderStateUBO.BindToShader(shader.ProgramHandle, "RenderStateData");
-            _uvTransformUBO.BindToShader(shader.ProgramHandle, "UVTransformData");
-            _volumeScatterUBO.BindToShader(shader.ProgramHandle, "VolumeScatterData");
         }
 
         /// <summary>

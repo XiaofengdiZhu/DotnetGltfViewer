@@ -196,10 +196,15 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
-        /// 按视图空间深度排序所有队列
+        /// 按视图空间深度排序需要排序的渲染队列
+        /// 不透明物体不需要排序（可利用 Z-buffer）
+        /// 只有透明、Transmission 和 Scatter 物体需要从后往前排序
         /// </summary>
         public void SortByDepth(Matrix4x4 viewMatrix) {
-            SortInstancesByDepth(OpaqueInstances, viewMatrix);
+            // 不透明物体无需排序，利用深度缓冲即可
+            // SortInstancesByDepth(OpaqueInstances, viewMatrix);
+
+            // 透明物体需要从后往前排序才能正确渲染
             SortInstancesByDepth(TransparentInstances, viewMatrix);
             SortInstancesByDepth(TransmissionInstances, viewMatrix);
             SortInstancesByDepth(ScatterInstances, viewMatrix);

@@ -208,6 +208,9 @@ namespace DotnetGltfRenderer {
                     throw new Exception($"Program link failed: {log}");
                 }
 
+                // 链接后立即绑定所有 UBO binding points（只需一次）
+                BindUniformBlockBindings(programHandle);
+
                 // 保存二进制缓存
                 SaveProgramBinary(programHandle, cacheKey);
 
@@ -215,7 +218,9 @@ namespace DotnetGltfRenderer {
                 program = new Shader(programHandle, vertShader, fragShader);
             }
             else {
-                // 从缓存加载成功，创建 Shader 对象（着色器句柄设为 0，因为不再需要）
+                // 从缓存加载成功，仍需绑定 UBO（ProgramBinary 不保存 binding points）
+                BindUniformBlockBindings(programHandle);
+                // 创建 Shader 对象（着色器句柄设为 0，因为不再需要）
                 program = new Shader(programHandle, 0, 0);
             }
 
@@ -238,6 +243,30 @@ namespace DotnetGltfRenderer {
 
             // Instance matrix attributes (mat4 requires 4 vec4 slots)
             GlContext.GL.BindAttribLocation(programHandle, 8, "a_instance_model_matrix");
+        }
+
+        /// <summary>
+        /// 绑定所有 UBO binding points（链接着色器后调用一次）
+        /// 避免每帧重复调用 glGetUniformBlockIndex + glUniformBlockBinding
+        /// </summary>
+        static void BindUniformBlockBindings(uint programHandle) {
+            // Binding points 与 UniformBuffer.cs 中的定义一致
+            // 0: SceneData, 1: MaterialCoreData, 2: LightsData, 3: RenderStateData
+            // 4: UVTransformData, 5: VolumeScatterData, 6: MaterialExtensionData
+            BindUniformBlock(programHandle, "SceneData", 0);
+            BindUniformBlock(programHandle, "MaterialCoreData", 1);
+            BindUniformBlock(programHandle, "LightsData", 2);
+            BindUniformBlock(programHandle, "RenderStateData", 3);
+            BindUniformBlock(programHandle, "UVTransformData", 4);
+            BindUniformBlock(programHandle, "VolumeScatterData", 5);
+            BindUniformBlock(programHandle, "MaterialExtensionData", 6);
+        }
+
+        static void BindUniformBlock(uint programHandle, string blockName, uint bindingPoint) {
+            uint blockIndex = GlContext.GL.GetUniformBlockIndex(programHandle, blockName);
+            if (blockIndex != uint.MaxValue) {
+                GlContext.GL.UniformBlockBinding(programHandle, blockIndex, bindingPoint);
+            }
         }
 
         static uint TryLoadProgramBinary(string cacheKey) {
