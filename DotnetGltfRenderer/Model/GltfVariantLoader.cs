@@ -15,12 +15,10 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public static List<string> LoadVariants(ModelRoot modelRoot) {
             List<string> variants = new();
-
             object variantsExt = GetUnknownExtension(modelRoot, "KHR_materials_variants");
             if (variantsExt == null) {
                 return variants;
             }
-
             JsonArray variantsArray = GetExtensionProperty(variantsExt, "variants") as JsonArray;
             if (variantsArray != null) {
                 foreach (JsonNode variant in variantsArray) {
@@ -30,7 +28,6 @@ namespace DotnetGltfRenderer {
                     }
                 }
             }
-
             return variants;
         }
 
@@ -39,7 +36,6 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public static Dictionary<(int MeshIndex, int PrimitiveIndex), Dictionary<int, int>> LoadVariantMappings(ModelRoot modelRoot) {
             Dictionary<(int MeshIndex, int PrimitiveIndex), Dictionary<int, int>> mappings = new();
-
             int meshIndex = 0;
             foreach (SharpGLTF.Schema2.Mesh mesh in modelRoot.LogicalMeshes) {
                 int primitiveIndex = 0;
@@ -52,7 +48,8 @@ namespace DotnetGltfRenderer {
                             foreach (JsonNode mapping in mappingsArray) {
                                 int? materialIdx = mapping?["material"]?.GetValue<int>();
                                 JsonArray variantIndices = mapping?["variants"] as JsonArray;
-                                if (materialIdx.HasValue && variantIndices != null) {
+                                if (materialIdx.HasValue
+                                    && variantIndices != null) {
                                     foreach (JsonNode variantIdx in variantIndices) {
                                         int? vIdx = variantIdx?.GetValue<int>();
                                         if (vIdx.HasValue) {
@@ -70,7 +67,6 @@ namespace DotnetGltfRenderer {
                 }
                 meshIndex++;
             }
-
             return mappings;
         }
 
@@ -97,7 +93,8 @@ namespace DotnetGltfRenderer {
             Type extType = unknownExtension.GetType();
             PropertyInfo propsProp = extType.GetProperty("Properties", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             IReadOnlyDictionary<string, JsonNode> properties = propsProp?.GetValue(unknownExtension) as IReadOnlyDictionary<string, JsonNode>;
-            if (properties != null && properties.TryGetValue(propertyName, out JsonNode value)) {
+            if (properties != null
+                && properties.TryGetValue(propertyName, out JsonNode value)) {
                 return value;
             }
             return null;

@@ -14,18 +14,17 @@ namespace DotnetGltfRenderer {
         static Dictionary<int, uint> _shaderCache;
         static Dictionary<string, Shader> _programCache;
         static string _cacheDirectory;
-        static bool _initialized;
 
         /// <summary>
         /// 是否已初始化
         /// </summary>
-        public static bool IsInitialized => _initialized;
+        public static bool IsInitialized { get; private set; }
 
         /// <summary>
         /// 初始化着色器缓存（应用启动时调用一次）
         /// </summary>
         public static void Initialize(string shadersDirectory) {
-            if (_initialized) {
+            if (IsInitialized) {
                 return;
             }
             _cacheDirectory = Path.Combine(shadersDirectory, "caches");
@@ -35,10 +34,9 @@ namespace DotnetGltfRenderer {
 
             // 确保缓存目录存在
             Directory.CreateDirectory(_cacheDirectory);
-
             LoadShaderSources(shadersDirectory);
             ResolveIncludes();
-            _initialized = true;
+            IsInitialized = true;
         }
 
         /// <summary>
@@ -85,7 +83,7 @@ namespace DotnetGltfRenderer {
                     foreach ((string includeName, string includeSource) in _sources) {
                         string pattern = $"#include <{includeName}>";
                         if (src.Contains(pattern)) {
-                            var sb = new StringBuilder(src.Length + includeSource.Length);
+                            StringBuilder sb = new(src.Length + includeSource.Length);
                             int index = 0;
                             int patternLength = pattern.Length;
 
@@ -97,7 +95,8 @@ namespace DotnetGltfRenderer {
                                     break;
                                 }
                                 // 只替换第一次出现，后续的删除
-                                if (sb.Length == 0 || foundIndex > index) {
+                                if (sb.Length == 0
+                                    || foundIndex > index) {
                                     sb.Append(src, index, foundIndex - index);
                                     sb.Append(includeSource);
                                 }
@@ -119,10 +118,9 @@ namespace DotnetGltfRenderer {
         /// <param name="defines">预处理器定义列表</param>
         /// <returns>着色器 hash</returns>
         public static int SelectShader(string shaderName, List<string> defines) {
-            if (!_initialized) {
+            if (!IsInitialized) {
                 throw new InvalidOperationException("ShaderCache not initialized. Call Initialize() first.");
             }
-
             if (!_sources.TryGetValue(shaderName, out string src)) {
                 throw new FileNotFoundException($"Shader source not found: {shaderName}");
             }
@@ -152,10 +150,9 @@ namespace DotnetGltfRenderer {
         /// <param name="defines">ShaderDefines 对象（使用其缓存的 hash）</param>
         /// <returns>着色器 hash</returns>
         public static int SelectShader(string shaderName, ShaderDefines defines) {
-            if (!_initialized) {
+            if (!IsInitialized) {
                 throw new InvalidOperationException("ShaderCache not initialized. Call Initialize() first.");
             }
-
             if (!_sources.TryGetValue(shaderName, out string src)) {
                 throw new FileNotFoundException($"Shader source not found: {shaderName}");
             }
@@ -208,17 +205,17 @@ namespace DotnetGltfRenderer {
         /// 如果 hash 不在缓存中，返回 null
         /// </summary>
         public static Shader TryGetShaderProgram(int vertexShaderHash, int fragmentShaderHash) {
-            if (!_initialized) {
+            if (!IsInitialized) {
                 return null;
             }
-
             string cacheKey = $"{vertexShaderHash},{fragmentShaderHash}";
             if (_programCache.TryGetValue(cacheKey, out Shader program)) {
                 return program;
             }
 
             // 检查着色器 hash 是否存在
-            if (!_shaderCache.ContainsKey(vertexShaderHash) || !_shaderCache.ContainsKey(fragmentShaderHash)) {
+            if (!_shaderCache.ContainsKey(vertexShaderHash)
+                || !_shaderCache.ContainsKey(fragmentShaderHash)) {
                 return null;
             }
 
@@ -239,10 +236,9 @@ namespace DotnetGltfRenderer {
         /// 获取或链接着色器程序
         /// </summary>
         public static Shader GetShaderProgram(int vertexShaderHash, int fragmentShaderHash) {
-            if (!_initialized) {
+            if (!IsInitialized) {
                 throw new InvalidOperationException("ShaderCache not initialized. Call Initialize() first.");
             }
-
             string cacheKey = $"{vertexShaderHash},{fragmentShaderHash}";
             if (_programCache.TryGetValue(cacheKey, out Shader program)) {
                 return program;
@@ -251,7 +247,6 @@ namespace DotnetGltfRenderer {
             // 尝试从二进制缓存加载
             uint programHandle = TryLoadProgramBinary(cacheKey);
             bool fromCache = programHandle != 0;
-
             if (!fromCache) {
                 // 缓存加载失败，走原有编译链接流程
                 if (!_shaderCache.TryGetValue(vertexShaderHash, out uint vertShader)) {
@@ -260,14 +255,12 @@ namespace DotnetGltfRenderer {
                 if (!_shaderCache.TryGetValue(fragmentShaderHash, out uint fragShader)) {
                     throw new InvalidOperationException($"Fragment shader not found: {fragmentShaderHash}");
                 }
-
                 programHandle = GlContext.GL.CreateProgram();
                 GlContext.GL.AttachShader(programHandle, vertShader);
                 GlContext.GL.AttachShader(programHandle, fragShader);
 
                 // Bind vertex attribute locations (must be done BEFORE linking)
                 BindAttributeLocations(programHandle);
-
                 GlContext.GL.LinkProgram(programHandle);
                 GlContext.GL.GetProgram(programHandle, ProgramPropertyARB.LinkStatus, out int status);
                 if (status == 0) {
@@ -290,7 +283,6 @@ namespace DotnetGltfRenderer {
                 // 创建 Shader 对象（着色器句柄设为 0，因为不再需要）
                 program = new Shader(programHandle, 0, 0);
             }
-
             _programCache[cacheKey] = program;
             return program;
         }
@@ -341,7 +333,6 @@ namespace DotnetGltfRenderer {
             if (!File.Exists(cacheFile)) {
                 return 0;
             }
-
             try {
                 byte[] fileData = File.ReadAllBytes(cacheFile);
                 if (fileData.Length < 8) {
@@ -352,16 +343,13 @@ namespace DotnetGltfRenderer {
                 uint formatValue = BitConverter.ToUInt32(fileData, 0);
                 // 剩余是二进制数据
                 int binaryLength = fileData.Length - 4;
-
                 uint programHandle = GlContext.GL.CreateProgram();
                 GlContext.GL.ProgramBinary(programHandle, (GLEnum)formatValue, fileData.AsSpan(4, binaryLength), (uint)binaryLength);
-
                 GlContext.GL.GetProgram(programHandle, ProgramPropertyARB.LinkStatus, out int status);
                 if (status == 0) {
                     GlContext.GL.DeleteProgram(programHandle);
                     return 0;
                 }
-
                 return programHandle;
             }
             catch {
@@ -383,7 +371,6 @@ namespace DotnetGltfRenderer {
                 if (binaryLength <= 0) {
                     return;
                 }
-
                 byte[] binary = new byte[binaryLength + 4];
                 uint formatValue;
                 fixed (byte* ptr = &binary[4]) {
@@ -393,7 +380,6 @@ namespace DotnetGltfRenderer {
 
                 // 前 4 字节存储格式
                 BitConverter.TryWriteBytes(binary, formatValue);
-
                 string cacheFile = Path.Combine(_cacheDirectory, $"{cacheKey}.bin");
                 File.WriteAllBytes(cacheFile, binary);
             }
@@ -435,7 +421,7 @@ namespace DotnetGltfRenderer {
         /// 释放资源
         /// </summary>
         public static void Dispose() {
-            if (!_initialized) {
+            if (!IsInitialized) {
                 return;
             }
 
@@ -450,9 +436,8 @@ namespace DotnetGltfRenderer {
                 program.Dispose();
             }
             _programCache.Clear();
-
             _sources.Clear();
-            _initialized = false;
+            IsInitialized = false;
         }
     }
 }

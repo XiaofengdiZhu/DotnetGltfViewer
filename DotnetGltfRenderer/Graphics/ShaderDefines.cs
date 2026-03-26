@@ -229,7 +229,6 @@ namespace DotnetGltfRenderer {
             if (_hashValid) {
                 return _cachedHash;
             }
-
             unchecked {
                 _cachedHash = 17;
                 foreach (string define in _defines) {
@@ -332,7 +331,8 @@ namespace DotnetGltfRenderer {
             }
 
             // 添加 Morph Target 支持
-            if (mesh.HasMorphTargets && mesh.MorphTargetTexture != null) {
+            if (mesh.HasMorphTargets
+                && mesh.MorphTargetTexture != null) {
                 MorphTargetTexture tex = mesh.MorphTargetTexture;
                 defines.SetMorphTargetDefines(
                     mesh.MorphTargetCount,
@@ -350,7 +350,6 @@ namespace DotnetGltfRenderer {
                     tex.Color0Offset
                 );
             }
-
             return defines;
         }
 
@@ -392,7 +391,8 @@ namespace DotnetGltfRenderer {
             // 注意：Unlit 材质不需要灯光计算
             // 重要：LIGHT_COUNT 必须与 ubos.glsl 中的固定数组大小一致（8）
             // 但我们使用 u_LightCount 动态控制实际光源数量
-            if (lightCount > 0 && !(material?.Unlit?.IsEnabled ?? false)) {
+            if (lightCount > 0
+                && !(material?.Unlit?.IsEnabled ?? false)) {
                 defines.Add("USE_PUNCTUAL");
                 // 使用固定的 LIGHT_COUNT（与 ubos.glsl 中数组大小一致）
                 // 实际光源数量由 u_LightCount 控制
@@ -413,7 +413,6 @@ namespace DotnetGltfRenderer {
             else {
                 defines.Add("LINEAR_OUTPUT");
             }
-
             return defines;
         }
 

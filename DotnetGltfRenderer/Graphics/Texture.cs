@@ -20,7 +20,6 @@ namespace DotnetGltfRenderer {
     }
 
     public class Texture : IDisposable {
-
         public string Path { get; set; }
         public ModelTextureType Type { get; }
         public bool IsHDR { get; private set; }
@@ -51,11 +50,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 从 glTF MemoryImage 创建纹理（延迟上传模式）
         /// </summary>
-        public Texture(
-            MemoryImage image,
-            ModelTextureType type = ModelTextureType.None,
-            GltfTextureSampler sampler = null,
-            bool isSrgb = true) {
+        public Texture(MemoryImage image, ModelTextureType type = ModelTextureType.None, GltfTextureSampler sampler = null, bool isSrgb = true) {
             Path = image.SourcePath;
             Type = type;
             Handle = GlContext.GL.GenTexture();

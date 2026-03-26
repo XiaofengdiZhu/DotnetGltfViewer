@@ -18,7 +18,6 @@ namespace DotnetGltfRenderer {
             foreach (GltfTexture gltfTexture in modelRoot.LogicalTextures) {
                 textureIsSrgb[gltfTexture.LogicalIndex] = true; // 默认 sRGB
             }
-
             foreach (SharpGLTF.Schema2.Material material in modelRoot.LogicalMaterials) {
                 AnalyzeTextureUsage(material, textureIsSrgb);
             }
@@ -29,14 +28,12 @@ namespace DotnetGltfRenderer {
                 if (image?.Content == null) {
                     continue;
                 }
-
                 int texIndex = gltfTexture.LogicalIndex;
                 bool isSrgb = textureIsSrgb.GetValueOrDefault(texIndex, true);
                 Texture texture = new(image.Content, ModelTextureType.None, gltfTexture.Sampler, isSrgb);
                 texture.Path = image.Content.SourcePath ?? texIndex.ToString();
                 texturesLoaded[texIndex] = texture;
             }
-
             return texturesLoaded;
         }
 

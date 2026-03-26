@@ -237,25 +237,22 @@ namespace DotnetGltfRenderer {
         /// 计算局部空间包围盒
         /// </summary>
         void ComputeLocalBounds() {
-            if (BaseVertices == null || BaseVertices.Length < BaseVertexStride) {
+            if (BaseVertices == null
+                || BaseVertices.Length < BaseVertexStride) {
                 LocalBounds = BoundingBox.Empty;
                 return;
             }
-
             Vector3 min = new(float.MaxValue);
             Vector3 max = new(float.MinValue);
-
             int vertexCount = BaseVertices.Length / BaseVertexStride;
             for (int i = 0; i < vertexCount; i++) {
                 int offset = i * BaseVertexStride;
                 float x = BaseVertices[offset];
                 float y = BaseVertices[offset + 1];
                 float z = BaseVertices[offset + 2];
-
                 min = Vector3.Min(min, new Vector3(x, y, z));
                 max = Vector3.Max(max, new Vector3(x, y, z));
             }
-
             LocalBounds = min.X != float.MaxValue ? new BoundingBox(min, max) : BoundingBox.Empty;
         }
 
@@ -300,7 +297,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 设置 GPU 实例化缓冲区
         /// </summary>
-        public unsafe void SetupInstancingBuffer() {
+        public void SetupInstancingBuffer() {
             if (!UseInstancing
                 || InstanceMatrices == null
                 || InstanceMatrices.Length == 0) {
@@ -334,7 +331,6 @@ namespace DotnetGltfRenderer {
             if (_cachedVertDefines != null) {
                 return _cachedVertDefines;
             }
-
             _cachedVertDefines = ShaderDefines.CreateFromMesh(this);
             return _cachedVertDefines;
         }
@@ -347,7 +343,6 @@ namespace DotnetGltfRenderer {
             if (_fragAttrHashValid) {
                 return _cachedFragAttrHash;
             }
-
             unchecked {
                 int hash = 17;
                 if (HasSurfaceAttributes) {

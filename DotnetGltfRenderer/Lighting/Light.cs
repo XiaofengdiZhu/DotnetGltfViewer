@@ -103,7 +103,6 @@ namespace DotnetGltfRenderer {
             // 从世界矩阵提取方向（局部空间的前方向是 -Z）
             Vector3 forward = new(-worldMatrix.M31, -worldMatrix.M32, -worldMatrix.M33);
             Vector3 direction = Vector3.Normalize(forward);
-
             Light light = new() {
                 Color = punctualLight.Color,
                 Intensity = punctualLight.Intensity,
@@ -112,14 +111,9 @@ namespace DotnetGltfRenderer {
                 Direction = direction,
                 SourceNode = sourceNode
             };
-
             switch (punctualLight.LightType) {
-                case PunctualLightType.Directional:
-                    light.Type = LightType.Directional;
-                    break;
-                case PunctualLightType.Point:
-                    light.Type = LightType.Point;
-                    break;
+                case PunctualLightType.Directional: light.Type = LightType.Directional; break;
+                case PunctualLightType.Point: light.Type = LightType.Point; break;
                 case PunctualLightType.Spot:
                     light.Type = LightType.Spot;
                     // 将弧度转换为度数
@@ -127,7 +121,6 @@ namespace DotnetGltfRenderer {
                     light.OuterConeAngle = punctualLight.OuterConeAngle * 180f / MathF.PI;
                     break;
             }
-
             return light;
         }
     }

@@ -6,23 +6,20 @@ namespace DotnetGltfViewer.Windows {
     /// 选择管理器，处理模型选择和高亮
     /// </summary>
     public static class SelectionManager {
-        static SceneModel _selectedModel;
-        static MeshInstance _selectedInstance;
-
         /// <summary>
         /// 当前选中的场景模型
         /// </summary>
-        public static SceneModel SelectedModel => _selectedModel;
+        public static SceneModel SelectedModel { get; private set; }
 
         /// <summary>
         /// 当前选中的 MeshInstance（可能为 null）
         /// </summary>
-        public static MeshInstance SelectedInstance => _selectedInstance;
+        public static MeshInstance SelectedInstance { get; private set; }
 
         /// <summary>
         /// 是否有选中对象
         /// </summary>
-        public static bool HasSelection => _selectedModel != null;
+        public static bool HasSelection => SelectedModel != null;
 
         /// <summary>
         /// 选择变化事件
@@ -35,12 +32,12 @@ namespace DotnetGltfViewer.Windows {
         /// <param name="model">场景模型</param>
         /// <param name="instance">MeshInstance（可选）</param>
         public static void Select(SceneModel model, MeshInstance instance = null) {
-            if (_selectedModel == model && _selectedInstance == instance) {
+            if (SelectedModel == model
+                && SelectedInstance == instance) {
                 return;
             }
-
-            _selectedModel = model;
-            _selectedInstance = instance;
+            SelectedModel = model;
+            SelectedInstance = instance;
 
             // 同步更新场景的选择状态
             if (model != null) {
@@ -49,7 +46,6 @@ namespace DotnetGltfViewer.Windows {
                 // 更新选中模型的包围盒，确保 Gizmo 位置正确
                 model.UpdateWorldBounds();
             }
-
             OnSelectionChanged?.Invoke(model, instance);
         }
 
@@ -57,17 +53,15 @@ namespace DotnetGltfViewer.Windows {
         /// 清除选择
         /// </summary>
         public static void ClearSelection() {
-            if (_selectedModel == null) {
+            if (SelectedModel == null) {
                 return;
             }
-
-            _selectedModel = null;
-            _selectedInstance = null;
+            SelectedModel = null;
+            SelectedInstance = null;
 
             // 同步清除场景的选择状态
             Scene scene = MainWindow.GetScene();
             scene?.ClearSelection();
-
             OnSelectionChanged?.Invoke(null, null);
         }
 
@@ -77,10 +71,10 @@ namespace DotnetGltfViewer.Windows {
         /// <returns>是否成功选择</returns>
         public static bool SelectSingleModel() {
             Scene scene = MainWindow.GetScene();
-            if (scene == null || scene.Models.Count != 1) {
+            if (scene == null
+                || scene.Models.Count != 1) {
                 return false;
             }
-
             Select(scene.Models[0]);
             return true;
         }

@@ -54,8 +54,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建 Drawable 渲染器
         /// </summary>
-        public MeshInstanceRenderer(
-            UniformBuffer<MaterialCoreData> materialCoreUBO,
+        public MeshInstanceRenderer(UniformBuffer<MaterialCoreData> materialCoreUBO,
             UniformBuffer<MaterialExtensionData> materialExtUBO,
             UniformBuffer<SceneData> sceneUBO,
             UniformBuffer<LightsData> lightsUBO,
@@ -93,11 +92,11 @@ namespace DotnetGltfRenderer {
         /// 计算 context defines hash，避免每个 MeshInstance 重复计算
         /// </summary>
         void UpdateContextHashIfNeeded(in RenderContext context) {
-            var contextParams = (context.UseIBL, context.UseLinearOutput, context.ToneMapMode, context.LightCount, context.IsScatterPass);
+            (bool UseIBL, bool UseLinearOutput, ToneMapMode ToneMapMode, int LightCount, bool IsScatterPass) contextParams = (context.UseIBL,
+                context.UseLinearOutput, context.ToneMapMode, context.LightCount, context.IsScatterPass);
             if (_lastContextParams == contextParams) {
                 return; // context 未变化，使用缓存的 hash
             }
-
             _lastContextParams = contextParams;
             _cachedContextHash = ComputeContextHash(context);
         }
@@ -133,7 +132,6 @@ namespace DotnetGltfRenderer {
                     };
                     hash = hash * 31 + tonemapDefine.GetHashCode();
                 }
-
                 return hash;
             }
         }
@@ -154,14 +152,14 @@ namespace DotnetGltfRenderer {
         public void Render(MeshInstance instance, in RenderContext context) {
             // 更新 context hash（如果 context 参数变化）
             UpdateContextHashIfNeeded(in context);
-
             Mesh mesh = instance.Mesh;
             Material material = instance.CurrentMaterial;
 
             // 根据材质获取着色器变体
             Shader shader = GetOrCreateShaderVariant(mesh, material, in context);
-            if (shader == null) return;
-
+            if (shader == null) {
+                return;
+            }
             shader.Use();
 
             // UBO binding points 已在 ShaderCache.GetShaderProgram 链接时设置，无需每帧绑定
@@ -233,8 +231,9 @@ namespace DotnetGltfRenderer {
         /// 更新 UV 变换 UBO（懒更新）
         /// </summary>
         void UpdateUVTransformUBO(Material material) {
-            if (!_uvTransformDirty) return;
-
+            if (!_uvTransformDirty) {
+                return;
+            }
             UVTransformData uvTransformData = MaterialTextureBinder.BuildUVTransformData(material);
             _uvTransformUBO.Update(ref uvTransformData);
             _uvTransformDirty = false;
@@ -250,25 +249,24 @@ namespace DotnetGltfRenderer {
 
             // 片段着色器：组合各部分 hash
             // hash = shaderName ^ materialHash ^ meshFragAttrHash ^ contextHash
-            string fragShaderName = context.IsScatterPass ? "scatter.frag"
-                : material?.SpecularGlossiness?.IsEnabled == true ? "specular_glossiness.frag"
-                : "pbr.frag";
-
+            string fragShaderName = context.IsScatterPass ? "scatter.frag" :
+                material?.SpecularGlossiness?.IsEnabled == true ? "specular_glossiness.frag" : "pbr.frag";
             int fragShaderNameHash = ComputeHash(fragShaderName);
             int materialHash = material?.GetDefines().ComputeHash() ?? 0;
             int meshFragAttrHash = mesh.GetFragAttrHash();
 
             // Diffuse Transmission 也需要 IBL
             int contextHash = _cachedContextHash;
-            if (material?.DiffuseTransmission?.IsEnabled == true && !context.UseIBL) {
+            if (material?.DiffuseTransmission?.IsEnabled == true
+                && !context.UseIBL) {
                 contextHash ^= "USE_IBL 1".GetHashCode();
             }
 
             // Unlit 材质不需要灯光
-            if (material?.Unlit?.IsEnabled == true && context.LightCount > 0) {
+            if (material?.Unlit?.IsEnabled == true
+                && context.LightCount > 0) {
                 contextHash ^= "USE_PUNCTUAL 1".GetHashCode(); // 移除 USE_PUNCTUAL
             }
-
             int fragHash = fragShaderNameHash ^ materialHash ^ meshFragAttrHash ^ contextHash;
 
             // 尝试用 hash 直接获取程序
@@ -295,7 +293,6 @@ namespace DotnetGltfRenderer {
                 context.LightCount,
                 mesh
             );
-
             return ShaderCache.GetShaderProgram(
                 ShaderCache.SelectShader("primitive.vert", vertDefines),
                 ShaderCache.SelectShader(fragShaderName, fragDefines)
@@ -306,10 +303,10 @@ namespace DotnetGltfRenderer {
         /// 设置变换 uniform
         /// </summary>
         void SetTransformUniforms(MeshInstance instance, Shader shader) {
-            if (instance.Mesh.UseInstancing) return;
-
+            if (instance.Mesh.UseInstancing) {
+                return;
+            }
             Matrix4x4 modelMatrix = instance.HasSkinning ? Matrix4x4.Identity : instance.WorldMatrix;
-
             if (instance.HasSkinning) {
                 const int jointTextureSlot = 30;
                 instance.JointTexture?.Bind((TextureUnit)((int)TextureUnit.Texture0 + jointTextureSlot));
@@ -318,7 +315,6 @@ namespace DotnetGltfRenderer {
 
             // 更新 RenderStateData UBO 中的 ModelMatrix 和 NormalMatrix
             _renderStateData.ModelMatrix = modelMatrix;
-
             Matrix4x4.Invert(modelMatrix, out Matrix4x4 invModel);
             _renderStateData.NormalMatrix = Matrix4x4.Transpose(invModel);
 
@@ -330,12 +326,13 @@ namespace DotnetGltfRenderer {
         /// 设置 Morph Target 纹理和权重
         /// </summary>
         void SetupMorphTargets(Mesh mesh, Shader shader) {
-            if (!mesh.HasMorphTargets || mesh.MorphTargetTexture == null) return;
-
+            if (!mesh.HasMorphTargets
+                || mesh.MorphTargetTexture == null) {
+                return;
+            }
             const int morphTextureSlot = 30;
             mesh.MorphTargetTexture.Bind((TextureUnit)((int)TextureUnit.Texture0 + morphTextureSlot));
             shader.SetUniform("u_MorphTargetsSampler", morphTextureSlot);
-
             float[] weights = mesh.MorphWeights;
             if (weights != null) {
                 for (int i = 0; i < weights.Length; i++) {
@@ -348,8 +345,10 @@ namespace DotnetGltfRenderer {
         /// 设置 Transmission uniform
         /// </summary>
         void SetupTransmissionUniforms(Material material, Shader shader, in RenderContext context) {
-            if (material?.Transmission?.IsEnabled != true || !context.HasTransmissionFramebuffer) return;
-
+            if (material?.Transmission?.IsEnabled != true
+                || !context.HasTransmissionFramebuffer) {
+                return;
+            }
             shader.SetUniform("u_TransmissionFramebufferSampler", (int)MaterialTextureSlot.TransmissionFramebuffer);
             shader.SetUniformInt2("u_TransmissionFramebufferSize", context.FramebufferWidth, context.FramebufferHeight);
             shader.SetUniformInt2("u_ScreenSize", context.FramebufferWidth, context.FramebufferHeight);
@@ -359,7 +358,9 @@ namespace DotnetGltfRenderer {
         /// 设置 VolumeScatter uniform
         /// </summary>
         void SetupVolumeScatterUniforms(Material material, Shader shader, in RenderContext context) {
-            if (material?.VolumeScatter?.IsEnabled != true) return;
+            if (material?.VolumeScatter?.IsEnabled != true) {
+                return;
+            }
 
             // 更新 VolumeScatterData UBO
             VolumeScatterData scatterData = new() {
@@ -374,8 +375,8 @@ namespace DotnetGltfRenderer {
             // Scatter samples 保持独立 uniform（数组太大不适合 UBO）
             // 只在首次使用该着色器时设置（静态数据）
             SetScatterSamplesUniformsOnce(shader);
-
-            if (!context.IsScatterPass && context.HasScatterFramebuffer) {
+            if (!context.IsScatterPass
+                && context.HasScatterFramebuffer) {
                 shader.SetUniform("u_ScatterFramebufferSampler", (int)MaterialTextureSlot.ScatterFramebuffer);
                 shader.SetUniform("u_ScatterDepthFramebufferSampler", (int)MaterialTextureSlot.ScatterDepthFramebuffer);
             }
@@ -390,10 +391,10 @@ namespace DotnetGltfRenderer {
             if (_scatterSamplesSetShaders.Contains(shader.ProgramHandle)) {
                 return;
             }
-
             float[] samples = VolumeScatterExtension.ScatterSamples;
-            if (samples == null) return;
-
+            if (samples == null) {
+                return;
+            }
             int sampleCount = samples.Length / 3;
             for (int i = 0; i < sampleCount; i++) {
                 int idx = i * 3;
@@ -421,7 +422,8 @@ namespace DotnetGltfRenderer {
         /// 设置混合模式
         /// </summary>
         void SetupBlendMode(Material material, in RenderContext context) {
-            if (material?.Transmission?.IsEnabled == true && context.UseLinearOutput) {
+            if (material?.Transmission?.IsEnabled == true
+                && context.UseLinearOutput) {
                 GlContext.DisableBlend();
             }
             else if (material != null) {

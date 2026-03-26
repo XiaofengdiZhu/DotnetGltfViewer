@@ -8,7 +8,7 @@ namespace DotnetGltfRenderer {
     /// 渲染队列类型
     /// </summary>
     public enum RenderQueueType {
-        None,       // 未初始化
+        None, // 未初始化
         Opaque,
         Transparent,
         Transmission,
@@ -33,10 +33,12 @@ namespace DotnetGltfRenderer {
         public Mesh Mesh { get; }
         internal Skin Skin { get; }
         public Matrix4x4 WorldMatrix { get; internal set; }
+
         /// <summary>
         /// 原始世界矩阵（用于 Gizmo 变换计算）
         /// </summary>
         public Matrix4x4 OriginalWorldMatrix { get; private set; }
+
         public Matrix4x4[] JointMatrices { get; }
         public JointTexture JointTexture { get; }
         public bool HasSkinning => Skin != null && Mesh.HasSkinAttributes && JointMatrices.Length > 0;
@@ -76,22 +78,18 @@ namespace DotnetGltfRenderer {
             OriginalWorldMatrix = node.WorldMatrix;
             IsVisible = true;
             _gizmoTransform = Matrix4x4.Identity;
-
             if (skin == null) {
                 _joints = Array.Empty<Node>();
                 _inverseBindMatrices = Array.Empty<Matrix4x4>();
                 JointMatrices = Array.Empty<Matrix4x4>();
                 return;
             }
-
             int jointCount = Math.Min(skin.JointsCount, MaxSkinJoints);
             _joints = new Node[jointCount];
             _inverseBindMatrices = new Matrix4x4[jointCount];
             JointMatrices = new Matrix4x4[jointCount];
-
             IReadOnlyList<Node> skinJoints = skin.Joints;
             IReadOnlyList<Matrix4x4> inverseBindMatrices = skin.InverseBindMatrices;
-
             for (int i = 0; i < jointCount; i++) {
                 _joints[i] = skinJoints[i];
                 _inverseBindMatrices[i] = i < inverseBindMatrices.Count ? inverseBindMatrices[i] : Matrix4x4.Identity;
@@ -153,10 +151,11 @@ namespace DotnetGltfRenderer {
             if (!HasSkinning) {
                 return;
             }
-
             for (int i = 0; i < JointMatrices.Length; i++) {
                 Matrix4x4 jointWorld;
-                if (animation != null && cache != null && cache.TryGetValue(_joints[i], out Matrix4x4 cached)) {
+                if (animation != null
+                    && cache != null
+                    && cache.TryGetValue(_joints[i], out Matrix4x4 cached)) {
                     jointWorld = cached;
                 }
                 else {
@@ -175,7 +174,6 @@ namespace DotnetGltfRenderer {
         internal void UpdateMaterialAndQueueType(int variantIndex, Scene scene) {
             Material newMaterial = Mesh?.GetMaterialForVariant(variantIndex);
             RenderQueueType newQueueType = ComputeQueueType(newMaterial);
-
             if (scene != null) {
                 if (QueueType == RenderQueueType.None) {
                     // 第一次初始化，直接添加到队列
@@ -187,7 +185,6 @@ namespace DotnetGltfRenderer {
                     scene.AddInstanceToQueue(this, newQueueType);
                 }
             }
-
             CurrentMaterial = newMaterial;
             QueueType = newQueueType;
         }
@@ -196,16 +193,22 @@ namespace DotnetGltfRenderer {
         /// 根据材质计算渲染队列类型
         /// </summary>
         public static RenderQueueType ComputeQueueType(Material mat) {
-            if (mat == null) return RenderQueueType.Opaque;
-
+            if (mat == null) {
+                return RenderQueueType.Opaque;
+            }
             bool isTransparent = mat.AlphaMode == AlphaMode.Blend;
             bool hasTransmission = mat.Transmission?.IsEnabled == true;
             bool hasDiffuseTransmission = mat.DiffuseTransmission?.IsEnabled == true;
             bool hasVolumeScatter = mat.VolumeScatter?.IsEnabled == true;
-
-            if (hasVolumeScatter && hasDiffuseTransmission) return RenderQueueType.Scatter;
-            if (hasTransmission) return RenderQueueType.Transmission;
-            if (isTransparent) return RenderQueueType.Transparent;
+            if (hasVolumeScatter && hasDiffuseTransmission) {
+                return RenderQueueType.Scatter;
+            }
+            if (hasTransmission) {
+                return RenderQueueType.Transmission;
+            }
+            if (isTransparent) {
+                return RenderQueueType.Transparent;
+            }
             return RenderQueueType.Opaque;
         }
     }

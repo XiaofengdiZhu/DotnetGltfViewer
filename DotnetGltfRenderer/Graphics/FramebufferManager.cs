@@ -42,9 +42,9 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public void EnsureTransmissionFramebuffer() {
             // 如果尺寸变化，需要重新创建
-            if (_transmissionFramebuffer == null ||
-                Width != _transmissionFramebuffer.Width ||
-                Height != _transmissionFramebuffer.Height) {
+            if (_transmissionFramebuffer == null
+                || Width != _transmissionFramebuffer.Width
+                || Height != _transmissionFramebuffer.Height) {
                 _transmissionFramebuffer?.Dispose();
                 _transmissionFramebuffer = new OffscreenFramebuffer(Width, Height);
             }
@@ -54,9 +54,9 @@ namespace DotnetGltfRenderer {
         /// 确保 Scatter 帧缓冲区已创建
         /// </summary>
         public void EnsureScatterFramebuffer() {
-            if (_scatterFramebuffer == null ||
-                Width != _scatterFramebuffer.Width ||
-                Height != _scatterFramebuffer.Height) {
+            if (_scatterFramebuffer == null
+                || Width != _scatterFramebuffer.Width
+                || Height != _scatterFramebuffer.Height) {
                 _scatterFramebuffer?.Dispose();
                 _scatterFramebuffer = new ScatterFramebuffer(Width, Height);
             }
@@ -112,9 +112,7 @@ namespace DotnetGltfRenderer {
             if (_transmissionFramebuffer == null) {
                 return;
             }
-
-            _transmissionFramebuffer.BindColorTexture(
-                (TextureUnit)((int)TextureUnit.Texture0 + (int)MaterialTextureSlot.TransmissionFramebuffer));
+            _transmissionFramebuffer.BindColorTexture((TextureUnit)((int)TextureUnit.Texture0 + (int)MaterialTextureSlot.TransmissionFramebuffer));
         }
 
         /// <summary>
@@ -124,11 +122,8 @@ namespace DotnetGltfRenderer {
             if (_scatterFramebuffer == null) {
                 return;
             }
-
-            _scatterFramebuffer.BindColorTexture(
-                (TextureUnit)((int)TextureUnit.Texture0 + (int)MaterialTextureSlot.ScatterFramebuffer));
-            _scatterFramebuffer.BindDepthTexture(
-                (TextureUnit)((int)TextureUnit.Texture0 + (int)MaterialTextureSlot.ScatterDepthFramebuffer));
+            _scatterFramebuffer.BindColorTexture((TextureUnit)((int)TextureUnit.Texture0 + (int)MaterialTextureSlot.ScatterFramebuffer));
+            _scatterFramebuffer.BindDepthTexture((TextureUnit)((int)TextureUnit.Texture0 + (int)MaterialTextureSlot.ScatterDepthFramebuffer));
         }
 
         public void Dispose() {

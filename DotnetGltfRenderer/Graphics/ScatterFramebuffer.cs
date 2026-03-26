@@ -93,10 +93,22 @@ namespace DotnetGltfRenderer {
             GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
 
             // 附加颜色纹理
-            GlContext.GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, ColorTexture, 0);
+            GlContext.GL.FramebufferTexture2D(
+                FramebufferTarget.Framebuffer,
+                FramebufferAttachment.ColorAttachment0,
+                TextureTarget.Texture2D,
+                ColorTexture,
+                0
+            );
 
             // 附加深度纹理
-            GlContext.GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2D, DepthTexture, 0);
+            GlContext.GL.FramebufferTexture2D(
+                FramebufferTarget.Framebuffer,
+                FramebufferAttachment.DepthAttachment,
+                TextureTarget.Texture2D,
+                DepthTexture,
+                0
+            );
 
             // 检查帧缓冲区状态
             FramebufferStatus status = (FramebufferStatus)GlContext.GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);

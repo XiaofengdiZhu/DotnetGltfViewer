@@ -179,7 +179,6 @@ namespace DotnetGltfRenderer {
 
             // Anisotropy
             data.AnisotropyUVTransform = BuildUVMatrix3(material.Anisotropy?.AnisotropyTexture);
-
             return data;
         }
 

@@ -160,7 +160,6 @@ namespace DotnetGltfRenderer {
             // 预分配层数据数组（每层 textureSize * textureSize * 4 floats）
             int layerPixelCount = TextureSize * TextureSize;
             _layerData = new float[layerPixelCount * 4];
-
             CreateTexture();
         }
 
@@ -262,8 +261,7 @@ namespace DotnetGltfRenderer {
             GlContext.GL.BindTexture(TextureTarget.Texture2DArray, 0);
         }
 
-        unsafe void UploadAttributeLayer<T>(float[] layerData, IReadOnlyList<T> attributeData, int layerIndex)
-            where T : unmanaged {
+        unsafe void UploadAttributeLayer<T>(float[] layerData, IReadOnlyList<T> attributeData, int layerIndex) where T : unmanaged {
             // 清零层数据
             Array.Clear(layerData, 0, layerData.Length);
             int vertexCount = Math.Min(attributeData.Count, VertexCount);

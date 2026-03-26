@@ -12,7 +12,6 @@ namespace DotnetGltfRenderer {
         public static MaterialCoreData BuildMaterialCoreData(Material material, bool useGeneratedTangents) {
             // 检查是否使用 SpecularGlossiness 工作流
             bool useSG = material?.SpecularGlossiness?.IsEnabled == true;
-
             return new MaterialCoreData {
                 // ============ PBR Core ============
                 // 对于 SpecularGlossiness 工作流，BaseColorFactor 存储 DiffuseFactor
@@ -20,7 +19,8 @@ namespace DotnetGltfRenderer {
                 EmissiveFactor = new Vector4(material?.EmissiveFactor ?? Vector3.Zero, 0f),
                 MetallicFactor = useSG ? 0f : material?.MetallicFactor ?? MaterialDefaults.MetallicFactor,
                 // 对于 SpecularGlossiness 工作流，Roughness = 1 - Glossiness
-                RoughnessFactor = useSG ? 1f - material.SpecularGlossiness.GlossinessFactor : material?.RoughnessFactor ?? MaterialDefaults.RoughnessFactor,
+                RoughnessFactor =
+                    useSG ? 1f - material.SpecularGlossiness.GlossinessFactor : material?.RoughnessFactor ?? MaterialDefaults.RoughnessFactor,
                 NormalScale = material?.NormalScale ?? MaterialDefaults.NormalScale,
                 OcclusionStrength = material?.OcclusionStrength ?? MaterialDefaults.OcclusionStrength,
 
@@ -53,7 +53,6 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public static MaterialExtensionData BuildMaterialExtensionData(Material material) {
             bool useSG = material?.SpecularGlossiness?.IsEnabled == true;
-
             return new MaterialExtensionData {
                 // ============ IOR ============
                 Ior = material?.Ior?.IsEnabled == true ? material.Ior.Ior : MaterialDefaults.Ior,
@@ -117,9 +116,10 @@ namespace DotnetGltfRenderer {
                 DispersionPadding2 = 0f,
 
                 // ============ Diffuse Transmission ============
-                DiffuseTransmissionFactor = material?.DiffuseTransmission?.IsEnabled == true
-                    ? material.DiffuseTransmission.Factor
-                    : MaterialDefaults.DiffuseTransmissionFactor,
+                DiffuseTransmissionFactor =
+                    material?.DiffuseTransmission?.IsEnabled == true
+                        ? material.DiffuseTransmission.Factor
+                        : MaterialDefaults.DiffuseTransmissionFactor,
                 DiffuseTransmissionPadding0 = 0f,
                 DiffuseTransmissionPadding1 = 0f,
                 DiffuseTransmissionPadding2 = 0f,
@@ -168,20 +168,21 @@ namespace DotnetGltfRenderer {
         /// 检查材质是否有启用任何扩展
         /// </summary>
         public static bool HasExtensions(Material material) {
-            if (material == null) return false;
-
-            return material.Ior?.IsEnabled == true ||
-                   material.EmissiveStrength?.IsEnabled == true ||
-                   material.Specular?.IsEnabled == true ||
-                   material.Sheen?.IsEnabled == true ||
-                   material.ClearCoat?.IsEnabled == true ||
-                   material.Transmission?.IsEnabled == true ||
-                   material.Volume?.IsEnabled == true ||
-                   material.Iridescence?.IsEnabled == true ||
-                   material.Dispersion?.IsEnabled == true ||
-                   material.DiffuseTransmission?.IsEnabled == true ||
-                   material.Anisotropy?.IsEnabled == true ||
-                   material.SpecularGlossiness?.IsEnabled == true;
+            if (material == null) {
+                return false;
+            }
+            return material.Ior?.IsEnabled == true
+                || material.EmissiveStrength?.IsEnabled == true
+                || material.Specular?.IsEnabled == true
+                || material.Sheen?.IsEnabled == true
+                || material.ClearCoat?.IsEnabled == true
+                || material.Transmission?.IsEnabled == true
+                || material.Volume?.IsEnabled == true
+                || material.Iridescence?.IsEnabled == true
+                || material.Dispersion?.IsEnabled == true
+                || material.DiffuseTransmission?.IsEnabled == true
+                || material.Anisotropy?.IsEnabled == true
+                || material.SpecularGlossiness?.IsEnabled == true;
         }
 
         /// <summary>
@@ -191,23 +192,46 @@ namespace DotnetGltfRenderer {
             if (material == null) {
                 return ExtensionFlags.MetallicRoughness;
             }
-
             ExtensionFlags flags = ExtensionFlags.MetallicRoughness;
-
-            if (material.ClearCoat?.IsEnabled == true) flags |= ExtensionFlags.ClearCoat;
-            if (material.Iridescence?.IsEnabled == true) flags |= ExtensionFlags.Iridescence;
-            if (material.Transmission?.IsEnabled == true) flags |= ExtensionFlags.Transmission;
-            if (material.Volume?.IsEnabled == true) flags |= ExtensionFlags.Volume;
-            if (material.Sheen?.IsEnabled == true) flags |= ExtensionFlags.Sheen;
-            if (material.Specular?.IsEnabled == true) flags |= ExtensionFlags.Specular;
-            if (material.Ior?.IsEnabled == true) flags |= ExtensionFlags.Ior;
-            if (material.EmissiveStrength?.IsEnabled == true) flags |= ExtensionFlags.EmissiveStrength;
-            if (material.Dispersion?.IsEnabled == true) flags |= ExtensionFlags.Dispersion;
-            if (material.Anisotropy?.IsEnabled == true) flags |= ExtensionFlags.Anisotropy;
-            if (material.DiffuseTransmission?.IsEnabled == true) flags |= ExtensionFlags.DiffuseTransmission;
-            if (material.VolumeScatter?.IsEnabled == true) flags |= ExtensionFlags.VolumeScatter;
-            if (material.Unlit?.IsEnabled == true) flags |= ExtensionFlags.Unlit;
-
+            if (material.ClearCoat?.IsEnabled == true) {
+                flags |= ExtensionFlags.ClearCoat;
+            }
+            if (material.Iridescence?.IsEnabled == true) {
+                flags |= ExtensionFlags.Iridescence;
+            }
+            if (material.Transmission?.IsEnabled == true) {
+                flags |= ExtensionFlags.Transmission;
+            }
+            if (material.Volume?.IsEnabled == true) {
+                flags |= ExtensionFlags.Volume;
+            }
+            if (material.Sheen?.IsEnabled == true) {
+                flags |= ExtensionFlags.Sheen;
+            }
+            if (material.Specular?.IsEnabled == true) {
+                flags |= ExtensionFlags.Specular;
+            }
+            if (material.Ior?.IsEnabled == true) {
+                flags |= ExtensionFlags.Ior;
+            }
+            if (material.EmissiveStrength?.IsEnabled == true) {
+                flags |= ExtensionFlags.EmissiveStrength;
+            }
+            if (material.Dispersion?.IsEnabled == true) {
+                flags |= ExtensionFlags.Dispersion;
+            }
+            if (material.Anisotropy?.IsEnabled == true) {
+                flags |= ExtensionFlags.Anisotropy;
+            }
+            if (material.DiffuseTransmission?.IsEnabled == true) {
+                flags |= ExtensionFlags.DiffuseTransmission;
+            }
+            if (material.VolumeScatter?.IsEnabled == true) {
+                flags |= ExtensionFlags.VolumeScatter;
+            }
+            if (material.Unlit?.IsEnabled == true) {
+                flags |= ExtensionFlags.Unlit;
+            }
             return flags;
         }
 
@@ -215,47 +239,80 @@ namespace DotnetGltfRenderer {
         /// 构建纹理标志位
         /// </summary>
         public static TextureFlags BuildTextureFlags(Material material) {
-            if (material == null) return TextureFlags.None;
-
+            if (material == null) {
+                return TextureFlags.None;
+            }
             TextureFlags flags = TextureFlags.None;
-
-            if (material.BaseColorTexture != null) flags |= TextureFlags.BaseColor;
-            if (material.MetallicRoughnessTexture != null) flags |= TextureFlags.MetallicRoughness;
-            if (material.NormalTexture != null) flags |= TextureFlags.Normal;
-            if (material.OcclusionTexture != null) flags |= TextureFlags.Occlusion;
-            if (material.EmissiveTexture != null) flags |= TextureFlags.Emissive;
-
+            if (material.BaseColorTexture != null) {
+                flags |= TextureFlags.BaseColor;
+            }
+            if (material.MetallicRoughnessTexture != null) {
+                flags |= TextureFlags.MetallicRoughness;
+            }
+            if (material.NormalTexture != null) {
+                flags |= TextureFlags.Normal;
+            }
+            if (material.OcclusionTexture != null) {
+                flags |= TextureFlags.Occlusion;
+            }
+            if (material.EmissiveTexture != null) {
+                flags |= TextureFlags.Emissive;
+            }
             if (material.ClearCoat?.IsEnabled == true) {
-                if (material.ClearCoat.Texture != null) flags |= TextureFlags.ClearCoat;
-                if (material.ClearCoat.RoughnessTexture != null) flags |= TextureFlags.ClearCoatRoughness;
-                if (material.ClearCoat.NormalTexture != null) flags |= TextureFlags.ClearCoatNormal;
+                if (material.ClearCoat.Texture != null) {
+                    flags |= TextureFlags.ClearCoat;
+                }
+                if (material.ClearCoat.RoughnessTexture != null) {
+                    flags |= TextureFlags.ClearCoatRoughness;
+                }
+                if (material.ClearCoat.NormalTexture != null) {
+                    flags |= TextureFlags.ClearCoatNormal;
+                }
             }
             if (material.Iridescence?.IsEnabled == true) {
-                if (material.Iridescence.Texture != null) flags |= TextureFlags.Iridescence;
-                if (material.Iridescence.ThicknessTexture != null) flags |= TextureFlags.IridescenceThickness;
+                if (material.Iridescence.Texture != null) {
+                    flags |= TextureFlags.Iridescence;
+                }
+                if (material.Iridescence.ThicknessTexture != null) {
+                    flags |= TextureFlags.IridescenceThickness;
+                }
             }
-            if (material.Transmission?.IsEnabled == true && material.Transmission.Texture != null) {
+            if (material.Transmission?.IsEnabled == true
+                && material.Transmission.Texture != null) {
                 flags |= TextureFlags.Transmission;
             }
-            if (material.Volume?.IsEnabled == true && material.Volume.ThicknessTexture != null) {
+            if (material.Volume?.IsEnabled == true
+                && material.Volume.ThicknessTexture != null) {
                 flags |= TextureFlags.Thickness;
             }
             if (material.Sheen?.IsEnabled == true) {
-                if (material.Sheen.ColorTexture != null) flags |= TextureFlags.SheenColor;
-                if (material.Sheen.RoughnessTexture != null) flags |= TextureFlags.SheenRoughness;
+                if (material.Sheen.ColorTexture != null) {
+                    flags |= TextureFlags.SheenColor;
+                }
+                if (material.Sheen.RoughnessTexture != null) {
+                    flags |= TextureFlags.SheenRoughness;
+                }
             }
             if (material.Specular?.IsEnabled == true) {
-                if (material.Specular.SpecularTexture != null) flags |= TextureFlags.Specular;
-                if (material.Specular.SpecularColorTexture != null) flags |= TextureFlags.SpecularColor;
+                if (material.Specular.SpecularTexture != null) {
+                    flags |= TextureFlags.Specular;
+                }
+                if (material.Specular.SpecularColorTexture != null) {
+                    flags |= TextureFlags.SpecularColor;
+                }
             }
-            if (material.Anisotropy?.IsEnabled == true && material.Anisotropy.AnisotropyTexture != null) {
+            if (material.Anisotropy?.IsEnabled == true
+                && material.Anisotropy.AnisotropyTexture != null) {
                 flags |= TextureFlags.Anisotropy;
             }
             if (material.DiffuseTransmission?.IsEnabled == true) {
-                if (material.DiffuseTransmission.Texture != null) flags |= TextureFlags.DiffuseTransmission;
-                if (material.DiffuseTransmission.ColorTexture != null) flags |= TextureFlags.DiffuseTransmissionColor;
+                if (material.DiffuseTransmission.Texture != null) {
+                    flags |= TextureFlags.DiffuseTransmission;
+                }
+                if (material.DiffuseTransmission.ColorTexture != null) {
+                    flags |= TextureFlags.DiffuseTransmissionColor;
+                }
             }
-
             return flags;
         }
     }

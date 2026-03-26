@@ -8,7 +8,6 @@ namespace DotnetGltfRenderer {
     /// IBL 预处理器，用于生成预过滤的环境贴图
     /// </summary>
     public class IblSampler : IDisposable {
-
         // 配置参数
         readonly int _textureSize = 256;
         readonly int _ggxSampleCount = 1024;
@@ -166,7 +165,11 @@ namespace DotnetGltfRenderer {
                 );
             }
             if (withMipmaps) {
-                GlContext.GL.TexParameter(TextureTarget.TextureCubeMap, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
+                GlContext.GL.TexParameter(
+                    TextureTarget.TextureCubeMap,
+                    TextureParameterName.TextureMinFilter,
+                    (int)TextureMinFilter.LinearMipmapLinear
+                );
             }
             else {
                 GlContext.GL.TexParameter(TextureTarget.TextureCubeMap, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
@@ -384,7 +387,6 @@ namespace DotnetGltfRenderer {
                     }
                 }
             }
-
             string path = Path.Combine(ProgressDirectory, $"{name}.bmp");
             SaveBmp(path, combinedData, combinedWidth, combinedHeight);
         }
@@ -442,7 +444,13 @@ namespace DotnetGltfRenderer {
             float[] floatData = new float[_lutResolution * _lutResolution * 4];
             uint fbo = GlContext.GL.GenFramebuffer();
             GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
-            GlContext.GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, texture, 0);
+            GlContext.GL.FramebufferTexture2D(
+                FramebufferTarget.Framebuffer,
+                FramebufferAttachment.ColorAttachment0,
+                TextureTarget.Texture2D,
+                texture,
+                0
+            );
             fixed (float* d = floatData) {
                 GlContext.GL.ReadPixels(
                     0,
@@ -464,7 +472,6 @@ namespace DotnetGltfRenderer {
                 data[i * 3 + 1] = (byte)Math.Clamp(g * 255, 0, 255);
                 data[i * 3 + 2] = (byte)Math.Clamp(b * 255, 0, 255);
             }
-
             string path = Path.Combine(ProgressDirectory, $"{name}.bmp");
             SaveBmp(path, data, _lutResolution, _lutResolution);
         }

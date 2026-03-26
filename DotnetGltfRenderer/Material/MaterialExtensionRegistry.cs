@@ -41,7 +41,8 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建扩展实例
         /// </summary>
-        public static MaterialExtension Create(string extensionName) => _factories.TryGetValue(extensionName, out Func<MaterialExtension> factory) ? factory() : null;
+        public static MaterialExtension Create(string extensionName) =>
+            _factories.TryGetValue(extensionName, out Func<MaterialExtension> factory) ? factory() : null;
 
         /// <summary>
         /// 清除所有已注册的扩展

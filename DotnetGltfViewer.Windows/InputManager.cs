@@ -74,18 +74,20 @@ namespace DotnetGltfViewer.Windows {
         /// 处理鼠标按下事件
         /// </summary>
         public static void OnMouseDown(IMouse mouse, MouseButton button) {
-            if (ImGuiManager.IO.WantCaptureMouse || GizmoManager.IsOver()) {
+            if (ImGuiManager.IO.WantCaptureMouse
+                || GizmoManager.IsOver()) {
                 return;
             }
 
             // 选择模式：左键点击进行射线拾取，但仍然允许相机操作
-            if (button == MouseButton.Left && GizmoManager.CurrentMode == GizmoMode.Select) {
-                if (_scene != null && _camera != null) {
+            if (button == MouseButton.Left
+                && GizmoManager.CurrentMode == GizmoMode.Select) {
+                if (_scene != null
+                    && _camera != null) {
                     Vector2 screenPos = mouse.Position;
-                    Vector2 screenSize = new Vector2(MainWindow.Size.X, MainWindow.Size.Y);
+                    Vector2 screenSize = new(MainWindow.Size.X, MainWindow.Size.Y);
                     Ray ray = RayPicker.CreateRayFromScreen(screenPos, screenSize, _camera);
                     PickingResult result = RayPicker.Pick(_scene, ray);
-
                     if (result.Hit) {
                         SelectionManager.Select(result.Model, result.MeshInstance);
                     }
@@ -93,7 +95,6 @@ namespace DotnetGltfViewer.Windows {
                 }
                 // 不再 return，继续处理相机操作
             }
-
             if (button == MouseButton.Left) {
                 _leftMouseDown = true;
                 _hasMousePosition = false;
@@ -120,7 +121,8 @@ namespace DotnetGltfViewer.Windows {
         /// 处理鼠标移动事件
         /// </summary>
         public static void OnMouseMove(IMouse mouse, Vector2 position) {
-            if (ImGuiManager.IO.WantCaptureMouse || GizmoManager.IsUsing()) {
+            if (ImGuiManager.IO.WantCaptureMouse
+                || GizmoManager.IsUsing()) {
                 return;
             }
             if (!_hasMousePosition) {
@@ -128,10 +130,8 @@ namespace DotnetGltfViewer.Windows {
                 _hasMousePosition = true;
                 return;
             }
-
             Vector2 delta = position - _lastMousePosition;
             _lastMousePosition = position;
-
             if (_leftMouseDown) {
                 // 左键拖拽：以固定点为中心旋转相机
                 _camera.Orbit(delta.X * MouseOrbitSensitivity, -delta.Y * MouseOrbitSensitivity);
@@ -146,7 +146,8 @@ namespace DotnetGltfViewer.Windows {
         /// 处理鼠标滚轮事件
         /// </summary>
         public static void OnMouseScroll(IMouse mouse, ScrollWheel scrollWheel) {
-            if (ImGuiManager.IO.WantCaptureMouse || GizmoManager.IsUsing()) {
+            if (ImGuiManager.IO.WantCaptureMouse
+                || GizmoManager.IsUsing()) {
                 return;
             }
             // 滚轮：缩放（靠近/远离固定点）
@@ -167,17 +168,16 @@ namespace DotnetGltfViewer.Windows {
             if (ImGuiManager.IO.WantCaptureKeyboard) {
                 return;
             }
-            if (_primaryKeyboard == null) return;
-
+            if (_primaryKeyboard == null) {
+                return;
+            }
             float speed = _camera.MoveSpeed * KeyboardMoveMultiplier * deltaTime;
 
             // 计算相机的前方向（朝向固定点的方向）和右方向
             Vector3 forward = _camera.GetForwardDirection();
             Vector3 right = _camera.GetRightDirection();
             Vector3 up = Vector3.UnitY;
-
             Vector3 movement = Vector3.Zero;
-
             if (_primaryKeyboard.IsKeyPressed(Key.W)) {
                 movement += forward;
             }
@@ -193,10 +193,10 @@ namespace DotnetGltfViewer.Windows {
             if (_primaryKeyboard.IsKeyPressed(Key.Space)) {
                 movement += up;
             }
-            if (_primaryKeyboard.IsKeyPressed(Key.ShiftLeft) || _primaryKeyboard.IsKeyPressed(Key.ShiftRight)) {
+            if (_primaryKeyboard.IsKeyPressed(Key.ShiftLeft)
+                || _primaryKeyboard.IsKeyPressed(Key.ShiftRight)) {
                 movement -= up;
             }
-
             if (movement.LengthSquared() > 0f) {
                 movement = Vector3.Normalize(movement) * speed;
                 // 键盘移动：同时平移相机和固定点

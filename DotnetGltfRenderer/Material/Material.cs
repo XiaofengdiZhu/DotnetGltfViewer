@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Reflection;
+using SharpGLTF.IO;
 using SharpGLTF.Schema2;
 using GltfMaterial = SharpGLTF.Schema2.Material;
 
@@ -67,7 +68,6 @@ namespace DotnetGltfRenderer {
             if (_cachedDefines != null) {
                 return _cachedDefines;
             }
-
             ShaderDefines defines = ShaderDefines.CreateFragmentDefines();
 
             // Alpha mode
@@ -107,7 +107,6 @@ namespace DotnetGltfRenderer {
 
             // Extensions
             AppendExtensionDefines(defines);
-
             _cachedDefines = defines;
             return defines;
         }
@@ -225,7 +224,7 @@ namespace DotnetGltfRenderer {
         }
 
         void LoadMaterialExtensions(GltfMaterial material, Model model) {
-            foreach (var jsonSerializable in material.Extensions) {
+            foreach (JsonSerializable jsonSerializable in material.Extensions) {
                 Type type = jsonSerializable.GetType();
                 string extName = null;
                 if (jsonSerializable is ExtraProperties) {

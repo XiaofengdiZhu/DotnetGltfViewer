@@ -13,7 +13,6 @@ namespace DotnetGltfRenderer {
         const int IndexCount = 36;
 
         public Skybox() {
-
             // 立方体顶点（与官方 environment_renderer.js 一致）
             float[] vertices = [
                 -1,
@@ -100,7 +99,12 @@ namespace DotnetGltfRenderer {
             GlContext.GL.BindBuffer(BufferTargetARB.ElementArrayBuffer, _indexBuffer);
             unsafe {
                 fixed (ushort* i = indices) {
-                    GlContext.GL.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(indices.Length * sizeof(ushort)), i, BufferUsageARB.StaticDraw);
+                    GlContext.GL.BufferData(
+                        BufferTargetARB.ElementArrayBuffer,
+                        (nuint)(indices.Length * sizeof(ushort)),
+                        i,
+                        BufferUsageARB.StaticDraw
+                    );
                 }
             }
 

@@ -18,7 +18,6 @@ namespace DotnetGltfRenderer {
         readonly UniformBuffer<VolumeScatterData> _volumeScatterUBO;
 
         // Subsystems
-        readonly FramebufferManager _framebufferManager;
         readonly RenderPassManager _renderPassManager;
 
         // Frame state
@@ -34,7 +33,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 场景
         /// </summary>
-        public Scene Scene { get; private set; }
+        public Scene Scene { get; }
 
         /// <summary>
         /// 光照系统
@@ -59,7 +58,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 帧缓冲区管理器
         /// </summary>
-        public FramebufferManager FramebufferManager => _framebufferManager;
+        public FramebufferManager FramebufferManager { get; }
 
         /// <summary>
         /// 色调映射模式
@@ -98,9 +97,17 @@ namespace DotnetGltfRenderer {
             IBLManager.Load(environmentTexturePath);
 
             // 初始化子系统
-            _framebufferManager = new FramebufferManager();
-            MeshInstanceRenderer meshInstanceRenderer = new(_materialCoreUBO, _materialExtUBO, _sceneUBO, _lightsUBO, _renderStateUBO, _uvTransformUBO, _volumeScatterUBO);
-            _renderPassManager = new RenderPassManager(_framebufferManager, meshInstanceRenderer);
+            FramebufferManager = new FramebufferManager();
+            MeshInstanceRenderer meshInstanceRenderer = new(
+                _materialCoreUBO,
+                _materialExtUBO,
+                _sceneUBO,
+                _lightsUBO,
+                _renderStateUBO,
+                _uvTransformUBO,
+                _volumeScatterUBO
+            );
+            _renderPassManager = new RenderPassManager(FramebufferManager, meshInstanceRenderer);
 
             // 初始化天空渲染器
             InitializeSkyRenderer();
@@ -127,7 +134,7 @@ namespace DotnetGltfRenderer {
             _framebufferWidth = width;
             _framebufferHeight = height;
             _framebufferAspectRatio = (float)width / height;
-            _framebufferManager?.SetSize(width, height);
+            FramebufferManager?.SetSize(width, height);
         }
 
         /// <summary>
@@ -144,7 +151,9 @@ namespace DotnetGltfRenderer {
             LightingSystem.ClearLights();
             if (Scene != null) {
                 foreach (SceneModel sceneModel in Scene.Models) {
-                    if (!sceneModel.IsVisible) continue;
+                    if (!sceneModel.IsVisible) {
+                        continue;
+                    }
                     foreach (Light light in sceneModel.Model.Lights) {
                         LightingSystem.AddLight(light);
                     }
@@ -156,7 +165,9 @@ namespace DotnetGltfRenderer {
         /// 执行渲染
         /// </summary>
         public void Render() {
-            if (Scene == null) return;
+            if (Scene == null) {
+                return;
+            }
 
             // 计算视图投影矩阵
             Matrix4x4 view = Camera.ViewMatrix;
@@ -174,8 +185,8 @@ namespace DotnetGltfRenderer {
                 LightCount = LightingSystem.Lights.Count,
                 FramebufferWidth = _framebufferWidth,
                 FramebufferHeight = _framebufferHeight,
-                HasTransmissionFramebuffer = _framebufferManager.HasTransmissionFramebuffer,
-                HasScatterFramebuffer = _framebufferManager.HasScatterFramebuffer
+                HasTransmissionFramebuffer = FramebufferManager.HasTransmissionFramebuffer,
+                HasScatterFramebuffer = FramebufferManager.HasScatterFramebuffer
             };
 
             // 更新 Scene UBO
@@ -197,20 +208,16 @@ namespace DotnetGltfRenderer {
 
             // === Transmission Pass ===
             if (Scene.HasTransmissionInstances) {
-                _renderPassManager.ExecuteTransmissionPass(
-                    Scene,
-                    in context,
-                    renderSkyLinear: (v, p) => RenderSkyLinear(v, p)
-                );
+                _renderPassManager.ExecuteTransmissionPass(Scene, in context, (v, p) => RenderSkyLinear(v, p));
             }
 
             // === Main Pass ===
             _renderPassManager.ExecuteMainPass(
                 Scene,
                 in context,
-                renderSky: (v, p) => RenderSky(v, p),
-                onBindScatterTextures: () => _framebufferManager.BindScatterTextures(),
-                onBindTransmissionTexture: () => _framebufferManager.BindTransmissionTexture()
+                (v, p) => RenderSky(v, p),
+                () => FramebufferManager.BindScatterTextures(),
+                () => FramebufferManager.BindTransmissionTexture()
             );
         }
 
@@ -234,11 +241,17 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 渲染天空盒
         /// </summary>
-        public void RenderSky(Matrix4x4 view, Matrix4x4 projection, float envIntensity = 1.0f, float envBlur = 0.0f, float envRotationDegrees = 0.0f) {
+        public void RenderSky(Matrix4x4 view,
+            Matrix4x4 projection,
+            float envIntensity = 1.0f,
+            float envBlur = 0.0f,
+            float envRotationDegrees = 0.0f) {
             SkyRenderer?.Render(
-                view, projection,
+                view,
+                projection,
                 envIntensity * IBLManager.EnvironmentStrength,
-                envBlur, envRotationDegrees,
+                envBlur,
+                envRotationDegrees,
                 LightingSystem.Exposure,
                 IBLManager.IblSampler
             );
@@ -249,7 +262,8 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public void RenderSkyLinear(Matrix4x4 view, Matrix4x4 projection, float envIntensity = 1.0f) {
             SkyRenderer?.RenderLinear(
-                view, projection,
+                view,
+                projection,
                 envIntensity * IBLManager.EnvironmentStrength,
                 LightingSystem.Exposure,
                 IBLManager.IblSampler
@@ -267,7 +281,7 @@ namespace DotnetGltfRenderer {
             _renderStateUBO?.Dispose();
             _uvTransformUBO?.Dispose();
             _volumeScatterUBO?.Dispose();
-            _framebufferManager?.Dispose();
+            FramebufferManager?.Dispose();
             SkyRenderer = null;
         }
     }

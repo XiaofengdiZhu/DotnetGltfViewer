@@ -18,10 +18,15 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 渲染天空盒
         /// </summary>
-        public void Render(Matrix4x4 view, Matrix4x4 projection,
-            float envIntensity, float envBlur, float envRotationDegrees,
-            float exposure, IblSampler iblSampler) {
-            if (_skybox == null || iblSampler == null) {
+        public void Render(Matrix4x4 view,
+            Matrix4x4 projection,
+            float envIntensity,
+            float envBlur,
+            float envRotationDegrees,
+            float exposure,
+            IblSampler iblSampler) {
+            if (_skybox == null
+                || iblSampler == null) {
                 return;
             }
 
@@ -45,7 +50,6 @@ namespace DotnetGltfRenderer {
             GlContext.DisableBlend();
             GlContext.FrontFaceCCW();
             GlContext.EnableCullFace();
-
             _skyShader.Use();
 
             // 设置 uniforms
@@ -60,7 +64,6 @@ namespace DotnetGltfRenderer {
             GlContext.GL.ActiveTexture(TextureUnit.Texture0);
             GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, iblSampler.GGXTexture);
             _skyShader.SetUniform("u_GGXEnvSampler", 0);
-
             _skybox.Draw();
 
             // 恢复深度测试
@@ -70,9 +73,9 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 渲染天空盒（线性输出模式，用于离屏缓冲区）
         /// </summary>
-        public void RenderLinear(Matrix4x4 view, Matrix4x4 projection,
-            float envIntensity, float exposure, IblSampler iblSampler) {
-            if (_skybox == null || iblSampler == null) {
+        public void RenderLinear(Matrix4x4 view, Matrix4x4 projection, float envIntensity, float exposure, IblSampler iblSampler) {
+            if (_skybox == null
+                || iblSampler == null) {
                 return;
             }
 
@@ -117,7 +120,6 @@ namespace DotnetGltfRenderer {
             GlContext.GL.ActiveTexture(TextureUnit.Texture0);
             GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, iblSampler.GGXTexture);
             linearSkyShader.SetUniform("u_GGXEnvSampler", 0);
-
             _skybox.Draw();
 
             // 恢复深度测试

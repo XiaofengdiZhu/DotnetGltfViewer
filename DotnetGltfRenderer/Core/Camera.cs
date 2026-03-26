@@ -9,7 +9,6 @@ namespace DotnetGltfRenderer {
         const float MinDistance = 0.1f;
         const float DefaultDistanceMargin = 1.5f;
 
-        Vector3 _front = -Vector3.UnitZ;
         readonly Vector3 _worldUp = Vector3.UnitY;
 
         /// <summary>
@@ -30,7 +29,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 相机前方向（归一化）
         /// </summary>
-        public Vector3 Front => _front;
+        public Vector3 Front { get; private set; } = -Vector3.UnitZ;
 
         /// <summary>
         /// 相机上方向
@@ -131,7 +130,6 @@ namespace DotnetGltfRenderer {
             Vector3 right = Right * xOffset * panSpeed;
             Vector3 up = Up * yOffset * panSpeed;
             Vector3 translation = right + up;
-
             FocalPoint += translation;
             Position += translation;
         }
@@ -156,7 +154,6 @@ namespace DotnetGltfRenderer {
             Vector3 direction = Vector3.Normalize(target - position);
             Yaw = MathHelper.RadiansToDegrees(MathF.Atan2(direction.Z, direction.X));
             Pitch = MathHelper.RadiansToDegrees(MathF.Asin(direction.Y));
-
             UpdateCameraVectors();
         }
 
@@ -177,9 +174,8 @@ namespace DotnetGltfRenderer {
             // 正视模型：从正前方观察
             FocalPoint = modelCenter;
             Distance = distance;
-            Yaw = -90f;      // 正对模型前方
-            Pitch = 0f;    // 水平视角
-
+            Yaw = -90f; // 正对模型前方
+            Pitch = 0f; // 水平视角
             UpdateDerivedProperties(radius, distance);
             UpdatePosition();
         }
@@ -198,14 +194,13 @@ namespace DotnetGltfRenderer {
             // 球坐标系转笛卡尔坐标
             float yawRad = MathHelper.DegreesToRadians(Yaw);
             float pitchRad = MathHelper.DegreesToRadians(Pitch);
-
             float x = MathF.Cos(pitchRad) * MathF.Cos(yawRad);
             float y = MathF.Sin(pitchRad);
             float z = MathF.Cos(pitchRad) * MathF.Sin(yawRad);
 
             // 相机位置 = 焦点 - 方向向量 * 距离
-            _front = new Vector3(x, y, z);
-            Position = FocalPoint - _front * Distance;
+            Front = new Vector3(x, y, z);
+            Position = FocalPoint - Front * Distance;
         }
 
         /// <summary>
@@ -219,11 +214,11 @@ namespace DotnetGltfRenderer {
             float x = MathF.Cos(pitchRad) * MathF.Cos(yawRad);
             float y = MathF.Sin(pitchRad);
             float z = MathF.Cos(pitchRad) * MathF.Sin(yawRad);
-            _front = Vector3.Normalize(new Vector3(x, y, z));
+            Front = Vector3.Normalize(new Vector3(x, y, z));
 
             // 计算右方向和上方向
-            Right = Vector3.Normalize(Vector3.Cross(_front, _worldUp));
-            Up = Vector3.Normalize(Vector3.Cross(Right, _front));
+            Right = Vector3.Normalize(Vector3.Cross(Front, _worldUp));
+            Up = Vector3.Normalize(Vector3.Cross(Right, Front));
         }
 
         /// <summary>

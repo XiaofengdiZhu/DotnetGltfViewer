@@ -3,11 +3,11 @@ using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using DotnetGltfRenderer;
+using NativeFileDialogCore;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGLES;
 using Silk.NET.Windowing;
-using NativeFileDialogCore;
 using ZLogger;
 
 namespace DotnetGltfViewer.Windows {
@@ -44,7 +44,8 @@ namespace DotnetGltfViewer.Windows {
             options.API = new GraphicsAPI(ContextAPI.OpenGLES, new APIVersion(3, 0));
             options.Size = new Vector2D<int>(1280, 720);
             options.Title = "DotnetGltfViewer";
-            options.VSync = true;options.UpdatesPerSecond = 60;
+            options.VSync = true;
+            options.UpdatesPerSecond = 60;
             _window = Window.Create(options);
         }
 
@@ -68,7 +69,6 @@ namespace DotnetGltfViewer.Windows {
             LogManager.Logger.ZLogInformation($"初始化窗口...");
             _gl = GL.GetApi(_window);
             GlContext.GL = _gl; // 设置全局 GL 上下文
-
             IInputContext input = _window.CreateInput();
             LogManager.Logger.ZLogInformation($"窗口初始化完成, Size: {_window.Size.X}x{_window.Size.Y}");
             LogManager.Logger.ZLogInformation($"OpenGL ES 版本: {_gl.GetStringS(StringName.Version)}");
@@ -154,19 +154,13 @@ namespace DotnetGltfViewer.Windows {
             }
         }
 
-        public static bool TryGetSceneBounds(out Vector3 min, out Vector3 max) {
-            return _scene.TryGetSceneBounds(out min, out max);
-        }
+        public static bool TryGetSceneBounds(out Vector3 min, out Vector3 max) => _scene.TryGetSceneBounds(out min, out max);
 
         /// <summary>
         /// 打开模型文件对话框
         /// </summary>
         public static void OpenModelFileDialog() {
-            DialogResult result = Dialog.FileOpenEx(
-                "[glTF Files (*.gltf;*.glb)|*.gltf;*.glb]",
-                null,
-                "Open glTF Model"
-            );
+            DialogResult result = Dialog.FileOpenEx("[glTF Files (*.gltf;*.glb)|*.gltf;*.glb]", null, "Open glTF Model");
             if (result.IsOk) {
                 try {
                     _scene.AddModel(result.Path);
@@ -184,11 +178,7 @@ namespace DotnetGltfViewer.Windows {
         /// 打开环境贴图文件对话框
         /// </summary>
         public static void OpenEnvironmentMapDialog() {
-            DialogResult result = Dialog.FileOpenEx(
-                "[HDR Files (*.hdr)|*.hdr]",
-                null,
-                "Open Environment Map"
-            );
+            DialogResult result = Dialog.FileOpenEx("[HDR Files (*.hdr)|*.hdr]", null, "Open Environment Map");
             if (result.IsOk) {
                 try {
                     _renderer.SetEnvironmentMap(result.Path);

@@ -99,19 +99,20 @@ namespace DotnetGltfRenderer {
             _unknownNodeType ??= AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany(a => a.GetTypes())
                 .FirstOrDefault(t => t.FullName == "SharpGLTF.IO.UnknownNode");
-
-            if (_unknownNodeType == null) return null;
-
+            if (_unknownNodeType == null) {
+                return null;
+            }
             foreach (JsonSerializable ext in target.Extensions) {
                 Type extType = ext.GetType();
-                if (extType != _unknownNodeType) continue;
+                if (extType != _unknownNodeType) {
+                    continue;
+                }
 
                 // 使用缓存的 PropertyInfo
                 if (!_namePropertyCache.TryGetValue(extType, out PropertyInfo nameProp)) {
                     nameProp = extType.GetProperty("Name", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     _namePropertyCache[extType] = nameProp;
                 }
-
                 if (nameProp?.GetValue(ext)?.ToString() == extensionName) {
                     return ext;
                 }
@@ -134,7 +135,6 @@ namespace DotnetGltfRenderer {
                 propsProp = extType.GetProperty("Properties", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 _propertiesPropertyCache[extType] = propsProp;
             }
-
             IReadOnlyDictionary<string, JsonNode> properties = propsProp?.GetValue(unknownExtension) as IReadOnlyDictionary<string, JsonNode>;
             if (properties != null
                 && properties.TryGetValue(propertyName, out JsonNode value)) {

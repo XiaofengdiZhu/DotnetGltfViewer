@@ -56,27 +56,29 @@ namespace DotnetGltfRenderer {
         /// 更新世界空间边界
         /// </summary>
         public void UpdateWorldBounds() {
-            if (Model == null || Model.MeshInstances.Count == 0) {
+            if (Model == null
+                || Model.MeshInstances.Count == 0) {
                 WorldBounds = BoundingBox.Empty;
                 return;
             }
-
             Vector3 min = new(float.MaxValue);
             Vector3 max = new(float.MinValue);
-
             foreach (MeshInstance instance in Model.MeshInstances) {
-                if (!instance.IsVisible) continue;
+                if (!instance.IsVisible) {
+                    continue;
+                }
 
                 // 获取网格的局部包围盒
                 BoundingBox localBounds = instance.Mesh.LocalBounds;
-                if (!localBounds.IsValid) continue;
+                if (!localBounds.IsValid) {
+                    continue;
+                }
 
                 // 变换到世界空间
                 BoundingBox worldBounds = BoundingBox.Transform(localBounds, instance.WorldMatrix);
                 min = Vector3.Min(min, worldBounds.Min);
                 max = Vector3.Max(max, worldBounds.Max);
             }
-
             WorldBounds = min.X != float.MaxValue ? new BoundingBox(min, max) : BoundingBox.Empty;
         }
 
@@ -154,8 +156,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建场景
         /// </summary>
-        public Scene() {
-        }
+        public Scene() { }
 
         // ========== 渲染队列操作 ==========
         /// <summary>
@@ -214,8 +215,9 @@ namespace DotnetGltfRenderer {
         }
 
         void SortInstancesByDepth(List<MeshInstance> instances, Matrix4x4 viewMatrix) {
-            if (instances.Count <= 1) return;
-
+            if (instances.Count <= 1) {
+                return;
+            }
             for (int i = 0; i < instances.Count; i++) {
                 MeshInstance inst = instances[i];
                 Vector3 centroid = inst.Mesh.Centroid;
@@ -234,10 +236,10 @@ namespace DotnetGltfRenderer {
         /// <param name="filePath">模型文件路径</param>
         /// <returns>添加的模型项</returns>
         public SceneModel AddModel(string filePath) {
-            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) {
+            if (string.IsNullOrEmpty(filePath)
+                || !File.Exists(filePath)) {
                 throw new FileNotFoundException($"Model file not found: {filePath}");
             }
-
             SceneModel sceneModel = new(filePath, _nextModelId++);
             _models.Add(sceneModel);
             AddModelInstancesToQueues(sceneModel);
@@ -250,12 +252,12 @@ namespace DotnetGltfRenderer {
         /// </summary>
         /// <param name="model">要移除的模型</param>
         public void RemoveModel(SceneModel model) {
-            if (model == null) return;
-
+            if (model == null) {
+                return;
+            }
             if (SelectedModel == model) {
                 ClearSelection();
             }
-
             RemoveModelInstancesFromQueues(model.Model);
             _models.Remove(model);
             OnModelRemoved?.Invoke(model);
@@ -267,7 +269,9 @@ namespace DotnetGltfRenderer {
         /// </summary>
         /// <param name="model">要选中的模型</param>
         public void SelectModel(SceneModel model) {
-            if (SelectedModel == model) return;
+            if (SelectedModel == model) {
+                return;
+            }
 
             // 清除之前的选中状态
             if (SelectedModel != null) {
@@ -279,7 +283,6 @@ namespace DotnetGltfRenderer {
             if (model != null) {
                 model.IsSelected = true;
             }
-
             OnSelectionChanged?.Invoke(model);
         }
 
@@ -311,14 +314,13 @@ namespace DotnetGltfRenderer {
             if (_models.Count == 0) {
                 return BoundingBox.Empty;
             }
-
             Vector3 min = new(float.MaxValue);
             Vector3 max = new(float.MinValue);
             bool hasAny = false;
-
             foreach (SceneModel model in _models) {
-                if (!model.IsVisible) continue;
-
+                if (!model.IsVisible) {
+                    continue;
+                }
                 model.UpdateWorldBounds();
                 BoundingBox bounds = model.WorldBounds;
                 if (bounds.IsValid) {
@@ -327,7 +329,6 @@ namespace DotnetGltfRenderer {
                     hasAny = true;
                 }
             }
-
             return hasAny ? new BoundingBox(min, max) : BoundingBox.Empty;
         }
 
@@ -351,7 +352,6 @@ namespace DotnetGltfRenderer {
                 max = bounds.Max;
                 return true;
             }
-
             min = Vector3.Zero;
             max = Vector3.One;
             return false;

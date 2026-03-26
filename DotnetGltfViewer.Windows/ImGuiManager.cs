@@ -38,7 +38,7 @@ namespace DotnetGltfViewer.Windows {
             Scene scene,
             ImGuiFontConfig? imGuiFontConfig = null,
             Action onConfigureIO = null) {
-            _controller = new ImGuiController(GlContext.GL, window, input, imGuiFontConfig, onConfigureIO ?? DefaultOnConfigureIO );
+            _controller = new ImGuiController(GlContext.GL, window, input, imGuiFontConfig, onConfigureIO ?? DefaultOnConfigureIO);
             ImGuizmo.SetImGuiContext(_controller.Context);
             _camera = camera;
             _scene = scene;
@@ -169,7 +169,6 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         static void RenderScenePanel() {
             ImGui.Begin("Scene", ref _showScenePanel);
-
             if (_scene == null) {
                 ImGui.Text("No scene loaded");
                 ImGui.End();
@@ -179,7 +178,6 @@ namespace DotnetGltfViewer.Windows {
             // 模型列表
             ImGui.Text($"Models: {_scene.Models.Count}");
             ImGui.Separator();
-
             for (int i = 0; i < _scene.Models.Count; i++) {
                 SceneModel model = _scene.Models[i];
                 bool isSelected = _scene.SelectedModel == model;
@@ -207,14 +205,12 @@ namespace DotnetGltfViewer.Windows {
                     ImGui.EndPopup();
                 }
             }
-
             ImGui.Separator();
 
             // 添加模型按钮
             if (ImGui.Button("Add Model...")) {
                 MainWindow.OpenModelFileDialog();
             }
-
             ImGui.End();
         }
 

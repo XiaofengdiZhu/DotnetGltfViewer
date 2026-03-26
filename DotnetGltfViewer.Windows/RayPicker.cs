@@ -50,8 +50,8 @@ namespace DotnetGltfViewer.Windows {
         /// <returns>世界空间射线</returns>
         public static Ray CreateRayFromScreen(Vector2 screenPos, Vector2 screenSize, Camera camera) {
             // 转换到 NDC [-1, 1]
-            float ndcX = (2.0f * screenPos.X) / screenSize.X - 1.0f;
-            float ndcY = 1.0f - (2.0f * screenPos.Y) / screenSize.Y; // Y 翻转
+            float ndcX = 2.0f * screenPos.X / screenSize.X - 1.0f;
+            float ndcY = 1.0f - 2.0f * screenPos.Y / screenSize.Y; // Y 翻转
 
             // 裁剪空间坐标
             Vector4 clipCoords = new(ndcX, ndcY, -1.0f, 1.0f);
@@ -71,7 +71,6 @@ namespace DotnetGltfViewer.Windows {
 
             // 归一化方向
             Vector3 direction = Vector3.Normalize(new Vector3(worldCoords.X, worldCoords.Y, worldCoords.Z));
-
             return new Ray(camera.Position, direction);
         }
 
@@ -82,26 +81,25 @@ namespace DotnetGltfViewer.Windows {
         /// <param name="ray">射线</param>
         /// <returns>拾取结果</returns>
         public static PickingResult Pick(Scene scene, Ray ray) {
-            if (scene == null || scene.Models.Count == 0) {
+            if (scene == null
+                || scene.Models.Count == 0) {
                 return PickingResult.Empty;
             }
-
             PickingResult closestResult = PickingResult.Empty;
             closestResult.Distance = float.MaxValue;
-
             foreach (SceneModel model in scene.Models) {
-                if (!model.IsVisible) continue;
-
+                if (!model.IsVisible) {
+                    continue;
+                }
                 PickingResult result = PickModel(model, ray);
-                if (result.Hit && result.Distance < closestResult.Distance) {
+                if (result.Hit
+                    && result.Distance < closestResult.Distance) {
                     closestResult = result;
                 }
             }
-
             if (closestResult.Hit) {
                 closestResult.HitPoint = ray.GetPoint(closestResult.Distance);
             }
-
             return closestResult;
         }
 
@@ -118,19 +116,21 @@ namespace DotnetGltfViewer.Windows {
             if (!worldBounds.IsValid) {
                 return PickingResult.Empty;
             }
-
             if (!worldBounds.Intersects(ray, out float modelDistance)) {
                 return PickingResult.Empty;
             }
 
             // 然后检测每个 MeshInstance
             foreach (MeshInstance instance in sceneModel.Model.MeshInstances) {
-                if (!instance.IsVisible) continue;
+                if (!instance.IsVisible) {
+                    continue;
+                }
 
                 // 获取 MeshInstance 的世界包围盒
                 BoundingBox instanceBounds = GetMeshInstanceWorldBounds(instance);
-                if (!instanceBounds.IsValid) continue;
-
+                if (!instanceBounds.IsValid) {
+                    continue;
+                }
                 if (instanceBounds.Intersects(ray, out float instanceDistance)) {
                     if (instanceDistance < result.Distance) {
                         result.Hit = true;
@@ -141,12 +141,12 @@ namespace DotnetGltfViewer.Windows {
             }
 
             // 如果没有命中任何 MeshInstance，但命中了模型包围盒，返回模型级别的命中
-            if (!result.Hit && modelDistance < float.MaxValue) {
+            if (!result.Hit
+                && modelDistance < float.MaxValue) {
                 result.Hit = true;
                 result.MeshInstance = null;
                 result.Distance = modelDistance;
             }
-
             return result;
         }
 
@@ -158,7 +158,6 @@ namespace DotnetGltfViewer.Windows {
             if (!localBounds.IsValid) {
                 return BoundingBox.Empty;
             }
-
             return BoundingBox.Transform(localBounds, instance.WorldMatrix);
         }
     }

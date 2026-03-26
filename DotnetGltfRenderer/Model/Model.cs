@@ -54,8 +54,13 @@ namespace DotnetGltfRenderer {
         public int ActiveSceneIndex {
             get => _activeSceneIndex;
             set {
-                if (value < 0 || value >= _sceneNames.Count) return;
-                if (value == _activeSceneIndex) return;
+                if (value < 0
+                    || value >= _sceneNames.Count) {
+                    return;
+                }
+                if (value == _activeSceneIndex) {
+                    return;
+                }
                 _activeSceneIndex = value;
                 SwitchToScene(_activeSceneIndex);
             }
@@ -70,9 +75,7 @@ namespace DotnetGltfRenderer {
 
         public string ActiveVariant {
             get => ActiveVariantIndex >= 0 && ActiveVariantIndex < _variants.Count ? _variants[ActiveVariantIndex] : null;
-            set {
-                ActiveVariantIndex = value == null ? -1 : _variants.IndexOf(value);
-            }
+            set => ActiveVariantIndex = value == null ? -1 : _variants.IndexOf(value);
         }
 
         public bool HasAnimation => _activeAnimation != null;
@@ -88,14 +91,14 @@ namespace DotnetGltfRenderer {
             string fullPath = Path.GetFullPath(path);
             Directory = Path.GetDirectoryName(fullPath) ?? string.Empty;
             _modelRoot = ModelRoot.Load(fullPath, new ReadSettings { Validation = ValidationMode.Skip });
-
             DetectExtensions(_modelRoot);
 
             // 加载变体
             List<string> variants = GltfVariantLoader.LoadVariants(_modelRoot);
             _variants.AddRange(variants);
             _variantMappings.Clear();
-            foreach (var kvp in GltfVariantLoader.LoadVariantMappings(_modelRoot)) {
+            foreach (KeyValuePair<(int MeshIndex, int PrimitiveIndex), Dictionary<int, int>> kvp in
+                GltfVariantLoader.LoadVariantMappings(_modelRoot)) {
                 _variantMappings[kvp.Key] = kvp.Value;
             }
 
@@ -111,11 +114,12 @@ namespace DotnetGltfRenderer {
                 defaultSceneIndex = _modelRoot.DefaultScene.LogicalIndex;
             }
             _activeSceneIndex = Math.Min(defaultSceneIndex, _sceneNames.Count - 1);
-            if (_activeSceneIndex < 0) _activeSceneIndex = 0;
+            if (_activeSceneIndex < 0) {
+                _activeSceneIndex = 0;
+            }
 
             // 切换到默认场景
             SwitchToScene(_activeSceneIndex);
-
             _activeAnimation = _modelRoot.LogicalAnimations.FirstOrDefault();
             AnimationDurationSeconds = _activeAnimation?.Duration ?? 0f;
 
@@ -130,8 +134,9 @@ namespace DotnetGltfRenderer {
 
         void BuildMorphSamplerCache() {
             _morphSamplerCache.Clear();
-            if (_activeAnimation == null) return;
-
+            if (_activeAnimation == null) {
+                return;
+            }
             foreach (AnimationChannel channel in _activeAnimation.Channels) {
                 if (channel.TargetNodePath == PropertyPath.weights) {
                     IAnimationSampler<float[]> sampler = channel.GetMorphSampler();
@@ -155,20 +160,16 @@ namespace DotnetGltfRenderer {
             foreach (GltfScene scene in _modelRoot.LogicalScenes) {
                 _sceneNames.Add(scene.Name ?? $"Scene {scene.LogicalIndex}");
             }
-
             if (_sceneNames.Count == 0) {
                 _sceneNames.Add("Default Scene");
             }
-
             _sceneMeshInstances.Clear();
             _sceneLights.Clear();
-
             Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> primitiveMeshCache = new();
             for (int sceneIndex = 0; sceneIndex < _modelRoot.LogicalScenes.Count; sceneIndex++) {
                 GltfScene scene = _modelRoot.LogicalScenes[sceneIndex];
                 ProcessScene(scene, sceneIndex, primitiveMeshCache);
             }
-
             if (_modelRoot.LogicalScenes.Count == 0) {
                 ProcessScene(null, 0, primitiveMeshCache);
             }
@@ -177,7 +178,6 @@ namespace DotnetGltfRenderer {
         void ProcessScene(GltfScene scene, int sceneIndex, Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> primitiveMeshCache) {
             List<MeshInstance> instances = new();
             List<Light> lights = new();
-
             if (scene != null) {
                 foreach (Node rootNode in scene.VisualChildren) {
                     ProcessNodeForScene(rootNode, primitiveMeshCache, Matrix4x4.Identity, instances, lights);
@@ -188,7 +188,6 @@ namespace DotnetGltfRenderer {
                     ProcessNodeForScene(rootNode, primitiveMeshCache, Matrix4x4.Identity, instances, lights);
                 }
             }
-
             _sceneMeshInstances[sceneIndex] = instances;
             _sceneLights[sceneIndex] = lights;
         }
@@ -198,8 +197,10 @@ namespace DotnetGltfRenderer {
             Matrix4x4 parentWorldMatrix,
             List<MeshInstance> instances,
             List<Light> lights) {
-            if (node.TryGetVisibility(out bool isVisible) && !isVisible) return;
-
+            if (node.TryGetVisibility(out bool isVisible)
+                && !isVisible) {
+                return;
+            }
             Matrix4x4 worldMatrix = node.LocalMatrix * parentWorldMatrix;
 
             // Check for KHR_lights_punctual extension
@@ -210,17 +211,18 @@ namespace DotnetGltfRenderer {
                     lights.Add(light);
                 }
             }
-
             MeshGpuInstancing gpuInstancing = node.GetGpuInstancing();
             if (node.Mesh != null) {
-                if (gpuInstancing != null && gpuInstancing.Count > 0) {
+                if (gpuInstancing != null
+                    && gpuInstancing.Count > 0) {
                     ProcessInstancedNodeForScene(node, gpuInstancing, primitiveMeshCache, instances);
                 }
                 else {
                     for (int i = 0; i < node.Mesh.Primitives.Count; i++) {
                         MeshPrimitive primitive = node.Mesh.Primitives[i];
-                        if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) continue;
-
+                        if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) {
+                            continue;
+                        }
                         (int LogicalIndex, int i) key = (node.Mesh.LogicalIndex, i);
                         if (!primitiveMeshCache.TryGetValue(key, out Mesh mesh)) {
                             _variantMappings.TryGetValue(key, out Dictionary<int, int> variantMatMapping);
@@ -232,7 +234,6 @@ namespace DotnetGltfRenderer {
                     }
                 }
             }
-
             foreach (Node child in node.VisualChildren) {
                 ProcessNodeForScene(child, primitiveMeshCache, worldMatrix, instances, lights);
             }
@@ -243,14 +244,17 @@ namespace DotnetGltfRenderer {
             Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> primitiveMeshCache,
             List<MeshInstance> instances) {
             int instanceCount = gpuInstancing.Count;
-            if (instanceCount == 0) return;
+            if (instanceCount == 0) {
+                return;
+            }
 
             // 蒙皮网格不支持 GPU 实例化
             if (node.Skin != null) {
                 for (int i = 0; i < node.Mesh.Primitives.Count; i++) {
                     MeshPrimitive primitive = node.Mesh.Primitives[i];
-                    if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) continue;
-
+                    if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) {
+                        continue;
+                    }
                     (int LogicalIndex, int i) key = (node.Mesh.LogicalIndex, i);
                     if (!primitiveMeshCache.TryGetValue(key, out Mesh mesh)) {
                         _variantMappings.TryGetValue(key, out Dictionary<int, int> variantMatMapping);
@@ -262,23 +266,26 @@ namespace DotnetGltfRenderer {
                 }
                 return;
             }
-
             Matrix4x4[] instanceWorldMatrices = new Matrix4x4[instanceCount];
             for (int i = 0; i < instanceCount; i++) {
                 instanceWorldMatrices[i] = gpuInstancing.GetWorldMatrix(i);
             }
-
             List<int> positiveScaleInstances = new();
             List<int> negativeScaleInstances = new();
             for (int i = 0; i < instanceCount; i++) {
                 float determinant = instanceWorldMatrices[i].GetDeterminant();
-                if (determinant < 0) negativeScaleInstances.Add(i);
-                else positiveScaleInstances.Add(i);
+                if (determinant < 0) {
+                    negativeScaleInstances.Add(i);
+                }
+                else {
+                    positiveScaleInstances.Add(i);
+                }
             }
-
             for (int primIdx = 0; primIdx < node.Mesh.Primitives.Count; primIdx++) {
                 MeshPrimitive primitive = node.Mesh.Primitives[primIdx];
-                if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) continue;
+                if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) {
+                    continue;
+                }
 
                 // Morph targets 不支持 GPU 实例化
                 if (primitive.MorphTargetsCount > 0) {
@@ -292,15 +299,29 @@ namespace DotnetGltfRenderer {
                     instances.Add(new MeshInstance(node, mesh, node.Skin));
                     continue;
                 }
-
                 (int LogicalIndex, int i) primKey = (node.Mesh.LogicalIndex, primIdx);
                 _variantMappings.TryGetValue(primKey, out Dictionary<int, int> primVariantMapping);
-
                 if (positiveScaleInstances.Count > 0) {
-                    CreateInstancedMeshForScene(node, primitive, positiveScaleInstances, instanceWorldMatrices, primVariantMapping, false, instances);
+                    CreateInstancedMeshForScene(
+                        node,
+                        primitive,
+                        positiveScaleInstances,
+                        instanceWorldMatrices,
+                        primVariantMapping,
+                        false,
+                        instances
+                    );
                 }
                 if (negativeScaleInstances.Count > 0) {
-                    CreateInstancedMeshForScene(node, primitive, negativeScaleInstances, instanceWorldMatrices, primVariantMapping, true, instances);
+                    CreateInstancedMeshForScene(
+                        node,
+                        primitive,
+                        negativeScaleInstances,
+                        instanceWorldMatrices,
+                        primVariantMapping,
+                        true,
+                        instances
+                    );
                 }
             }
         }
@@ -316,40 +337,33 @@ namespace DotnetGltfRenderer {
             for (int i = 0; i < instanceIndices.Count; i++) {
                 instanceMatrices[i] = allMatrices[instanceIndices[i]];
             }
-
             Mesh mesh = ProcessPrimitive(primitive, variantMatMapping);
             mesh.InstanceCount = instanceIndices.Count;
             mesh.InstanceMatrices = instanceMatrices;
             mesh.IsNegativeScaleInstance = isNegativeScale;
             mesh.SetupInstancingBuffer();
             _uniqueMeshes.Add(mesh);
-
-            MeshInstance instance = new(node, mesh, null) {
-                UseGpuInstancing = true,
-                IsNegativeScale = isNegativeScale
-            };
+            MeshInstance instance = new(node, mesh, null) { UseGpuInstancing = true, IsNegativeScale = isNegativeScale };
             instances.Add(instance);
         }
 
         void SwitchToScene(int sceneIndex) {
             _meshInstances.Clear();
             _lights.Clear();
-
             if (_sceneMeshInstances.TryGetValue(sceneIndex, out List<MeshInstance> instances)) {
                 _meshInstances.AddRange(instances);
             }
             if (_sceneLights.TryGetValue(sceneIndex, out List<Light> lights)) {
                 _lights.AddRange(lights);
             }
-
             UpdateMeshInstanceTransforms();
         }
 
         Mesh ProcessPrimitive(MeshPrimitive primitive, Dictionary<int, int> variantMatMapping) {
             Mesh mesh = new();
             SharpGLTF.Schema2.Material material = primitive.Material;
-
-            Accessor posAcc = primitive.GetVertexAccessor("POSITION") ?? throw new InvalidOperationException("glTF primitive is missing POSITION accessor.");
+            Accessor posAcc = primitive.GetVertexAccessor("POSITION")
+                ?? throw new InvalidOperationException("glTF primitive is missing POSITION accessor.");
             IAccessorArray<Vector3> positions = posAcc.AsVector3Array();
             IAccessorArray<Vector3> normals = primitive.GetVertexAccessor("NORMAL")?.AsVector3Array();
             IAccessorArray<Vector2> uv0 = primitive.GetVertexAccessor("TEXCOORD_0")?.AsVector2Array();
@@ -358,14 +372,12 @@ namespace DotnetGltfRenderer {
             IAccessorArray<Vector4> tangents = primitive.GetVertexAccessor("TANGENT")?.AsVector4Array();
             IAccessorArray<Vector4> joints = primitive.GetVertexAccessor("JOINTS_0")?.AsVector4Array();
             IAccessorArray<Vector4> weights = primitive.GetVertexAccessor("WEIGHTS_0")?.AsVector4Array();
-
             mesh.Indices = primitive.GetIndices()?.ToArray() ?? Enumerable.Range(0, positions.Count).Select(i => (uint)i).ToArray();
             Vector4[] generatedTangents = GltfGeometryProcessor.GenerateTangents(positions, normals, uv0, mesh.Indices);
 
             // Morph Target 纹理化支持
             int morphTargetCount = primitive.MorphTargetsCount;
             IReadOnlyList<float> morphWeights = primitive.LogicalParent.MorphWeights;
-
             if (morphTargetCount > 0) {
                 HashSet<string> morphAttributes = new();
                 for (int t = 0; t < morphTargetCount; t++) {
@@ -374,17 +386,14 @@ namespace DotnetGltfRenderer {
                         morphAttributes.Add(attr);
                     }
                 }
-
                 mesh.MorphTargetCount = morphTargetCount;
                 mesh.MorphTargetTexture = new MorphTargetTexture(positions.Count, morphTargetCount, morphAttributes);
-
                 List<IReadOnlyList<Vector3>> morphPositions = new();
                 List<IReadOnlyList<Vector3>> morphNormals = new();
                 List<IReadOnlyList<Vector4>> morphTangents = new();
                 List<IReadOnlyList<Vector2>> morphTexCoords0 = new();
                 List<IReadOnlyList<Vector2>> morphTexCoords1 = new();
                 List<IReadOnlyList<Vector4>> morphColors0 = new();
-
                 for (int t = 0; t < morphTargetCount; t++) {
                     IReadOnlyDictionary<string, Accessor> targetAccessors = primitive.GetMorphTargetAccessors(t);
                     morphPositions.Add(targetAccessors.TryGetValue("POSITION", out Accessor morphPosAcc) ? morphPosAcc.AsVector3Array() : null);
@@ -394,10 +403,14 @@ namespace DotnetGltfRenderer {
                     morphTexCoords1.Add(targetAccessors.TryGetValue("TEXCOORD_1", out Accessor morphUv1Acc) ? morphUv1Acc.AsVector2Array() : null);
                     morphColors0.Add(targetAccessors.TryGetValue("COLOR_0", out Accessor morphColAcc) ? morphColAcc.AsColorArray() : null);
                 }
-
-                mesh.MorphTargetTexture.UploadData(morphPositions.ToArray(), morphNormals.ToArray(), morphTangents.ToArray(),
-                    morphTexCoords0.ToArray(), morphTexCoords1.ToArray(), morphColors0.ToArray());
-
+                mesh.MorphTargetTexture.UploadData(
+                    morphPositions.ToArray(),
+                    morphNormals.ToArray(),
+                    morphTangents.ToArray(),
+                    morphTexCoords0.ToArray(),
+                    morphTexCoords1.ToArray(),
+                    morphColors0.ToArray()
+                );
                 mesh.MorphWeights = new float[morphTargetCount];
                 if (morphWeights != null) {
                     for (int i = 0; i < Math.Min(morphWeights.Count, morphTargetCount); i++) {
@@ -405,25 +418,35 @@ namespace DotnetGltfRenderer {
                     }
                 }
             }
-
             mesh.HasUV1 = uv1 != null;
             mesh.HasColor0 = colors != null;
-            GltfGeometryProcessor.FillVertexBuffers(mesh, positions, normals, uv0, uv1, colors, tangents, joints, weights, generatedTangents);
+            GltfGeometryProcessor.FillVertexBuffers(
+                mesh,
+                positions,
+                normals,
+                uv0,
+                uv1,
+                colors,
+                tangents,
+                joints,
+                weights,
+                generatedTangents
+            );
             mesh.UseGeneratedTangents = tangents == null && generatedTangents != null;
 
             // Load material
-            mesh.Material = new Material {
-                SourceMaterialIndex = material?.LogicalIndex ?? -1
-            };
+            mesh.Material = new Material { SourceMaterialIndex = material?.LogicalIndex ?? -1 };
             mesh.Material.LoadFromGltf(material, this);
 
             // Load variant materials
-            if (variantMatMapping != null && variantMatMapping.Count > 0) {
+            if (variantMatMapping != null
+                && variantMatMapping.Count > 0) {
                 ModelRoot modelRoot = primitive.LogicalParent.LogicalParent;
                 foreach (KeyValuePair<int, int> kvp in variantMatMapping) {
                     int variantIndex = kvp.Key;
                     int materialIndex = kvp.Value;
-                    if (materialIndex >= 0 && materialIndex < modelRoot.LogicalMaterials.Count) {
+                    if (materialIndex >= 0
+                        && materialIndex < modelRoot.LogicalMaterials.Count) {
                         SharpGLTF.Schema2.Material variantMaterial = modelRoot.LogicalMaterials[materialIndex];
                         Material mat = new();
                         mat.LoadFromGltf(variantMaterial, this);
@@ -431,27 +454,28 @@ namespace DotnetGltfRenderer {
                     }
                 }
             }
-
             mesh.SetupMesh();
             return mesh;
         }
 
         public void Update(float deltaTimeSeconds) {
-            if (_activeAnimation != null && AnimationDurationSeconds > 0f) {
+            if (_activeAnimation != null
+                && AnimationDurationSeconds > 0f) {
                 _animationTimeSeconds += MathF.Max(0f, deltaTimeSeconds);
                 _animationTimeSeconds %= AnimationDurationSeconds;
             }
-
             _pointerProcessor?.Update(_animationTimeSeconds);
             UpdateMeshInstanceTransforms();
         }
 
         void UpdateLightTransforms() {
             foreach (Light light in _lights) {
-                if (light.SourceNode == null) continue;
-
+                if (light.SourceNode == null) {
+                    continue;
+                }
                 Matrix4x4 worldMatrix;
-                if (_activeAnimation != null && _nodeWorldMatrixCache.TryGetValue(light.SourceNode, out Matrix4x4 cached)) {
+                if (_activeAnimation != null
+                    && _nodeWorldMatrixCache.TryGetValue(light.SourceNode, out Matrix4x4 cached)) {
                     worldMatrix = cached;
                 }
                 else {
@@ -459,7 +483,6 @@ namespace DotnetGltfRenderer {
                         ? light.SourceNode.WorldMatrix
                         : light.SourceNode.GetWorldMatrix(_activeAnimation, _animationTimeSeconds);
                 }
-
                 light.Position = new Vector3(worldMatrix.M41, worldMatrix.M42, worldMatrix.M43);
                 Vector3 forward = new(-worldMatrix.M31, -worldMatrix.M32, -worldMatrix.M33);
                 light.Direction = Vector3.Normalize(forward);
@@ -471,7 +494,8 @@ namespace DotnetGltfRenderer {
                 _nodesToUpdate.Clear();
                 foreach (MeshInstance instance in _meshInstances) {
                     _nodesToUpdate.Add(instance.Node);
-                    if (instance.HasSkinning && instance._joints != null) {
+                    if (instance.HasSkinning
+                        && instance._joints != null) {
                         foreach (Node joint in instance._joints) {
                             _nodesToUpdate.Add(joint);
                         }
@@ -482,28 +506,28 @@ namespace DotnetGltfRenderer {
                         _nodesToUpdate.Add(light.SourceNode);
                     }
                 }
-
                 foreach (Node node in _nodesToUpdate) {
                     _nodeWorldMatrixCache[node] = node.GetWorldMatrix(_activeAnimation, _animationTimeSeconds);
                 }
             }
-
             foreach (MeshInstance instance in _meshInstances) {
-                if (_activeAnimation != null && _nodeWorldMatrixCache.TryGetValue(instance.Node, out Matrix4x4 cachedMatrix)) {
+                if (_activeAnimation != null
+                    && _nodeWorldMatrixCache.TryGetValue(instance.Node, out Matrix4x4 cachedMatrix)) {
                     instance.WorldMatrix = cachedMatrix;
                 }
                 else {
                     instance.WorldMatrix = instance.Node.WorldMatrix;
                 }
-
                 instance.ApplyGizmoTransform();
                 instance.IsNegativeScale = instance.WorldMatrix.GetDeterminant() < 0f;
                 instance.UpdateSkinning(_activeAnimation, _animationTimeSeconds, _nodeWorldMatrixCache);
 
                 // Update morph weights (使用缓存的 sampler)
-                if (_activeAnimation != null && instance.Mesh.HasMorphTargets) {
+                if (_activeAnimation != null
+                    && instance.Mesh.HasMorphTargets) {
                     float[] weights = instance.Mesh.MorphWeights;
-                    if (weights != null && _morphSamplerCache.TryGetValue(instance.Node, out IAnimationSampler<float[]> sampler)) {
+                    if (weights != null
+                        && _morphSamplerCache.TryGetValue(instance.Node, out IAnimationSampler<float[]> sampler)) {
                         ICurveSampler<float[]> curveSampler = sampler.CreateCurveSampler();
                         float[] animatedWeights = curveSampler.GetPoint(_animationTimeSeconds);
                         if (animatedWeights != null) {
@@ -514,7 +538,6 @@ namespace DotnetGltfRenderer {
                     }
                 }
             }
-
             UpdateLightTransforms();
         }
 

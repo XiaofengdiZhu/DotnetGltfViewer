@@ -64,36 +64,24 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建默认渲染上下文
         /// </summary>
-        public static RenderContext Default => new() {
-            UseIBL = true,
-            ToneMapMode = ToneMapMode.KhrPbrNeutral
-        };
+        public static RenderContext Default => new() { UseIBL = true, ToneMapMode = ToneMapMode.KhrPbrNeutral };
 
         /// <summary>
         /// 创建用于 Scatter Pass 的上下文
         /// 使用 with 表达式，编译器可优化复制
         /// </summary>
-        public RenderContext ForScatterPass() => this with {
-            UseLinearOutput = true,
-            IsScatterPass = true
-        };
+        public RenderContext ForScatterPass() => this with { UseLinearOutput = true, IsScatterPass = true };
 
         /// <summary>
         /// 创建用于 Transmission Pass 的上下文
         /// 使用 with 表达式，编译器可优化复制
         /// </summary>
-        public RenderContext ForTransmissionPass() => this with {
-            UseLinearOutput = true,
-            IsScatterPass = false
-        };
+        public RenderContext ForTransmissionPass() => this with { UseLinearOutput = true, IsScatterPass = false };
 
         /// <summary>
         /// 创建用于 Main Pass 的上下文
         /// 使用 with 表达式，编译器可优化复制
         /// </summary>
-        public RenderContext ForMainPass() => this with {
-            UseLinearOutput = false,
-            IsScatterPass = false
-        };
+        public RenderContext ForMainPass() => this with { UseLinearOutput = false, IsScatterPass = false };
     }
 }

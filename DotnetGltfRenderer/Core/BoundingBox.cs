@@ -57,12 +57,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 合并两个包围盒
         /// </summary>
-        public static BoundingBox Merge(BoundingBox a, BoundingBox b) {
-            return new BoundingBox(
-                Vector3.Min(a.Min, b.Min),
-                Vector3.Max(a.Max, b.Max)
-            );
-        }
+        public static BoundingBox Merge(BoundingBox a, BoundingBox b) => new(Vector3.Min(a.Min, b.Min), Vector3.Max(a.Max, b.Max));
 
         /// <summary>
         /// 变换包围盒（结果为包含变换后所有顶点的 AABB）
@@ -70,33 +65,29 @@ namespace DotnetGltfRenderer {
         public static BoundingBox Transform(BoundingBox box, Matrix4x4 matrix) {
             // 变换所有 8 个顶点，然后计算新的 AABB
             Vector3[] corners = GetCorners(box);
-            Vector3 min = new Vector3(float.MaxValue);
-            Vector3 max = new Vector3(float.MinValue);
-
+            Vector3 min = new(float.MaxValue);
+            Vector3 max = new(float.MinValue);
             foreach (Vector3 corner in corners) {
                 Vector3 transformed = Vector3.Transform(corner, matrix);
                 min = Vector3.Min(min, transformed);
                 max = Vector3.Max(max, transformed);
             }
-
             return new BoundingBox(min, max);
         }
 
         /// <summary>
         /// 获取包围盒的 8 个角点
         /// </summary>
-        public static Vector3[] GetCorners(BoundingBox box) {
-            return [
-                new Vector3(box.Min.X, box.Min.Y, box.Min.Z),
-                new Vector3(box.Max.X, box.Min.Y, box.Min.Z),
-                new Vector3(box.Min.X, box.Max.Y, box.Min.Z),
-                new Vector3(box.Max.X, box.Max.Y, box.Min.Z),
-                new Vector3(box.Min.X, box.Min.Y, box.Max.Z),
-                new Vector3(box.Max.X, box.Min.Y, box.Max.Z),
-                new Vector3(box.Min.X, box.Max.Y, box.Max.Z),
-                new Vector3(box.Max.X, box.Max.Y, box.Max.Z),
-            ];
-        }
+        public static Vector3[] GetCorners(BoundingBox box) => [
+            new(box.Min.X, box.Min.Y, box.Min.Z),
+            new(box.Max.X, box.Min.Y, box.Min.Z),
+            new(box.Min.X, box.Max.Y, box.Min.Z),
+            new(box.Max.X, box.Max.Y, box.Min.Z),
+            new(box.Min.X, box.Min.Y, box.Max.Z),
+            new(box.Max.X, box.Min.Y, box.Max.Z),
+            new(box.Min.X, box.Max.Y, box.Max.Z),
+            new(box.Max.X, box.Max.Y, box.Max.Z)
+        ];
 
         /// <summary>
         /// 射线与包围盒相交检测（Slab 方法）
@@ -104,9 +95,7 @@ namespace DotnetGltfRenderer {
         /// <param name="ray">射线</param>
         /// <param name="distance">相交距离（如果相交）</param>
         /// <returns>是否相交</returns>
-        public readonly bool Intersects(Ray ray, out float distance) {
-            return Intersects(ray, this, out distance);
-        }
+        public readonly bool Intersects(Ray ray, out float distance) => Intersects(ray, this, out distance);
 
         /// <summary>
         /// 射线与包围盒相交检测（Slab 方法）
@@ -137,13 +126,14 @@ namespace DotnetGltfRenderer {
             // 选择最近的正距离
             if (tmin > 0) {
                 distance = tmin;
-            } else if (tmax > 0) {
+            }
+            else if (tmax > 0) {
                 distance = tmax;
-            } else {
+            }
+            else {
                 distance = 0;
                 return false;
             }
-
             return true;
         }
 
@@ -152,7 +142,6 @@ namespace DotnetGltfRenderer {
                 // 射线与轴平行，检查原点是否在 slab 内
                 return origin >= min && origin <= max;
             }
-
             float t1 = (min - origin) / direction;
             float t2 = (max - origin) / direction;
 
@@ -160,27 +149,22 @@ namespace DotnetGltfRenderer {
             if (t1 > t2) {
                 (t1, t2) = (t2, t1);
             }
-
             tmin = MathF.Max(tmin, t1);
             tmax = MathF.Min(tmax, t2);
-
             return tmin <= tmax;
         }
 
         /// <summary>
         /// 检查点是否在包围盒内
         /// </summary>
-        public readonly bool Contains(Vector3 point) {
-            return point.X >= Min.X && point.X <= Max.X &&
-                   point.Y >= Min.Y && point.Y <= Max.Y &&
-                   point.Z >= Min.Z && point.Z <= Max.Z;
-        }
+        public readonly bool Contains(Vector3 point) =>
+            point.X >= Min.X && point.X <= Max.X && point.Y >= Min.Y && point.Y <= Max.Y && point.Z >= Min.Z && point.Z <= Max.Z;
 
         /// <summary>
         /// 检查包围盒是否有效（Max >= Min）
         /// </summary>
         public readonly bool IsValid => Max.X >= Min.X && Max.Y >= Min.Y && Max.Z >= Min.Z;
 
-        public override readonly string ToString() => $"BoundingBox(Min: {Min}, Max: {Max})";
+        public readonly override string ToString() => $"BoundingBox(Min: {Min}, Max: {Max})";
     }
 }

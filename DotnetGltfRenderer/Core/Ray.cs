@@ -32,6 +32,6 @@ namespace DotnetGltfRenderer {
         /// <returns>点坐标</returns>
         public readonly Vector3 GetPoint(float distance) => Origin + Direction * distance;
 
-        public override readonly string ToString() => $"Ray(Origin: {Origin}, Direction: {Direction})";
+        public readonly override string ToString() => $"Ray(Origin: {Origin}, Direction: {Direction})";
     }
 }

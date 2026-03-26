@@ -120,12 +120,11 @@ namespace DotnetGltfRenderer {
             BlendFuncSeparate(srcFactor, dstFactor, srcFactor, dstFactor);
         }
 
-        public static void BlendFuncSeparate(
-            BlendingFactor srcRgb, BlendingFactor dstRgb,
-            BlendingFactor srcAlpha, BlendingFactor dstAlpha) {
-
-            if (_blendFunc.Src != srcRgb || _blendFunc.Dst != dstRgb ||
-                _blendFunc.SrcAlpha != srcAlpha || _blendFunc.DstAlpha != dstAlpha) {
+        public static void BlendFuncSeparate(BlendingFactor srcRgb, BlendingFactor dstRgb, BlendingFactor srcAlpha, BlendingFactor dstAlpha) {
+            if (_blendFunc.Src != srcRgb
+                || _blendFunc.Dst != dstRgb
+                || _blendFunc.SrcAlpha != srcAlpha
+                || _blendFunc.DstAlpha != dstAlpha) {
                 _gl.BlendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha);
                 _blendFunc = (srcRgb, dstRgb, srcAlpha, dstAlpha);
             }
@@ -135,11 +134,7 @@ namespace DotnetGltfRenderer {
         /// 设置标准 Alpha 混合（src_alpha, one_minus_src_alpha）
         /// </summary>
         public static void SetAlphaBlend() {
-            BlendFuncSeparate(
-                BlendingFactor.SrcAlpha,
-                BlendingFactor.OneMinusSrcAlpha,
-                BlendingFactor.One,
-                BlendingFactor.OneMinusSrcAlpha);
+            BlendFuncSeparate(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha, BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
         }
 
         // ========== Front Face ==========

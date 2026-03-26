@@ -12,22 +12,27 @@ namespace DotnetGltfViewer.Windows {
     }
 
     public static class GizmoManager {
-        static GizmoMode _currentMode = GizmoMode.Select;
-        static Matrix4x4 _modelMatrix = Matrix4x4.Identity;
         static Matrix4x4 _userTransform = Matrix4x4.Identity;
         static bool _useSnap;
         static Vector3 _snapTranslate = new(0.5f, 0.5f, 0.5f);
         static float _snapRotate = 5f;
         static float _snapScale = 0.1f;
         static Scene _scene;
+
         static bool _initialized;
+
         // 缓存原始局部包围盒（相对于模型中心）
         static Vector3 _cachedLocalMin;
         static Vector3 _cachedLocalMax;
 
-        public static GizmoMode CurrentMode => _currentMode;
-        public static Matrix4x4 ModelMatrix => _modelMatrix;
-        public static bool UseSnap { get => _useSnap; set => _useSnap = value; }
+        public static GizmoMode CurrentMode { get; private set; } = GizmoMode.Select;
+
+        public static Matrix4x4 ModelMatrix { get; private set; } = Matrix4x4.Identity;
+
+        public static bool UseSnap {
+            get => _useSnap;
+            set => _useSnap = value;
+        }
 
         public static void Initialize(Scene scene) {
             _scene = scene;
@@ -38,7 +43,8 @@ namespace DotnetGltfViewer.Windows {
             SelectionManager.OnSelectionChanged += OnSelectionChanged;
 
             // 如果场景只有一个模型，自动选中
-            if (_scene != null && _scene.Models.Count == 1) {
+            if (_scene != null
+                && _scene.Models.Count == 1) {
                 _scene.SelectModel(_scene.Models[0]);
             }
         }
@@ -50,16 +56,16 @@ namespace DotnetGltfViewer.Windows {
             // 重置 Gizmo 状态
             _initialized = false;
             _userTransform = Matrix4x4.Identity;
-            _modelMatrix = Matrix4x4.Identity;
+            ModelMatrix = Matrix4x4.Identity;
         }
 
         static void InitializeModelMatrix() {
             if (_initialized) {
                 return;
             }
-
             SceneModel selectedModel = _scene?.SelectedModel;
-            if (selectedModel?.Model == null || selectedModel.Model.MeshInstances.Count == 0) {
+            if (selectedModel?.Model == null
+                || selectedModel.Model.MeshInstances.Count == 0) {
                 return;
             }
 
@@ -70,38 +76,40 @@ namespace DotnetGltfViewer.Windows {
             // 基于原始世界矩阵计算包围盒（不包含用户变换）
             Vector3 min = new(float.MaxValue);
             Vector3 max = new(float.MinValue);
-
             foreach (MeshInstance instance in selectedModel.Model.MeshInstances) {
-                if (!instance.IsVisible) continue;
-
+                if (!instance.IsVisible) {
+                    continue;
+                }
                 BoundingBox localBounds = instance.Mesh.LocalBounds;
-                if (!localBounds.IsValid) continue;
+                if (!localBounds.IsValid) {
+                    continue;
+                }
 
                 // 使用原始世界矩阵变换包围盒
                 BoundingBox worldBounds = BoundingBox.Transform(localBounds, instance.OriginalWorldMatrix);
                 min = Vector3.Min(min, worldBounds.Min);
                 max = Vector3.Max(max, worldBounds.Max);
             }
-
             if (min.X != float.MaxValue) {
                 Vector3 center = (min + max) * 0.5f;
-                _modelMatrix = Matrix4x4.CreateTranslation(center);
+                ModelMatrix = Matrix4x4.CreateTranslation(center);
 
                 // 缓存原始局部包围盒（相对于原始中心）
                 _cachedLocalMin = min - center;
                 _cachedLocalMax = max - center;
             }
-
             _initialized = true;
         }
 
         public static void SetMode(GizmoMode mode) {
             // 如果切换到变换模式但没有选中模型，且场景中只有一个模型，自动选中
-            if (mode != GizmoMode.Select && _scene?.SelectedModel == null && _scene?.Models.Count == 1) {
+            if (mode != GizmoMode.Select
+                && _scene?.SelectedModel == null
+                && _scene?.Models.Count == 1) {
                 _scene.SelectModel(_scene.Models[0]);
                 _initialized = false;
             }
-            _currentMode = mode;
+            CurrentMode = mode;
         }
 
         public static void ResetModelMatrix() {
@@ -130,20 +138,17 @@ namespace DotnetGltfViewer.Windows {
             float buttonSize = 36f;
             float padding = 8f;
             float windowHeight = buttonSize * 4 + padding * 5;
-
             ImGui.SetNextWindowPos(new Vector2(padding, padding + 24f));
             ImGui.SetNextWindowSize(new Vector2(buttonSize + padding * 2, windowHeight));
             ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding, padding));
             ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0, padding));
-
-            ImGuiWindowFlags flags = ImGuiWindowFlags.NoTitleBar |
-                                     ImGuiWindowFlags.NoResize |
-                                     ImGuiWindowFlags.NoMove |
-                                     ImGuiWindowFlags.NoScrollbar |
-                                     ImGuiWindowFlags.NoScrollWithMouse |
-                                     ImGuiWindowFlags.NoCollapse |
-                                     ImGuiWindowFlags.NoBringToFrontOnFocus;
-
+            ImGuiWindowFlags flags = ImGuiWindowFlags.NoTitleBar
+                | ImGuiWindowFlags.NoResize
+                | ImGuiWindowFlags.NoMove
+                | ImGuiWindowFlags.NoScrollbar
+                | ImGuiWindowFlags.NoScrollWithMouse
+                | ImGuiWindowFlags.NoCollapse
+                | ImGuiWindowFlags.NoBringToFrontOnFocus;
             if (ImGui.Begin("GizmoToolbar", flags)) {
                 RenderToolbarButton("Select", GizmoMode.Select, buttonSize);
                 RenderToolbarButton("Move", GizmoMode.Translate, buttonSize);
@@ -151,16 +156,14 @@ namespace DotnetGltfViewer.Windows {
                 RenderToolbarButton("Scale", GizmoMode.Scale, buttonSize);
             }
             ImGui.End();
-
             ImGui.PopStyleVar(2);
         }
 
         static void RenderToolbarButton(string label, GizmoMode mode, float size) {
-            bool isActive = _currentMode == mode;
+            bool isActive = CurrentMode == mode;
             if (isActive) {
                 ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.28f, 0.56f, 0.88f, 1.0f));
             }
-
             string icon = mode switch {
                 GizmoMode.Select => "V",
                 GizmoMode.Translate => "M",
@@ -168,15 +171,12 @@ namespace DotnetGltfViewer.Windows {
                 GizmoMode.Scale => "S",
                 _ => "?"
             };
-
             if (ImGui.Button(icon, new Vector2(size, size))) {
-                _currentMode = mode;
+                CurrentMode = mode;
             }
-
             if (ImGui.IsItemHovered()) {
                 ImGui.SetTooltip($"{label} ({GetShortcut(mode)})");
             }
-
             if (isActive) {
                 ImGui.PopStyleColor();
             }
@@ -196,16 +196,23 @@ namespace DotnetGltfViewer.Windows {
             if (ImGuiManager.IO.WantCaptureKeyboard) {
                 return;
             }
-
-            if (ImGui.IsKeyPressed(ImGuiKey.Keypad1)) _currentMode = GizmoMode.Select;
-            else if (ImGui.IsKeyPressed(ImGuiKey.Keypad2)) _currentMode = GizmoMode.Translate;
-            else if (ImGui.IsKeyPressed(ImGuiKey.Keypad3)) _currentMode = GizmoMode.Rotate;
-            else if (ImGui.IsKeyPressed(ImGuiKey.Keypad4)) _currentMode = GizmoMode.Scale;
+            if (ImGui.IsKeyPressed(ImGuiKey.Keypad1)) {
+                CurrentMode = GizmoMode.Select;
+            }
+            else if (ImGui.IsKeyPressed(ImGuiKey.Keypad2)) {
+                CurrentMode = GizmoMode.Translate;
+            }
+            else if (ImGui.IsKeyPressed(ImGuiKey.Keypad3)) {
+                CurrentMode = GizmoMode.Rotate;
+            }
+            else if (ImGui.IsKeyPressed(ImGuiKey.Keypad4)) {
+                CurrentMode = GizmoMode.Scale;
+            }
         }
 
         public static unsafe bool Manipulate(Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix) {
             // Select 模式不显示变换 Gizmo
-            if (_currentMode == GizmoMode.Select) {
+            if (CurrentMode == GizmoMode.Select) {
                 return false;
             }
 
@@ -214,22 +221,18 @@ namespace DotnetGltfViewer.Windows {
             if (selectedModel?.Model == null) {
                 return false;
             }
-
             InitializeModelMatrix();
-
             ImGuizmo.SetDrawlist(ImGui.GetBackgroundDrawList());
             ImGuizmo.Enable(true);
             ImGuizmo.SetOrthographic(false);
             ImGuizmo.SetRect(0, 0, MainWindow.Size.X, MainWindow.Size.Y);
-
-            ImGuizmoOperation operation = _currentMode switch {
+            ImGuizmoOperation operation = CurrentMode switch {
                 GizmoMode.Translate => ImGuizmoOperation.Translate,
                 GizmoMode.Rotate => ImGuizmoOperation.Rotate,
                 GizmoMode.Scale => ImGuizmoOperation.Scale,
                 _ => ImGuizmoOperation.Translate
             };
-
-            Matrix4x4 transform = _userTransform * _modelMatrix;
+            Matrix4x4 transform = _userTransform * ModelMatrix;
 
             // 使用缓存的原始局部包围盒
             // localBounds: [min.x, min.y, min.z, max.x, max.y, max.z]
@@ -240,21 +243,18 @@ namespace DotnetGltfViewer.Windows {
             localBounds[3] = _cachedLocalMax.X;
             localBounds[4] = _cachedLocalMax.Y;
             localBounds[5] = _cachedLocalMax.Z;
-
             float snapRotate = _snapRotate;
             float snapScale = _snapScale;
             Vector3 snapTranslate = _snapTranslate;
-
             float* snapPtr = null;
             if (_useSnap) {
-                snapPtr = _currentMode switch {
+                snapPtr = CurrentMode switch {
                     GizmoMode.Translate => &snapTranslate.X,
                     GizmoMode.Rotate => &snapRotate,
                     GizmoMode.Scale => &snapScale,
                     _ => null
                 };
             }
-
             bool manipulated = ImGuizmo.Manipulate(
                 ref viewMatrix.M11,
                 ref projectionMatrix.M11,
@@ -265,20 +265,19 @@ namespace DotnetGltfViewer.Windows {
                 snapPtr,
                 localBounds
             );
-
             if (manipulated) {
-                Matrix4x4.Invert(_modelMatrix, out Matrix4x4 invModelMatrix);
+                Matrix4x4.Invert(ModelMatrix, out Matrix4x4 invModelMatrix);
                 _userTransform = transform * invModelMatrix;
-
                 ApplyTransformToModel();
             }
-
             return manipulated;
         }
 
         static void ApplyTransformToModel() {
             SceneModel selectedModel = _scene?.SelectedModel;
-            if (selectedModel?.Model == null) return;
+            if (selectedModel?.Model == null) {
+                return;
+            }
 
             // 只对选中模型的 MeshInstance 应用变换
             foreach (MeshInstance instance in selectedModel.Model.MeshInstances) {
@@ -304,14 +303,12 @@ namespace DotnetGltfViewer.Windows {
             if (selectedModel?.Model == null) {
                 return;
             }
-
             InitializeModelMatrix();
 
             // 检查缓存的包围盒是否有效
             if (_cachedLocalMin.X > _cachedLocalMax.X) {
                 return;
             }
-
             ImGuizmo.SetDrawlist(ImGui.GetBackgroundDrawList());
             ImGuizmo.Enable(true);
             ImGuizmo.SetOrthographic(false);
@@ -328,7 +325,7 @@ namespace DotnetGltfViewer.Windows {
             localBounds[5] = _cachedLocalMax.Z;
 
             // 使用 Bounds 操作绘制包围盒
-            Matrix4x4 transform = _userTransform * _modelMatrix;
+            Matrix4x4 transform = _userTransform * ModelMatrix;
             ImGuizmo.Manipulate(
                 ref viewMatrix.M11,
                 ref projectionMatrix.M11,
@@ -346,23 +343,14 @@ namespace DotnetGltfViewer.Windows {
 
         public static void RenderOptionsPanel() {
             ImGui.SeparatorText("Gizmo Options");
-
             ImGui.Checkbox("Enable Snap", ref _useSnap);
-
             if (_useSnap) {
-                switch (_currentMode) {
-                    case GizmoMode.Translate:
-                        ImGui.DragFloat3("Snap (Translate)", ref _snapTranslate, 0.1f, 0.1f, 10f);
-                        break;
-                    case GizmoMode.Rotate:
-                        ImGui.DragFloat("Snap (Rotate)", ref _snapRotate, 1f, 1f, 45f);
-                        break;
-                    case GizmoMode.Scale:
-                        ImGui.DragFloat("Snap (Scale)", ref _snapScale, 0.01f, 0.01f, 1f);
-                        break;
+                switch (CurrentMode) {
+                    case GizmoMode.Translate: ImGui.DragFloat3("Snap (Translate)", ref _snapTranslate, 0.1f, 0.1f, 10f); break;
+                    case GizmoMode.Rotate: ImGui.DragFloat("Snap (Rotate)", ref _snapRotate, 1f, 1f, 45f); break;
+                    case GizmoMode.Scale: ImGui.DragFloat("Snap (Scale)", ref _snapScale, 0.01f, 0.01f, 1f); break;
                 }
             }
-
             if (ImGui.Button("Reset Transform")) {
                 ResetModelMatrix();
             }

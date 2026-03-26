@@ -322,11 +322,12 @@ namespace DotnetGltfRenderer {
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct RenderStateData {
-        public Matrix4x4 ViewProjectionMatrix;  // 64 bytes, offset 0
-        public Matrix4x4 ViewMatrix;             // 64 bytes, offset 64
-        public Matrix4x4 ProjectionMatrix;       // 64 bytes, offset 128
-        public Matrix4x4 ModelMatrix;            // 64 bytes, offset 192
-        public Matrix4x4 NormalMatrix;           // 64 bytes, offset 256
+        public Matrix4x4 ViewProjectionMatrix; // 64 bytes, offset 0
+        public Matrix4x4 ViewMatrix; // 64 bytes, offset 64
+        public Matrix4x4 ProjectionMatrix; // 64 bytes, offset 128
+        public Matrix4x4 ModelMatrix; // 64 bytes, offset 192
+
+        public Matrix4x4 NormalMatrix; // 64 bytes, offset 256
         // Total: 320 bytes
     }
 
@@ -392,39 +393,39 @@ namespace DotnetGltfRenderer {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct UVTransformData {
         // Core textures
-        public UVMatrix3 NormalUVTransform;         // 48 bytes
-        public UVMatrix3 EmissiveUVTransform;       // 48 bytes
-        public UVMatrix3 OcclusionUVTransform;      // 48 bytes
+        public UVMatrix3 NormalUVTransform; // 48 bytes
+        public UVMatrix3 EmissiveUVTransform; // 48 bytes
+        public UVMatrix3 OcclusionUVTransform; // 48 bytes
 
         // MetallicRoughness
-        public UVMatrix3 BaseColorUVTransform;      // 48 bytes
+        public UVMatrix3 BaseColorUVTransform; // 48 bytes
         public UVMatrix3 MetallicRoughnessUVTransform; // 48 bytes
 
         // SpecularGlossiness
-        public UVMatrix3 DiffuseUVTransform;        // 48 bytes
+        public UVMatrix3 DiffuseUVTransform; // 48 bytes
         public UVMatrix3 SpecularGlossinessUVTransform; // 48 bytes
 
         // ClearCoat
-        public UVMatrix3 ClearcoatUVTransform;      // 48 bytes
+        public UVMatrix3 ClearcoatUVTransform; // 48 bytes
         public UVMatrix3 ClearcoatRoughnessUVTransform; // 48 bytes
         public UVMatrix3 ClearcoatNormalUVTransform; // 48 bytes
 
         // Sheen
-        public UVMatrix3 SheenColorUVTransform;     // 48 bytes
+        public UVMatrix3 SheenColorUVTransform; // 48 bytes
         public UVMatrix3 SheenRoughnessUVTransform; // 48 bytes
 
         // Specular
-        public UVMatrix3 SpecularUVTransform;       // 48 bytes
-        public UVMatrix3 SpecularColorUVTransform;  // 48 bytes
+        public UVMatrix3 SpecularUVTransform; // 48 bytes
+        public UVMatrix3 SpecularColorUVTransform; // 48 bytes
 
         // Transmission
-        public UVMatrix3 TransmissionUVTransform;   // 48 bytes
+        public UVMatrix3 TransmissionUVTransform; // 48 bytes
 
         // Volume
-        public UVMatrix3 ThicknessUVTransform;      // 48 bytes
+        public UVMatrix3 ThicknessUVTransform; // 48 bytes
 
         // Iridescence
-        public UVMatrix3 IridescenceUVTransform;    // 48 bytes
+        public UVMatrix3 IridescenceUVTransform; // 48 bytes
         public UVMatrix3 IridescenceThicknessUVTransform; // 48 bytes
 
         // Diffuse Transmission
@@ -432,7 +433,7 @@ namespace DotnetGltfRenderer {
         public UVMatrix3 DiffuseTransmissionColorUVTransform; // 48 bytes
 
         // Anisotropy
-        public UVMatrix3 AnisotropyUVTransform;     // 48 bytes
+        public UVMatrix3 AnisotropyUVTransform; // 48 bytes
 
         // Total: 21 * 48 = 1008 bytes
     }
@@ -452,11 +453,7 @@ namespace DotnetGltfRenderer {
             Col2 = new Vector4(matrix.M13, matrix.M23, matrix.M33, 0f);
         }
 
-        public static UVMatrix3 Identity => new UVMatrix3(
-            new Vector4(1f, 0f, 0f, 0f),
-            new Vector4(0f, 1f, 0f, 0f),
-            new Vector4(0f, 0f, 1f, 0f)
-        );
+        public static UVMatrix3 Identity => new(new Vector4(1f, 0f, 0f, 0f), new Vector4(0f, 1f, 0f, 0f), new Vector4(0f, 0f, 1f, 0f));
 
         public UVMatrix3(Vector4 col0, Vector4 col1, Vector4 col2) {
             Col0 = col0;
@@ -476,11 +473,11 @@ namespace DotnetGltfRenderer {
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct VolumeScatterData {
-        public Vector4 MultiScatterColor;  // 16 bytes, offset 0 (xyz used)
-        public float MinRadius;            // 4 bytes, offset 16
-        public int MaterialID;             // 4 bytes, offset 20
-        public int FramebufferWidth;       // 4 bytes, offset 24
-        public int FramebufferHeight;      // 4 bytes, offset 28
+        public Vector4 MultiScatterColor; // 16 bytes, offset 0 (xyz used)
+        public float MinRadius; // 4 bytes, offset 16
+        public int MaterialID; // 4 bytes, offset 20
+        public int FramebufferWidth; // 4 bytes, offset 24
+        public int FramebufferHeight; // 4 bytes, offset 28
         // Total: 32 bytes
 
         // ScatterSamples 数组太大，保持使用独立 uniform

@@ -5,9 +5,7 @@ namespace DotnetGltfRenderer {
     public class VertexArrayObject<TVertexType, TIndexType> : IDisposable where TVertexType : unmanaged where TIndexType : unmanaged {
         readonly uint _handle;
 
-        public VertexArrayObject() {
-            _handle = GlContext.GL.GenVertexArray();
-        }
+        public VertexArrayObject() => _handle = GlContext.GL.GenVertexArray();
 
         public VertexArrayObject(BufferObject<TVertexType> vbo, BufferObject<TIndexType> ebo) : this() {
             Bind();
@@ -16,7 +14,14 @@ namespace DotnetGltfRenderer {
         }
 
         public unsafe void VertexAttributePointer(uint index, int count, VertexAttribPointerType type, uint vertexSize, int offSet) {
-            GlContext.GL.VertexAttribPointer(index, count, type, false, vertexSize * (uint)sizeof(TVertexType), (void*)(offSet * sizeof(TVertexType)));
+            GlContext.GL.VertexAttribPointer(
+                index,
+                count,
+                type,
+                false,
+                vertexSize * (uint)sizeof(TVertexType),
+                (void*)(offSet * sizeof(TVertexType))
+            );
             GlContext.GL.EnableVertexAttribArray(index);
         }
 
