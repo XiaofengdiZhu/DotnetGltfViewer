@@ -9,11 +9,40 @@ namespace DotnetGltfRenderer {
     public class ShaderDefines {
         readonly List<string> _defines = [];
 
+        // 缓存的 hash，避免每次遍历计算
+        int _cachedHash;
+        bool _hashValid;
+
+        /// <summary>
+        /// 增量更新 hash
+        /// </summary>
+        void UpdateHash(string define) {
+            unchecked {
+                if (_hashValid) {
+                    _cachedHash = _cachedHash * 31 + define.GetHashCode();
+                }
+                else {
+                    _cachedHash = 17 * 31 + define.GetHashCode();
+                    _hashValid = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 从另一个 ShaderDefines 复制 hash（用于 Clone）
+        /// </summary>
+        void CopyHashFrom(ShaderDefines other) {
+            _cachedHash = other._cachedHash;
+            _hashValid = other._hashValid;
+        }
+
         /// <summary>
         /// 添加一个 define（如 "MATERIAL_CLEARCOAT 1"）
         /// </summary>
         public void Add(string define, int value = 1) {
-            _defines.Add($"{define} {value}");
+            string str = $"{define} {value}";
+            _defines.Add(str);
+            UpdateHash(str);
         }
 
         /// <summary>
@@ -22,27 +51,34 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public void AddRaw(string define) {
             _defines.Add(define);
+            UpdateHash(define);
         }
 
         /// <summary>
         /// 添加纹理 define（如 "HAS_NORMAL_MAP 1"）
         /// </summary>
         public void AddTextureMap(string textureName) {
-            _defines.Add($"HAS_{textureName.ToUpper()}_MAP 1");
+            string str = $"HAS_{textureName.ToUpper()}_MAP 1";
+            _defines.Add(str);
+            UpdateHash(str);
         }
 
         /// <summary>
         /// 添加 UV Transform define（如 "HAS_BASECOLOR_UV_TRANSFORM 1"）
         /// </summary>
         public void AddUVTransform(string textureName) {
-            _defines.Add($"HAS_{textureName.ToUpper()}_UV_TRANSFORM 1");
+            string str = $"HAS_{textureName.ToUpper()}_UV_TRANSFORM 1";
+            _defines.Add(str);
+            UpdateHash(str);
         }
 
         /// <summary>
         /// 添加材质扩展 define（如 "MATERIAL_CLEARCOAT 1"）
         /// </summary>
         public void AddMaterialExtension(string extensionName) {
-            _defines.Add($"MATERIAL_{extensionName.ToUpper()} 1");
+            string str = $"MATERIAL_{extensionName.ToUpper()} 1";
+            _defines.Add(str);
+            UpdateHash(str);
         }
 
         /// <summary>
@@ -56,7 +92,9 @@ namespace DotnetGltfRenderer {
                 _ => ""
             };
             if (!string.IsNullOrEmpty(suffix)) {
-                _defines.Add($"HAS_{attributeName.ToUpper()}_{suffix} 1");
+                string str = $"HAS_{attributeName.ToUpper()}_{suffix} 1";
+                _defines.Add(str);
+                UpdateHash(str);
             }
         }
 
@@ -64,14 +102,18 @@ namespace DotnetGltfRenderer {
         /// 设置权重数量（用于骨骼动画）
         /// </summary>
         public void SetWeightCount(int count) {
-            _defines.Add($"WEIGHT_COUNT {count}");
+            string str = $"WEIGHT_COUNT {count}";
+            _defines.Add(str);
+            UpdateHash(str);
         }
 
         /// <summary>
         /// 设置 Joint 数量（用于骨骼动画）
         /// </summary>
         public void SetJointCount(int count) {
-            _defines.Add($"JOINT_COUNT {count}");
+            string str = $"JOINT_COUNT {count}";
+            _defines.Add(str);
+            UpdateHash(str);
         }
 
         /// <summary>
@@ -133,16 +175,41 @@ namespace DotnetGltfRenderer {
                 _ => 0
             };
             // Remove existing ALPHAMODE define if present
-            _defines.RemoveAll(d => d.StartsWith("ALPHAMODE "));
-            _defines.Add($"ALPHAMODE {modeValue}");
+            // 注意：移除后需要重新计算 hash
+            bool removed = _defines.RemoveAll(d => d.StartsWith("ALPHAMODE ")) > 0;
+            string str = $"ALPHAMODE {modeValue}";
+            _defines.Add(str);
+
+            // 如果移除了旧值，需要重新计算整个 hash
+            if (removed) {
+                _hashValid = false;
+                _cachedHash = 0;
+                foreach (string define in _defines) {
+                    UpdateHash(define);
+                }
+            }
+            else {
+                UpdateHash(str);
+            }
         }
 
         /// <summary>
         /// 生成完整的 defines 代码（包含 #version）
         /// </summary>
         public string GetDefinesCode() {
-            StringBuilder sb = new();
+            StringBuilder sb = new(_defines.Count * 32 + 20);
             sb.AppendLine("#version 300 es");
+            foreach (string define in _defines) {
+                sb.AppendLine($"#define {define}");
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// 生成 defines 代码（不包含 #version，用于插入到着色器中）
+        /// </summary>
+        internal string GetDefinesCodeWithoutVersion() {
+            StringBuilder sb = new(_defines.Count * 32);
             foreach (string define in _defines) {
                 sb.AppendLine($"#define {define}");
             }
@@ -156,15 +223,21 @@ namespace DotnetGltfRenderer {
 
         /// <summary>
         /// 计算组合 hash（用于着色器缓存）
+        /// 使用缓存避免重复计算
         /// </summary>
         public int ComputeHash() {
-            unchecked {
-                int hash = 17;
-                foreach (string define in _defines) {
-                    hash = hash * 31 + define.GetHashCode();
-                }
-                return hash;
+            if (_hashValid) {
+                return _cachedHash;
             }
+
+            unchecked {
+                _cachedHash = 17;
+                foreach (string define in _defines) {
+                    _cachedHash = _cachedHash * 31 + define.GetHashCode();
+                }
+                _hashValid = true;
+            }
+            return _cachedHash;
         }
 
         public override string ToString() => string.Join(", ", _defines);
@@ -175,6 +248,7 @@ namespace DotnetGltfRenderer {
         public ShaderDefines Clone() {
             ShaderDefines clone = new();
             clone._defines.AddRange(_defines);
+            clone.CopyHashFrom(this);
             return clone;
         }
 
@@ -218,7 +292,7 @@ namespace DotnetGltfRenderer {
             }
             if (useMorphing && morphTargetCount > 0) {
                 defines.Add("USE_MORPHING");
-                defines.Add($"MORPH_TARGET_COUNT {morphTargetCount}");
+                defines.AddRaw($"MORPH_TARGET_COUNT {morphTargetCount}");
             }
             return defines;
         }

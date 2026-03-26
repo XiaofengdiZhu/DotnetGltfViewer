@@ -29,6 +29,13 @@ namespace DotnetGltfRenderer {
         // UV 变换 dirty flag
         bool _uvTransformDirty = true;
 
+        // 缓存的 context hash（每个 Pass 更新一次）
+        int _cachedContextHash;
+        (bool useIBL, bool useLinearOutput, ToneMapMode toneMapMode, int lightCount, bool isScatterPass) _lastContextParams;
+
+        // 缓存的顶点着色器 hash（每帧更新一次，用于所有 MeshInstance）
+        int _cachedVertShaderBaseHash;
+
         /// <summary>
         /// 当前视图投影矩阵
         /// </summary>
@@ -76,12 +83,78 @@ namespace DotnetGltfRenderer {
             _renderStateData.ViewProjectionMatrix = CurrentViewProjection;
             _renderStateData.ViewMatrix = view;
             _renderStateData.ProjectionMatrix = projection;
+
+            // 预计算顶点着色器基础 hash（shaderName 部分）
+            _cachedVertShaderBaseHash = ComputeHash("primitive.vert");
+        }
+
+        /// <summary>
+        /// 更新渲染上下文（每个 Pass 调用一次）
+        /// 计算 context defines hash，避免每个 MeshInstance 重复计算
+        /// </summary>
+        void UpdateContextHashIfNeeded(in RenderContext context) {
+            var contextParams = (context.UseIBL, context.UseLinearOutput, context.ToneMapMode, context.LightCount, context.IsScatterPass);
+            if (_lastContextParams == contextParams) {
+                return; // context 未变化，使用缓存的 hash
+            }
+
+            _lastContextParams = contextParams;
+            _cachedContextHash = ComputeContextHash(context);
+        }
+
+        /// <summary>
+        /// 计算渲染上下文的 defines hash
+        /// </summary>
+        static int ComputeContextHash(in RenderContext context) {
+            unchecked {
+                int hash = 17;
+
+                // USE_IBL
+                if (context.UseIBL) {
+                    hash = hash * 31 + "USE_IBL 1".GetHashCode();
+                }
+
+                // USE_PUNCTUAL (LIGHT_COUNT)
+                if (context.LightCount > 0) {
+                    hash = hash * 31 + "USE_PUNCTUAL 1".GetHashCode();
+                }
+
+                // ToneMap / LINEAR_OUTPUT
+                if (context.UseLinearOutput) {
+                    hash = hash * 31 + "LINEAR_OUTPUT 1".GetHashCode();
+                }
+                else {
+                    string tonemapDefine = context.ToneMapMode switch {
+                        ToneMapMode.KhrPbrNeutral => "TONEMAP_KHR_PBR_NEUTRAL 1",
+                        ToneMapMode.AcesNarkowicz => "TONEMAP_ACES_NARKOWICZ 1",
+                        ToneMapMode.AcesHill => "TONEMAP_ACES_HILL 1",
+                        ToneMapMode.AcesHillExposureBoost => "TONEMAP_ACES_HILL_EXPOSURE_BOOST 1",
+                        _ => "LINEAR_OUTPUT 1"
+                    };
+                    hash = hash * 31 + tonemapDefine.GetHashCode();
+                }
+
+                return hash;
+            }
+        }
+
+        static int ComputeHash(string input) {
+            unchecked {
+                int hash = 17;
+                foreach (char c in input) {
+                    hash = hash * 31 + c;
+                }
+                return hash;
+            }
         }
 
         /// <summary>
         /// 渲染单个 MeshInstance
         /// </summary>
         public void Render(MeshInstance instance, in RenderContext context) {
+            // 更新 context hash（如果 context 参数变化）
+            UpdateContextHashIfNeeded(in context);
+
             Mesh mesh = instance.Mesh;
             Material material = instance.CurrentMaterial;
 
@@ -169,9 +242,49 @@ namespace DotnetGltfRenderer {
 
         /// <summary>
         /// 获取或创建着色器变体
+        /// 使用预计算的 hash 避免每帧创建 ShaderDefines 对象
         /// </summary>
         Shader GetOrCreateShaderVariant(Mesh mesh, Material material, in RenderContext context) {
-            // 使用缓存的顶点着色器 defines
+            // 顶点着色器：使用缓存的 defines hash
+            int vertHash = _cachedVertShaderBaseHash ^ mesh.GetVertDefines().ComputeHash();
+
+            // 片段着色器：组合各部分 hash
+            // hash = shaderName ^ materialHash ^ meshFragAttrHash ^ contextHash
+            string fragShaderName = context.IsScatterPass ? "scatter.frag"
+                : material?.SpecularGlossiness?.IsEnabled == true ? "specular_glossiness.frag"
+                : "pbr.frag";
+
+            int fragShaderNameHash = ComputeHash(fragShaderName);
+            int materialHash = material?.GetDefines().ComputeHash() ?? 0;
+            int meshFragAttrHash = mesh.GetFragAttrHash();
+
+            // Diffuse Transmission 也需要 IBL
+            int contextHash = _cachedContextHash;
+            if (material?.DiffuseTransmission?.IsEnabled == true && !context.UseIBL) {
+                contextHash ^= "USE_IBL 1".GetHashCode();
+            }
+
+            // Unlit 材质不需要灯光
+            if (material?.Unlit?.IsEnabled == true && context.LightCount > 0) {
+                contextHash ^= "USE_PUNCTUAL 1".GetHashCode(); // 移除 USE_PUNCTUAL
+            }
+
+            int fragHash = fragShaderNameHash ^ materialHash ^ meshFragAttrHash ^ contextHash;
+
+            // 尝试用 hash 直接获取程序
+            Shader shader = ShaderCache.TryGetShaderProgram(vertHash, fragHash);
+            if (shader != null) {
+                return shader;
+            }
+
+            // Hash 不在缓存中，回退到创建 ShaderDefines 并编译
+            return CreateShaderWithDefines(mesh, material, in context, fragShaderName);
+        }
+
+        /// <summary>
+        /// 创建着色器（首次编译时使用）
+        /// </summary>
+        static Shader CreateShaderWithDefines(Mesh mesh, Material material, in RenderContext context, string fragShaderName) {
             ShaderDefines vertDefines = mesh.GetVertDefines();
             ShaderDefines fragDefines = ShaderDefines.CreateFromMaterial(
                 material,
@@ -183,13 +296,9 @@ namespace DotnetGltfRenderer {
                 mesh
             );
 
-            string fragShaderName = context.IsScatterPass ? "scatter.frag"
-                : material?.SpecularGlossiness?.IsEnabled == true ? "specular_glossiness.frag"
-                : "pbr.frag";
-
             return ShaderCache.GetShaderProgram(
-                ShaderCache.SelectShader("primitive.vert", vertDefines.GetDefinesList()),
-                ShaderCache.SelectShader(fragShaderName, fragDefines.GetDefinesList())
+                ShaderCache.SelectShader("primitive.vert", vertDefines),
+                ShaderCache.SelectShader(fragShaderName, fragDefines)
             );
         }
 

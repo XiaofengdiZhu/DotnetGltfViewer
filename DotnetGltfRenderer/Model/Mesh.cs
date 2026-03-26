@@ -144,6 +144,10 @@ namespace DotnetGltfRenderer {
         // 缓存的顶点着色器 defines
         ShaderDefines _cachedVertDefines;
 
+        // 缓存的片段着色器顶点属性 defines hash（用于声明 varying 输入）
+        int _cachedFragAttrHash;
+        bool _fragAttrHashValid;
+
         // KHR_materials_variants: mappings from variant index to material
         // Key: variant index, Value: material for that variant
         readonly Dictionary<int, Material> _variantMaterials = new();
@@ -333,6 +337,33 @@ namespace DotnetGltfRenderer {
 
             _cachedVertDefines = ShaderDefines.CreateFromMesh(this);
             return _cachedVertDefines;
+        }
+
+        /// <summary>
+        /// 获取片段着色器中顶点属性 defines 的 hash
+        /// 用于声明 varying 输入变量（NORMAL, TANGENT, TEXCOORD_1, COLOR_0）
+        /// </summary>
+        public int GetFragAttrHash() {
+            if (_fragAttrHashValid) {
+                return _cachedFragAttrHash;
+            }
+
+            unchecked {
+                int hash = 17;
+                if (HasSurfaceAttributes) {
+                    hash = hash * 31 + "HAS_NORMAL_VEC3 1".GetHashCode();
+                    hash = hash * 31 + "HAS_TANGENT_VEC4 1".GetHashCode();
+                }
+                if (HasUV1) {
+                    hash = hash * 31 + "HAS_TEXCOORD_1_VEC2 1".GetHashCode();
+                }
+                if (HasColor0) {
+                    hash = hash * 31 + "HAS_COLOR_0_VEC4 1".GetHashCode();
+                }
+                _cachedFragAttrHash = hash;
+                _fragAttrHashValid = true;
+            }
+            return _cachedFragAttrHash;
         }
 
         public void Dispose() {

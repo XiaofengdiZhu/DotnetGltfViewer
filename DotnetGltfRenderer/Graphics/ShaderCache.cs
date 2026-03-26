@@ -130,7 +130,7 @@ namespace DotnetGltfRenderer {
             int hash = ComputeHash(shaderName);
 
             // 构建 defines 代码
-            StringBuilder definesBuilder = new();
+            StringBuilder definesBuilder = new(defines.Count * 32);
             foreach (string define in defines) {
                 hash ^= ComputeHash(define);
                 definesBuilder.AppendLine($"#define {define}");
@@ -142,10 +142,45 @@ namespace DotnetGltfRenderer {
             }
 
             // 编译新着色器变体
+            return CompileAndCacheShader(shaderName, src, definesBuilder.ToString(), hash, isVert);
+        }
+
+        /// <summary>
+        /// 选择或编译着色器变体（使用预计算的 hash，避免遍历）
+        /// </summary>
+        /// <param name="shaderName">着色器文件名</param>
+        /// <param name="defines">ShaderDefines 对象（使用其缓存的 hash）</param>
+        /// <returns>着色器 hash</returns>
+        public static int SelectShader(string shaderName, ShaderDefines defines) {
+            if (!_initialized) {
+                throw new InvalidOperationException("ShaderCache not initialized. Call Initialize() first.");
+            }
+
+            if (!_sources.TryGetValue(shaderName, out string src)) {
+                throw new FileNotFoundException($"Shader source not found: {shaderName}");
+            }
+            bool isVert = shaderName.EndsWith(".vert");
+
+            // 使用 ShaderDefines 的预计算 hash，结合 shaderName 的 hash
+            int hash = ComputeHash(shaderName) ^ defines.ComputeHash();
+
+            // 检查缓存
+            if (_shaderCache.ContainsKey(hash)) {
+                return hash;
+            }
+
+            // 构建 defines 代码（仅在需要编译时）
+            string definesStr = defines.GetDefinesCodeWithoutVersion();
+            return CompileAndCacheShader(shaderName, src, definesStr, hash, isVert);
+        }
+
+        /// <summary>
+        /// 编译并缓存着色器
+        /// </summary>
+        static int CompileAndCacheShader(string shaderName, string src, string definesStr, int hash, bool isVert) {
             // 如果着色器已有 #version，将 defines 插入到 #version 之后
             // 如果没有 #version，添加默认的 #version 300 es
             string fullSource;
-            string definesStr = definesBuilder.ToString();
             int versionIndex = src.IndexOf("#version");
             if (versionIndex >= 0) {
                 // 找到 #version 行的结束位置
@@ -166,6 +201,38 @@ namespace DotnetGltfRenderer {
             uint shader = CompileShader(isVert ? ShaderType.VertexShader : ShaderType.FragmentShader, fullSource, shaderName);
             _shaderCache[hash] = shader;
             return hash;
+        }
+
+        /// <summary>
+        /// 尝试用预计算的 hash 获取着色器程序
+        /// 如果 hash 不在缓存中，返回 null
+        /// </summary>
+        public static Shader TryGetShaderProgram(int vertexShaderHash, int fragmentShaderHash) {
+            if (!_initialized) {
+                return null;
+            }
+
+            string cacheKey = $"{vertexShaderHash},{fragmentShaderHash}";
+            if (_programCache.TryGetValue(cacheKey, out Shader program)) {
+                return program;
+            }
+
+            // 检查着色器 hash 是否存在
+            if (!_shaderCache.ContainsKey(vertexShaderHash) || !_shaderCache.ContainsKey(fragmentShaderHash)) {
+                return null;
+            }
+
+            // 尝试从二进制缓存加载
+            uint programHandle = TryLoadProgramBinary(cacheKey);
+            if (programHandle == 0) {
+                return null;
+            }
+
+            // 从二进制缓存加载成功，绑定 UBO
+            BindUniformBlockBindings(programHandle);
+            program = new Shader(programHandle, 0, 0);
+            _programCache[cacheKey] = program;
+            return program;
         }
 
         /// <summary>
