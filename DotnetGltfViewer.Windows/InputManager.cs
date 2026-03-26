@@ -43,9 +43,6 @@ namespace DotnetGltfViewer.Windows {
             _camera = camera;
             _input = input;
             _primaryKeyboard = _input.Keyboards.FirstOrDefault();
-            if (_primaryKeyboard != null) {
-                _primaryKeyboard.KeyDown += OnKeyDown;
-            }
             foreach (IMouse mouse in _input.Mice) {
                 mouse.MouseDown += OnMouseDown;
                 mouse.MouseUp += OnMouseUp;
@@ -59,15 +56,6 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         public static void SetScene(Scene scene) {
             _scene = scene;
-        }
-
-        public static void OnKeyDown(IKeyboard keyboard, Key key, int arg3) {
-            if (ImGuiManager.IO.WantCaptureKeyboard) {
-                return;
-            }
-            if (key == Key.Escape) {
-                MainWindow.Close();
-            }
         }
 
         /// <summary>
@@ -171,8 +159,23 @@ namespace DotnetGltfViewer.Windows {
             if (_primaryKeyboard == null) {
                 return;
             }
+            if (_primaryKeyboard.IsKeyPressed(Key.Escape)) {
+                MainWindow.Close();
+                return;
+            }
+            if (_primaryKeyboard.IsKeyPressed(Key.Number1)) {
+                GizmoManager.CurrentMode = GizmoMode.Select;
+            }
+            if (_primaryKeyboard.IsKeyPressed(Key.Number2)) {
+                GizmoManager.CurrentMode = GizmoMode.Translate;
+            }
+            if (_primaryKeyboard.IsKeyPressed(Key.Number3)) {
+                GizmoManager.CurrentMode = GizmoMode.Rotate;
+            }
+            if (_primaryKeyboard.IsKeyPressed(Key.Number4)) {
+                GizmoManager.CurrentMode = GizmoMode.Scale;
+            }
             float speed = _camera.MoveSpeed * KeyboardMoveMultiplier * deltaTime;
-
             // 计算相机的前方向（朝向固定点的方向）和右方向
             Vector3 forward = _camera.GetForwardDirection();
             Vector3 right = _camera.GetRightDirection();
@@ -214,7 +217,6 @@ namespace DotnetGltfViewer.Windows {
         }
 
         public static void Dispose() {
-            _primaryKeyboard.KeyDown -= OnKeyDown;
             foreach (IMouse mouse in _input?.Mice ?? []) {
                 mouse.MouseDown -= OnMouseDown;
                 mouse.MouseUp -= OnMouseUp;

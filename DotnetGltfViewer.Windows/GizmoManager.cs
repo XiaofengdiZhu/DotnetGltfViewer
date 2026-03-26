@@ -25,7 +25,7 @@ namespace DotnetGltfViewer.Windows {
         static Vector3 _cachedLocalMin;
         static Vector3 _cachedLocalMax;
 
-        public static GizmoMode CurrentMode { get; private set; } = GizmoMode.Select;
+        public static GizmoMode CurrentMode { get; set; } = GizmoMode.Select;
 
         public static Matrix4x4 ModelMatrix { get; private set; } = Matrix4x4.Identity;
 
@@ -135,13 +135,10 @@ namespace DotnetGltfViewer.Windows {
         }
 
         public static void RenderToolbar() {
-            float buttonSize = 36f;
-            float padding = 8f;
-            float windowHeight = buttonSize * 4 + padding * 5;
-            ImGui.SetNextWindowPos(new Vector2(padding, padding + 24f));
-            ImGui.SetNextWindowSize(new Vector2(buttonSize + padding * 2, windowHeight));
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding, padding));
-            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0, padding));
+            ImGui.SetNextWindowPos(new Vector2(8f, 48f));
+            ImGui.SetNextWindowSize(new Vector2(116f, 184f));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(8f, 8f));
+            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0, 8f));
             ImGuiWindowFlags flags = ImGuiWindowFlags.NoTitleBar
                 | ImGuiWindowFlags.NoResize
                 | ImGuiWindowFlags.NoMove
@@ -150,28 +147,21 @@ namespace DotnetGltfViewer.Windows {
                 | ImGuiWindowFlags.NoCollapse
                 | ImGuiWindowFlags.NoBringToFrontOnFocus;
             if (ImGui.Begin("GizmoToolbar", flags)) {
-                RenderToolbarButton("Select", GizmoMode.Select, buttonSize);
-                RenderToolbarButton("Move", GizmoMode.Translate, buttonSize);
-                RenderToolbarButton("Rotate", GizmoMode.Rotate, buttonSize);
-                RenderToolbarButton("Scale", GizmoMode.Scale, buttonSize);
+                RenderToolbarButton("Select", GizmoMode.Select);
+                RenderToolbarButton("Move", GizmoMode.Translate);
+                RenderToolbarButton("Rotate", GizmoMode.Rotate);
+                RenderToolbarButton("Scale", GizmoMode.Scale);
             }
             ImGui.End();
             ImGui.PopStyleVar(2);
         }
 
-        static void RenderToolbarButton(string label, GizmoMode mode, float size) {
+        static void RenderToolbarButton(string label, GizmoMode mode) {
             bool isActive = CurrentMode == mode;
             if (isActive) {
                 ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.28f, 0.56f, 0.88f, 1.0f));
             }
-            string icon = mode switch {
-                GizmoMode.Select => "V",
-                GizmoMode.Translate => "M",
-                GizmoMode.Rotate => "R",
-                GizmoMode.Scale => "S",
-                _ => "?"
-            };
-            if (ImGui.Button(icon, new Vector2(size, size))) {
+            if (ImGui.Button(label, new Vector2(100f, 36f))) {
                 CurrentMode = mode;
             }
             if (ImGui.IsItemHovered()) {
@@ -190,24 +180,6 @@ namespace DotnetGltfViewer.Windows {
                 GizmoMode.Scale => "Num 4",
                 _ => ""
             };
-        }
-
-        public static void HandleKeyboardShortcuts() {
-            if (ImGuiManager.IO.WantCaptureKeyboard) {
-                return;
-            }
-            if (ImGui.IsKeyPressed(ImGuiKey.Keypad1)) {
-                CurrentMode = GizmoMode.Select;
-            }
-            else if (ImGui.IsKeyPressed(ImGuiKey.Keypad2)) {
-                CurrentMode = GizmoMode.Translate;
-            }
-            else if (ImGui.IsKeyPressed(ImGuiKey.Keypad3)) {
-                CurrentMode = GizmoMode.Rotate;
-            }
-            else if (ImGui.IsKeyPressed(ImGuiKey.Keypad4)) {
-                CurrentMode = GizmoMode.Scale;
-            }
         }
 
         public static unsafe bool Manipulate(Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix) {
@@ -286,11 +258,8 @@ namespace DotnetGltfViewer.Windows {
         }
 
         public static void Render(Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix) {
-            HandleKeyboardShortcuts();
-
             // 绘制选中模型的包围盒高亮
             DrawSelectionBounds(viewMatrix, projectionMatrix);
-
             // 处理变换操作
             Manipulate(viewMatrix, projectionMatrix);
         }

@@ -41,8 +41,11 @@ namespace DotnetGltfViewer.Windows {
             InputWindowExtensions.ShouldLoadFirstPartyPlatforms(false);
             InputWindowExtensions.TryAdd("Silk.NET.Input.Glfw");
             WindowOptions options = WindowOptions.Default;
+            Rectangle<int> bounds = Monitor.GetMainMonitor(null).Bounds;
             options.API = new GraphicsAPI(ContextAPI.OpenGLES, new APIVersion(3, 0));
-            options.Size = new Vector2D<int>(1280, 720);
+            Vector2D<int> size = new((int)(bounds.Size.X * 0.8f), (int)(bounds.Size.Y * 0.8f));
+            options.Size = size;
+            options.Position = bounds.Origin + (bounds.Size - size) / 2;
             options.Title = "DotnetGltfViewer";
             options.VSync = true;
             options.UpdatesPerSecond = 60;
