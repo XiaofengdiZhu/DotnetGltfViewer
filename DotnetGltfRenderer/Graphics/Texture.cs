@@ -114,14 +114,6 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
-        /// 从 HDR 文件创建纹理
-        /// </summary>
-        public static Texture FromHDR(string path, bool halfFloat = false) {
-            EnvironmentMap envMap = EnvironmentMap.LoadHDR(path);
-            return new Texture(envMap.DataFloat, (uint)envMap.Width, (uint)envMap.Height, halfFloat);
-        }
-
-        /// <summary>
         /// 从 EnvironmentMap 创建纹理
         /// </summary>
         public static Texture FromEnvironmentMap(EnvironmentMap envMap, bool halfFloat = false) => new(

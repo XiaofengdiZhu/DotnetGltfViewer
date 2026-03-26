@@ -241,8 +241,6 @@ namespace DotnetGltfRenderer {
         }
 
         static uint TryLoadProgramBinary(string cacheKey) {
-            // Disable temporarily
-            return 0;
             string cacheFile = Path.Combine(_cacheDirectory, $"{cacheKey}.bin");
             if (!File.Exists(cacheFile)) {
                 return 0;
@@ -284,8 +282,6 @@ namespace DotnetGltfRenderer {
         }
 
         static unsafe void SaveProgramBinary(uint programHandle, string cacheKey) {
-            // Disable temporarily
-            return;
             try {
                 GlContext.GL.GetProgram(programHandle, ProgramPropertyARB.ProgramBinaryLength, out int binaryLength);
                 if (binaryLength <= 0) {
