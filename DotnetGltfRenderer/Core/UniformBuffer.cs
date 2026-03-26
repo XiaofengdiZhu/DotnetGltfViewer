@@ -68,7 +68,13 @@ namespace DotnetGltfRenderer {
         public int MipCount; // 4 bytes - IBL mipmap count
         public float Padding0;
 
-        // Total: 32 bytes
+        // EnvRotation (mat3 stored as 3 vec4s for std140 alignment)
+        // Each column of mat3 is stored in a vec4, using only xyz
+        public Vector4 EnvRotationCol0; // 16 bytes, offset 32
+        public Vector4 EnvRotationCol1; // 16 bytes, offset 48
+        public Vector4 EnvRotationCol2; // 16 bytes, offset 64
+
+        // Total: 80 bytes
     }
 
     /// <summary>
@@ -298,6 +304,25 @@ namespace DotnetGltfRenderer {
 
     #endregion
 
+    #region Render State Data Structure
+
+    /// <summary>
+    /// 渲染状态数据 UBO（每帧更新一次）
+    /// Binding Point: 3
+    /// std140 布局
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct RenderStateData {
+        public Matrix4x4 ViewProjectionMatrix;  // 64 bytes, offset 0
+        public Matrix4x4 ViewMatrix;             // 64 bytes, offset 64
+        public Matrix4x4 ProjectionMatrix;       // 64 bytes, offset 128
+        public Matrix4x4 ModelMatrix;            // 64 bytes, offset 192
+        public Matrix4x4 NormalMatrix;           // 64 bytes, offset 256
+        // Total: 320 bytes
+    }
+
+    #endregion
+
     #region Light Data Structures
 
     /// <summary>
@@ -344,6 +369,113 @@ namespace DotnetGltfRenderer {
         public LightData Light7;
 
         // Total: 16 + 8 * 64 = 528 bytes
+    }
+
+    #endregion
+
+    #region UV Transform Data Structure
+
+    /// <summary>
+    /// UV 变换矩阵数据 UBO（每个材质更新）
+    /// Binding Point: 4
+    /// std140 布局：mat3 需要 48 字节（每列 16 字节对齐，使用 vec4 存储 xyz）
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct UVTransformData {
+        // Core textures
+        public UVMatrix3 NormalUVTransform;         // 48 bytes
+        public UVMatrix3 EmissiveUVTransform;       // 48 bytes
+        public UVMatrix3 OcclusionUVTransform;      // 48 bytes
+
+        // MetallicRoughness
+        public UVMatrix3 BaseColorUVTransform;      // 48 bytes
+        public UVMatrix3 MetallicRoughnessUVTransform; // 48 bytes
+
+        // SpecularGlossiness
+        public UVMatrix3 DiffuseUVTransform;        // 48 bytes
+        public UVMatrix3 SpecularGlossinessUVTransform; // 48 bytes
+
+        // ClearCoat
+        public UVMatrix3 ClearcoatUVTransform;      // 48 bytes
+        public UVMatrix3 ClearcoatRoughnessUVTransform; // 48 bytes
+        public UVMatrix3 ClearcoatNormalUVTransform; // 48 bytes
+
+        // Sheen
+        public UVMatrix3 SheenColorUVTransform;     // 48 bytes
+        public UVMatrix3 SheenRoughnessUVTransform; // 48 bytes
+
+        // Specular
+        public UVMatrix3 SpecularUVTransform;       // 48 bytes
+        public UVMatrix3 SpecularColorUVTransform;  // 48 bytes
+
+        // Transmission
+        public UVMatrix3 TransmissionUVTransform;   // 48 bytes
+
+        // Volume
+        public UVMatrix3 ThicknessUVTransform;      // 48 bytes
+
+        // Iridescence
+        public UVMatrix3 IridescenceUVTransform;    // 48 bytes
+        public UVMatrix3 IridescenceThicknessUVTransform; // 48 bytes
+
+        // Diffuse Transmission
+        public UVMatrix3 DiffuseTransmissionUVTransform; // 48 bytes
+        public UVMatrix3 DiffuseTransmissionColorUVTransform; // 48 bytes
+
+        // Anisotropy
+        public UVMatrix3 AnisotropyUVTransform;     // 48 bytes
+
+        // Total: 21 * 48 = 1008 bytes
+    }
+
+    /// <summary>
+    /// UV 变换矩阵（mat3 存储为 3 个 vec4，用于 std140 布局）
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct UVMatrix3 {
+        public Vector4 Col0; // xyz = first column of mat3
+        public Vector4 Col1; // xyz = second column of mat3
+        public Vector4 Col2; // xyz = third column of mat3
+
+        public UVMatrix3(Matrix4x4 matrix) {
+            Col0 = new Vector4(matrix.M11, matrix.M21, matrix.M31, 0f);
+            Col1 = new Vector4(matrix.M12, matrix.M22, matrix.M32, 0f);
+            Col2 = new Vector4(matrix.M13, matrix.M23, matrix.M33, 0f);
+        }
+
+        public static UVMatrix3 Identity => new UVMatrix3(
+            new Vector4(1f, 0f, 0f, 0f),
+            new Vector4(0f, 1f, 0f, 0f),
+            new Vector4(0f, 0f, 1f, 0f)
+        );
+
+        public UVMatrix3(Vector4 col0, Vector4 col1, Vector4 col2) {
+            Col0 = col0;
+            Col1 = col1;
+            Col2 = col2;
+        }
+    }
+
+    #endregion
+
+    #region Volume Scatter Data Structure
+
+    /// <summary>
+    /// Volume Scatter 数据 UBO（材质启用 Volume Scatter 时更新）
+    /// Binding Point: 5
+    /// std140 布局
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct VolumeScatterData {
+        public Vector4 MultiScatterColor;  // 16 bytes, offset 0 (xyz used)
+        public float MinRadius;            // 4 bytes, offset 16
+        public int MaterialID;             // 4 bytes, offset 20
+        public int FramebufferWidth;       // 4 bytes, offset 24
+        public int FramebufferHeight;      // 4 bytes, offset 28
+        // Total: 32 bytes
+
+        // ScatterSamples 数组太大，保持使用独立 uniform
+        // 因为 std140 布局下 55 个 vec3 需要 55 * 16 = 880 bytes
     }
 
     #endregion

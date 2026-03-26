@@ -10,6 +10,12 @@ namespace DotnetGltfRenderer {
         readonly UniformBuffer<MaterialData> _materialUBO;
         readonly UniformBuffer<SceneData> _sceneUBO;
         readonly UniformBuffer<LightsData> _lightsUBO;
+        readonly UniformBuffer<RenderStateData> _renderStateUBO;
+        readonly UniformBuffer<UVTransformData> _uvTransformUBO;
+        readonly UniformBuffer<VolumeScatterData> _volumeScatterUBO;
+
+        // 当前渲染状态数据（用于 UBO 更新）
+        RenderStateData _renderStateData;
 
         /// <summary>
         /// 当前视图投影矩阵
@@ -29,10 +35,13 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建 Drawable 渲染器
         /// </summary>
-        public MeshInstanceRenderer(UniformBuffer<MaterialData> materialUBO, UniformBuffer<SceneData> sceneUBO, UniformBuffer<LightsData> lightsUBO) {
+        public MeshInstanceRenderer(UniformBuffer<MaterialData> materialUBO, UniformBuffer<SceneData> sceneUBO, UniformBuffer<LightsData> lightsUBO, UniformBuffer<RenderStateData> renderStateUBO, UniformBuffer<UVTransformData> uvTransformUBO, UniformBuffer<VolumeScatterData> volumeScatterUBO) {
             _materialUBO = materialUBO;
             _sceneUBO = sceneUBO;
             _lightsUBO = lightsUBO;
+            _renderStateUBO = renderStateUBO;
+            _uvTransformUBO = uvTransformUBO;
+            _volumeScatterUBO = volumeScatterUBO;
         }
 
         /// <summary>
@@ -42,6 +51,11 @@ namespace DotnetGltfRenderer {
             CurrentView = view;
             CurrentProjection = projection;
             CurrentViewProjection = view * projection;
+
+            // 更新 RenderStateData UBO 中的视图投影矩阵
+            _renderStateData.ViewProjectionMatrix = CurrentViewProjection;
+            _renderStateData.ViewMatrix = view;
+            _renderStateData.ProjectionMatrix = projection;
         }
 
         /// <summary>
@@ -60,14 +74,6 @@ namespace DotnetGltfRenderer {
             // 绑定 UBO
             BindUBOsToShader(shader);
 
-            // 设置视图投影矩阵
-            shader.SetUniform("u_ViewProjectionMatrix", CurrentViewProjection);
-            shader.SetUniform("u_ViewMatrix", CurrentView);
-            shader.SetUniform("u_ProjectionMatrix", CurrentProjection);
-
-            // IBL uniform（环境旋转矩阵）
-            shader.SetUniformMatrix3("u_EnvRotation", new Vector3(1f, 0f, 0f), new Vector3(0f, 1f, 0f), new Vector3(0f, 0f, 1f));
-
             // 绑定网格
             mesh.Bind();
 
@@ -81,10 +87,13 @@ namespace DotnetGltfRenderer {
             MaterialData matData = MaterialUboBuilder.BuildMaterialData(material, mesh.UseGeneratedTangents);
             _materialUBO.Update(ref matData);
 
+            // 更新 UV 变换 UBO
+            UVTransformData uvTransformData = MaterialTextureBinder.BuildUVTransformData(material);
+            _uvTransformUBO.Update(ref uvTransformData);
+
             // 绑定材质纹理
             if (material != null) {
                 MaterialTextureBinder.BindMaterialTextures(material, shader);
-                MaterialTextureBinder.SetUVTransforms(material, shader);
             }
             MaterialTextureBinder.SetTextureSlotUniforms(shader);
 
@@ -111,6 +120,9 @@ namespace DotnetGltfRenderer {
             _sceneUBO.BindToShader(shader.ProgramHandle, "SceneData");
             _materialUBO.BindToShader(shader.ProgramHandle, "MaterialData");
             _lightsUBO.BindToShader(shader.ProgramHandle, "LightsData");
+            _renderStateUBO.BindToShader(shader.ProgramHandle, "RenderStateData");
+            _uvTransformUBO.BindToShader(shader.ProgramHandle, "UVTransformData");
+            _volumeScatterUBO.BindToShader(shader.ProgramHandle, "VolumeScatterData");
         }
 
         /// <summary>
@@ -153,11 +165,14 @@ namespace DotnetGltfRenderer {
                 shader.SetUniform("u_jointsSampler", jointTextureSlot);
             }
 
-            shader.SetUniform("u_ModelMatrix", modelMatrix);
+            // 更新 RenderStateData UBO 中的 ModelMatrix 和 NormalMatrix
+            _renderStateData.ModelMatrix = modelMatrix;
 
             Matrix4x4.Invert(modelMatrix, out Matrix4x4 invModel);
-            Matrix4x4 normalMatrix4x4 = Matrix4x4.Transpose(invModel);
-            shader.SetUniform("u_NormalMatrix", normalMatrix4x4);
+            _renderStateData.NormalMatrix = Matrix4x4.Transpose(invModel);
+
+            // 更新整个 RenderStateData UBO
+            _renderStateUBO.Update(ref _renderStateData);
         }
 
         /// <summary>
@@ -195,19 +210,22 @@ namespace DotnetGltfRenderer {
         void SetupVolumeScatterUniforms(Material material, Shader shader, in RenderContext context) {
             if (material?.VolumeScatter?.IsEnabled != true) return;
 
-            shader.SetUniform("u_MultiScatterColor", material.VolumeScatter.MultiscatterColor);
-            shader.SetUniform("u_MinRadius", VolumeScatterExtension.ScatterMinRadius);
+            // 更新 VolumeScatterData UBO
+            VolumeScatterData scatterData = new() {
+                MultiScatterColor = new Vector4(material.VolumeScatter.MultiscatterColor, 0f),
+                MinRadius = VolumeScatterExtension.ScatterMinRadius,
+                MaterialID = context.IsScatterPass ? 1 : 0,
+                FramebufferWidth = context.FramebufferWidth,
+                FramebufferHeight = context.FramebufferHeight
+            };
+            _volumeScatterUBO.Update(ref scatterData);
 
+            // Scatter samples 保持独立 uniform（数组太大不适合 UBO）
             SetScatterSamplesUniforms(shader);
-
-            if (context.IsScatterPass) {
-                shader.SetUniform("u_MaterialID", 1);
-            }
 
             if (!context.IsScatterPass && context.HasScatterFramebuffer) {
                 shader.SetUniform("u_ScatterFramebufferSampler", (int)MaterialTextureSlot.ScatterFramebuffer);
                 shader.SetUniform("u_ScatterDepthFramebufferSampler", (int)MaterialTextureSlot.ScatterDepthFramebuffer);
-                shader.SetUniformInt2("u_FramebufferSize", context.FramebufferWidth, context.FramebufferHeight);
             }
         }
 

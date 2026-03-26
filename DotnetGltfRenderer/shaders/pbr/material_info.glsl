@@ -8,9 +8,7 @@
 uniform ivec2 u_ScreenSize;
 #endif
 
-uniform mat4 u_ModelMatrix;
-uniform mat4 u_ViewMatrix;
-uniform mat4 u_ProjectionMatrix;
+// 注意：u_ModelMatrix, u_ViewMatrix, u_ProjectionMatrix 现在通过 ubos.glsl 中的 RenderStateData UBO 访问
 
 #if DEBUG == DEBUG_TANGENT_W
 in float v_TangentWSign;

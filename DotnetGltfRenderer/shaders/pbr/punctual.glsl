@@ -25,11 +25,11 @@ const int LightType_Point = 1;
 const int LightType_Spot = 2;
 #endif
 
+// Volume Scatter uniforms - 在 ubos.glsl 的 VolumeScatterData 中定义
+// u_ScatterSamples 保持独立 uniform（数组太大不适合 UBO）
 #ifdef MATERIAL_VOLUME_SCATTER
 uniform vec3 u_ScatterSamples[SCATTER_SAMPLES_COUNT];
-uniform vec3 u_MultiScatterColor;
-uniform float u_MinRadius;
-uniform ivec2 u_FramebufferSize;
+// u_MultiScatterColor, u_MinRadius, u_MaterialID, u_FramebufferSize 在 ubos.glsl VolumeScatterData 中
 #endif
 
 // https://github.com/KhronosGroup/glTF/blob/master/extensions/2.0/Khronos/KHR_lights_punctual/README.md#range-property

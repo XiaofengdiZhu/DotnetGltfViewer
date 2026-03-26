@@ -129,50 +129,77 @@ namespace DotnetGltfRenderer {
         /// 设置 UV 变换
         /// </summary>
         public static void SetUVTransforms(Material material, Shader shader) {
+            // UV 变换现在通过 UVTransformData UBO 设置
+            // 此方法保留以供旧代码兼容，但不再执行操作
+        }
+
+        /// <summary>
+        /// 构建 UVTransformData UBO 数据
+        /// </summary>
+        public static UVTransformData BuildUVTransformData(Material material) {
+            UVTransformData data = new();
+
             // Core textures UV transforms
-            SetUVTransform(material.BaseColorTexture, shader, "u_BaseColorUVTransform");
-            SetUVTransform(material.NormalTexture, shader, "u_NormalUVTransform");
-            SetUVTransform(material.MetallicRoughnessTexture, shader, "u_MetallicRoughnessUVTransform");
-            SetUVTransform(material.OcclusionTexture, shader, "u_OcclusionUVTransform");
-            SetUVTransform(material.EmissiveTexture, shader, "u_EmissiveUVTransform");
+            data.NormalUVTransform = BuildUVMatrix3(material.NormalTexture);
+            data.EmissiveUVTransform = BuildUVMatrix3(material.EmissiveTexture);
+            data.OcclusionUVTransform = BuildUVMatrix3(material.OcclusionTexture);
+            data.BaseColorUVTransform = BuildUVMatrix3(material.BaseColorTexture);
+            data.MetallicRoughnessUVTransform = BuildUVMatrix3(material.MetallicRoughnessTexture);
 
-            // Extension textures UV transforms
-            if (material.ClearCoat?.IsEnabled == true) {
-                SetUVTransform(material.ClearCoat.Texture, shader, "u_ClearcoatUVTransform");
-                SetUVTransform(material.ClearCoat.RoughnessTexture, shader, "u_ClearcoatRoughnessUVTransform");
-                SetUVTransform(material.ClearCoat.NormalTexture, shader, "u_ClearcoatNormalUVTransform");
-            }
-            if (material.Iridescence?.IsEnabled == true) {
-                SetUVTransform(material.Iridescence.Texture, shader, "u_IridescenceUVTransform");
-                SetUVTransform(material.Iridescence.ThicknessTexture, shader, "u_IridescenceThicknessUVTransform");
-            }
-            if (material.Transmission?.IsEnabled == true) {
-                SetUVTransform(material.Transmission.Texture, shader, "u_TransmissionUVTransform");
-            }
-            if (material.Volume?.IsEnabled == true) {
-                SetUVTransform(material.Volume.ThicknessTexture, shader, "u_ThicknessUVTransform");
-            }
-            if (material.Sheen?.IsEnabled == true) {
-                SetUVTransform(material.Sheen.ColorTexture, shader, "u_SheenColorUVTransform");
-                SetUVTransform(material.Sheen.RoughnessTexture, shader, "u_SheenRoughnessUVTransform");
-            }
-            if (material.Specular?.IsEnabled == true) {
-                SetUVTransform(material.Specular.SpecularTexture, shader, "u_SpecularUVTransform");
-                SetUVTransform(material.Specular.SpecularColorTexture, shader, "u_SpecularColorUVTransform");
-            }
-            if (material.Anisotropy?.IsEnabled == true) {
-                SetUVTransform(material.Anisotropy.AnisotropyTexture, shader, "u_AnisotropyUVTransform");
-            }
-            if (material.DiffuseTransmission?.IsEnabled == true) {
-                SetUVTransform(material.DiffuseTransmission.Texture, shader, "u_DiffuseTransmissionUVTransform");
-                SetUVTransform(material.DiffuseTransmission.ColorTexture, shader, "u_DiffuseTransmissionColorUVTransform");
+            // SpecularGlossiness
+            data.DiffuseUVTransform = BuildUVMatrix3(material.SpecularGlossiness?.DiffuseTexture);
+            data.SpecularGlossinessUVTransform = BuildUVMatrix3(material.SpecularGlossiness?.SpecularGlossinessTexture);
+
+            // ClearCoat
+            data.ClearcoatUVTransform = BuildUVMatrix3(material.ClearCoat?.Texture);
+            data.ClearcoatRoughnessUVTransform = BuildUVMatrix3(material.ClearCoat?.RoughnessTexture);
+            data.ClearcoatNormalUVTransform = BuildUVMatrix3(material.ClearCoat?.NormalTexture);
+
+            // Sheen
+            data.SheenColorUVTransform = BuildUVMatrix3(material.Sheen?.ColorTexture);
+            data.SheenRoughnessUVTransform = BuildUVMatrix3(material.Sheen?.RoughnessTexture);
+
+            // Specular
+            data.SpecularUVTransform = BuildUVMatrix3(material.Specular?.SpecularTexture);
+            data.SpecularColorUVTransform = BuildUVMatrix3(material.Specular?.SpecularColorTexture);
+
+            // Transmission
+            data.TransmissionUVTransform = BuildUVMatrix3(material.Transmission?.Texture);
+
+            // Volume
+            data.ThicknessUVTransform = BuildUVMatrix3(material.Volume?.ThicknessTexture);
+
+            // Iridescence
+            data.IridescenceUVTransform = BuildUVMatrix3(material.Iridescence?.Texture);
+            data.IridescenceThicknessUVTransform = BuildUVMatrix3(material.Iridescence?.ThicknessTexture);
+
+            // Diffuse Transmission
+            data.DiffuseTransmissionUVTransform = BuildUVMatrix3(material.DiffuseTransmission?.Texture);
+            data.DiffuseTransmissionColorUVTransform = BuildUVMatrix3(material.DiffuseTransmission?.ColorTexture);
+
+            // Anisotropy
+            data.AnisotropyUVTransform = BuildUVMatrix3(material.Anisotropy?.AnisotropyTexture);
+
+            return data;
+        }
+
+        /// <summary>
+        /// 从 MaterialTexture 构建 UVMatrix3
+        /// </summary>
+        static UVMatrix3 BuildUVMatrix3(MaterialTexture matTex) {
+            if (matTex?.HasUVTransform != true) {
+                return UVMatrix3.Identity;
             }
 
-            // SpecularGlossiness UV transforms
-            if (material.SpecularGlossiness?.IsEnabled == true) {
-                SetUVTransform(material.SpecularGlossiness.DiffuseTexture, shader, "u_DiffuseUVTransform");
-                SetUVTransform(material.SpecularGlossiness.SpecularGlossinessTexture, shader, "u_SpecularGlossinessUVTransform");
-            }
+            // Convert Matrix3x2 to mat3 (3x3 matrix for UV transform)
+            // Column 0: [M11, M21, 0]    (scale*rotation part 1)
+            // Column 1: [M12, M22, 0]    (scale*rotation part 2)
+            // Column 2: [M31, M32, 1]    (translation)
+            return new UVMatrix3(
+                new Vector4(matTex.UVTransform.M11, matTex.UVTransform.M21, 0f, 0f),
+                new Vector4(matTex.UVTransform.M12, matTex.UVTransform.M22, 0f, 0f),
+                new Vector4(matTex.UVTransform.M31, matTex.UVTransform.M32, 1f, 0f)
+            );
         }
 
         /// <summary>

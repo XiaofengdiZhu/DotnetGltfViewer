@@ -12,11 +12,7 @@
 #endif
 
 #include <animation.glsl>
-
-
-uniform mat4 u_ViewProjectionMatrix;
-uniform mat4 u_ModelMatrix;
-uniform mat4 u_NormalMatrix;
+#include <ubos.glsl>
 
 
 in vec3 a_position;

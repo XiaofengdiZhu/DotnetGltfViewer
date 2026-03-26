@@ -1,13 +1,13 @@
 // shaders/pbr/textures.glsl
 // UBO 版本 - 纹理采样器和 UV 函数
-// 注意：factor、UVSet 等参数已移至 ubos.glsl 的 MaterialData/SceneData UBO 中
+// 注意：factor、UVSet、UVTransform 等参数已移至 ubos.glsl 的 MaterialData/SceneData/UVTransformData UBO 中
 
 #ifndef TEXTURES_GLSL
 #define TEXTURES_GLSL
 
 // ============================================================================
 // IBL 纹理采样器
-// 注意：u_MipCount 已移至 ubos.glsl 的 SceneData 中
+// 注意：u_MipCount、u_EnvRotation 已移至 ubos.glsl 的 SceneData 中
 // ============================================================================
 uniform samplerCube u_LambertianEnvSampler;
 uniform samplerCube u_GGXEnvSampler;
@@ -15,7 +15,6 @@ uniform sampler2D u_GGXLUT;
 uniform samplerCube u_CharlieEnvSampler;
 uniform sampler2D u_CharlieLUT;
 uniform sampler2D u_SheenELUT;
-uniform mat3 u_EnvRotation;
 
 
 // General Material
@@ -24,17 +23,17 @@ uniform mat3 u_EnvRotation;
 uniform sampler2D u_NormalSampler;
 // u_NormalScale - 在 ubos.glsl MaterialData 中
 // u_NormalUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_NormalUVTransform;
+// u_NormalUVTransform - 在 ubos.glsl UVTransformData 中
 
 // u_EmissiveFactor - 在 ubos.glsl MaterialData 中
 uniform sampler2D u_EmissiveSampler;
 // u_EmissiveUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_EmissiveUVTransform;
+// u_EmissiveUVTransform - 在 ubos.glsl UVTransformData 中
 
 uniform sampler2D u_OcclusionSampler;
 // u_OcclusionUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
 // u_OcclusionStrength - 在 ubos.glsl MaterialData 中
-uniform mat3 u_OcclusionUVTransform;
+// u_OcclusionUVTransform - 在 ubos.glsl UVTransformData 中
 
 
 in vec2 v_texcoord_0;
@@ -84,11 +83,11 @@ vec2 getOcclusionUV()
 
 uniform sampler2D u_BaseColorSampler;
 // u_BaseColorUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_BaseColorUVTransform;
+// u_BaseColorUVTransform - 在 ubos.glsl UVTransformData 中
 
 uniform sampler2D u_MetallicRoughnessSampler;
 // u_MetallicRoughnessUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_MetallicRoughnessUVTransform;
+// u_MetallicRoughnessUVTransform - 在 ubos.glsl UVTransformData 中
 
 vec2 getBaseColorUV()
 {
@@ -122,11 +121,11 @@ vec2 getMetallicRoughnessUV()
 
 uniform sampler2D u_DiffuseSampler;
 // u_DiffuseUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_DiffuseUVTransform;
+// u_DiffuseUVTransform - 在 ubos.glsl UVTransformData 中
 
 uniform sampler2D u_SpecularGlossinessSampler;
 // u_SpecularGlossinessUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_SpecularGlossinessUVTransform;
+// u_SpecularGlossinessUVTransform - 在 ubos.glsl UVTransformData 中
 
 
 vec2 getSpecularGlossinessUV()
@@ -161,15 +160,15 @@ vec2 getDiffuseUV()
 
 uniform sampler2D u_ClearcoatSampler;
 // u_ClearcoatUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_ClearcoatUVTransform;
+// u_ClearcoatUVTransform - 在 ubos.glsl UVTransformData 中
 
 uniform sampler2D u_ClearcoatRoughnessSampler;
 // u_ClearcoatRoughnessUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_ClearcoatRoughnessUVTransform;
+// u_ClearcoatRoughnessUVTransform - 在 ubos.glsl UVTransformData 中
 
 uniform sampler2D u_ClearcoatNormalSampler;
 // u_ClearcoatNormalUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_ClearcoatNormalUVTransform;
+// u_ClearcoatNormalUVTransform - 在 ubos.glsl UVTransformData 中
 // u_ClearcoatNormalScale - 在 ubos.glsl MaterialData 中
 
 
@@ -210,10 +209,10 @@ vec2 getClearcoatNormalUV()
 
 uniform sampler2D u_SheenColorSampler;
 // u_SheenColorUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_SheenColorUVTransform;
+// u_SheenColorUVTransform - 在 ubos.glsl UVTransformData 中
 uniform sampler2D u_SheenRoughnessSampler;
 // u_SheenRoughnessUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_SheenRoughnessUVTransform;
+// u_SheenRoughnessUVTransform - 在 ubos.glsl UVTransformData 中
 
 
 vec2 getSheenColorUV()
@@ -244,10 +243,10 @@ vec2 getSheenRoughnessUV()
 
 uniform sampler2D u_SpecularSampler;
 // u_SpecularUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_SpecularUVTransform;
+// u_SpecularUVTransform - 在 ubos.glsl UVTransformData 中
 uniform sampler2D u_SpecularColorSampler;
 // u_SpecularColorUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_SpecularColorUVTransform;
+// u_SpecularColorUVTransform - 在 ubos.glsl UVTransformData 中
 
 
 vec2 getSpecularUV()
@@ -278,7 +277,7 @@ vec2 getSpecularColorUV()
 
 uniform sampler2D u_TransmissionSampler;
 // u_TransmissionUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_TransmissionUVTransform;
+// u_TransmissionUVTransform - 在 ubos.glsl UVTransformData 中
 uniform sampler2D u_TransmissionFramebufferSampler;
 uniform ivec2 u_TransmissionFramebufferSize;
 
@@ -302,7 +301,7 @@ vec2 getTransmissionUV()
 
 uniform sampler2D u_ThicknessSampler;
 // u_ThicknessUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_ThicknessUVTransform;
+// u_ThicknessUVTransform - 在 ubos.glsl UVTransformData 中
 
 
 vec2 getThicknessUV()
@@ -332,11 +331,11 @@ uniform sampler2D u_ScatterDepthFramebufferSampler;
 
 uniform sampler2D u_IridescenceSampler;
 // u_IridescenceUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_IridescenceUVTransform;
+// u_IridescenceUVTransform - 在 ubos.glsl UVTransformData 中
 
 uniform sampler2D u_IridescenceThicknessSampler;
 // u_IridescenceThicknessUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_IridescenceThicknessUVTransform;
+// u_IridescenceThicknessUVTransform - 在 ubos.glsl UVTransformData 中
 
 
 vec2 getIridescenceUV()
@@ -366,11 +365,11 @@ vec2 getIridescenceThicknessUV()
 
 uniform sampler2D u_DiffuseTransmissionSampler;
 // u_DiffuseTransmissionUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_DiffuseTransmissionUVTransform;
+// u_DiffuseTransmissionUVTransform - 在 ubos.glsl UVTransformData 中
 
 uniform sampler2D u_DiffuseTransmissionColorSampler;
 // u_DiffuseTransmissionColorUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_DiffuseTransmissionColorUVTransform;
+// u_DiffuseTransmissionColorUVTransform - 在 ubos.glsl UVTransformData 中
 
 
 vec2 getDiffuseTransmissionUV()
@@ -399,7 +398,7 @@ vec2 getDiffuseTransmissionColorUV()
 
 uniform sampler2D u_AnisotropySampler;
 // u_AnisotropyUVSet - 在 ubos.glsl MaterialData 中（通过宏访问）
-uniform mat3 u_AnisotropyUVTransform;
+// u_AnisotropyUVTransform - 在 ubos.glsl UVTransformData 中
 
 vec2 getAnisotropyUV()
 {

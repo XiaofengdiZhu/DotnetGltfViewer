@@ -12,6 +12,9 @@ namespace DotnetGltfRenderer {
         readonly UniformBuffer<SceneData> _sceneUBO;
         readonly UniformBuffer<MaterialData> _materialUBO;
         readonly UniformBuffer<LightsData> _lightsUBO;
+        readonly UniformBuffer<RenderStateData> _renderStateUBO;
+        readonly UniformBuffer<UVTransformData> _uvTransformUBO;
+        readonly UniformBuffer<VolumeScatterData> _volumeScatterUBO;
 
         // Subsystems
         readonly FramebufferManager _framebufferManager;
@@ -86,13 +89,16 @@ namespace DotnetGltfRenderer {
             _sceneUBO = new UniformBuffer<SceneData>(0);
             _materialUBO = new UniformBuffer<MaterialData>(1);
             _lightsUBO = new UniformBuffer<LightsData>(2);
+            _renderStateUBO = new UniformBuffer<RenderStateData>(3);
+            _uvTransformUBO = new UniformBuffer<UVTransformData>(4);
+            _volumeScatterUBO = new UniformBuffer<VolumeScatterData>(5);
 
             // 加载环境贴图
             IBLManager.Load(environmentTexturePath);
 
             // 初始化子系统
             _framebufferManager = new FramebufferManager();
-            _meshInstanceRenderer = new MeshInstanceRenderer(_materialUBO, _sceneUBO, _lightsUBO);
+            _meshInstanceRenderer = new MeshInstanceRenderer(_materialUBO, _sceneUBO, _lightsUBO, _renderStateUBO, _uvTransformUBO, _volumeScatterUBO);
             _renderPassManager = new RenderPassManager(_framebufferManager, _meshInstanceRenderer);
 
             // 初始化天空渲染器
@@ -208,12 +214,18 @@ namespace DotnetGltfRenderer {
         }
 
         void UpdateSceneUBO() {
+            // EnvRotation is identity matrix by default
+            // Can be modified for environment map rotation
             SceneData sceneData = new() {
                 CameraPos = new Vector4(Camera.Position, 0f),
                 Exposure = LightingSystem.Exposure,
                 EnvironmentStrength = IBLManager.EnvironmentStrength,
                 MipCount = IBLManager.MipCount,
-                Padding0 = 0f
+                Padding0 = 0f,
+                // Identity rotation matrix columns
+                EnvRotationCol0 = new Vector4(1f, 0f, 0f, 0f),
+                EnvRotationCol1 = new Vector4(0f, 1f, 0f, 0f),
+                EnvRotationCol2 = new Vector4(0f, 0f, 1f, 0f)
             };
             _sceneUBO.Update(ref sceneData);
         }
@@ -250,6 +262,9 @@ namespace DotnetGltfRenderer {
             _sceneUBO?.Dispose();
             _materialUBO?.Dispose();
             _lightsUBO?.Dispose();
+            _renderStateUBO?.Dispose();
+            _uvTransformUBO?.Dispose();
+            _volumeScatterUBO?.Dispose();
             _framebufferManager?.Dispose();
             SkyRenderer = null;
         }
