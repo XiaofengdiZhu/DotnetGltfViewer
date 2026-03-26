@@ -25,7 +25,7 @@ namespace DotnetGltfViewer.Windows {
 
         // 默认路径
         const string DefaultModelPath = "Assets/DamagedHelmet/glTF/DamagedHelmet.gltf";
-        const string DefaultEnvironmentMapPath = "Assets/Cannon_Exterior.hdr";
+        const string DefaultEnvironmentMapPath = "Assets/Environments/Cannon_Exterior.hdr";
         const string ShadersDirectory = "shaders";
 
         public static Vector2D<int> Size { get; private set; }
@@ -149,6 +149,9 @@ namespace DotnetGltfViewer.Windows {
             _isClosing = true;
         }
 
+        /// <summary>
+        /// 重置相机以正视整个场景（启动时调用）
+        /// </summary>
         public static void ResetCameraToModel() {
             if (_scene.TryGetSceneBounds(out Vector3 min, out Vector3 max)) {
                 Vector2D<int> size = _window.Size;
@@ -157,7 +160,47 @@ namespace DotnetGltfViewer.Windows {
             }
         }
 
-        public static bool TryGetSceneBounds(out Vector3 min, out Vector3 max) => _scene.TryGetSceneBounds(out min, out max);
+        /// <summary>
+        /// 聚焦到选中的物品，保持当前视角方向不变
+        /// </summary>
+        public static void FocusOnSelection(SceneModel selectedModel = null) {
+            selectedModel ??= _scene?.SelectedModel;
+            if (selectedModel == null) {
+                return;
+            }
+            BoundingBox bounds = selectedModel.WorldBounds;
+            if (bounds.IsValid) {
+                Vector2D<int> size = _window.Size;
+                float aspect = (float)Math.Max(size.X, 1) / Math.Max(size.Y, 1);
+                _renderer.Camera.FocusOnBoundingBox(bounds.Min, bounds.Max, aspect);
+            }
+        }
+
+        /// <summary>
+        /// 移动模型到画面中心，保持相机不动
+        /// </summary>
+        public static void MoveModelToScreenCenter(SceneModel sceneModel) {
+            if (sceneModel?.Model == null) {
+                return;
+            }
+            BoundingBox bounds = sceneModel.WorldBounds;
+            if (!bounds.IsValid) {
+                return;
+            }
+            // 模型中心
+            Vector3 modelCenter = (bounds.Min + bounds.Max) * 0.5f;
+            // 画面中心（相机焦点）
+            Vector3 screenCenter = _camera.FocalPoint;
+            // 计算需要的平移量
+            Vector3 translation = screenCenter - modelCenter;
+            // 应用平移变换到模型的所有 MeshInstance
+            Matrix4x4 translateMatrix = Matrix4x4.CreateTranslation(translation);
+            foreach (MeshInstance instance in sceneModel.Model.MeshInstances) {
+                instance.SetGizmoTransform(translateMatrix);
+            }
+            // 更新包围盒
+            sceneModel.UpdateWorldBounds();
+        }
 
         /// <summary>
         /// 打开模型文件对话框
@@ -166,9 +209,10 @@ namespace DotnetGltfViewer.Windows {
             DialogResult result = Dialog.FileOpenEx("[glTF Files (*.gltf;*.glb)|*.gltf;*.glb]", null, "Open glTF Model");
             if (result.IsOk) {
                 try {
-                    _scene.AddModel(result.Path);
+                    SceneModel sceneModel = _scene.AddModel(result.Path);
+                    SelectionManager.Select(sceneModel);
+                    MoveModelToScreenCenter(sceneModel);
                     _renderer.UpdateLightsFromScene();
-                    ResetCameraToModel();
                     LogManager.Logger.ZLogInformation($"Loaded model: {result.Path}");
                 }
                 catch (Exception ex) {
@@ -197,6 +241,7 @@ namespace DotnetGltfViewer.Windows {
         /// 清除场景中的所有模型
         /// </summary>
         public static void ClearScene() {
+            SelectionManager.ClearSelection();
             _scene.Clear();
             _renderer.UpdateLightsFromScene();
         }

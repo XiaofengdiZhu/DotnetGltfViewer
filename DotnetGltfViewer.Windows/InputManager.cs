@@ -67,9 +67,8 @@ namespace DotnetGltfViewer.Windows {
                 return;
             }
 
-            // 选择模式：左键点击进行射线拾取，但仍然允许相机操作
-            if (button == MouseButton.Left
-                && GizmoManager.CurrentMode == GizmoMode.Select) {
+            // 左键点击进行射线拾取（任何模式下都可以选择）
+            if (button == MouseButton.Left) {
                 if (_scene != null
                     && _camera != null) {
                     Vector2 screenPos = mouse.Position;
@@ -81,9 +80,6 @@ namespace DotnetGltfViewer.Windows {
                     }
                     // 点击空白处不清除选择，保持当前选择状态
                 }
-                // 不再 return，继续处理相机操作
-            }
-            if (button == MouseButton.Left) {
                 _leftMouseDown = true;
                 _hasMousePosition = false;
             }
@@ -164,7 +160,7 @@ namespace DotnetGltfViewer.Windows {
                 return;
             }
             if (_primaryKeyboard.IsKeyPressed(Key.Number1)) {
-                GizmoManager.CurrentMode = GizmoMode.Select;
+                GizmoManager.CurrentMode = GizmoMode.None;
             }
             if (_primaryKeyboard.IsKeyPressed(Key.Number2)) {
                 GizmoManager.CurrentMode = GizmoMode.Translate;
@@ -174,6 +170,9 @@ namespace DotnetGltfViewer.Windows {
             }
             if (_primaryKeyboard.IsKeyPressed(Key.Number4)) {
                 GizmoManager.CurrentMode = GizmoMode.Scale;
+            }
+            if (_primaryKeyboard.IsKeyPressed(Key.F)) {
+                MainWindow.FocusOnSelection();
             }
             float speed = _camera.MoveSpeed * KeyboardMoveMultiplier * deltaTime;
             // 计算相机的前方向（朝向固定点的方向）和右方向

@@ -5,7 +5,7 @@ using Hexa.NET.ImGuizmo;
 
 namespace DotnetGltfViewer.Windows {
     public enum GizmoMode {
-        Select,
+        None,
         Translate,
         Rotate,
         Scale
@@ -25,7 +25,7 @@ namespace DotnetGltfViewer.Windows {
         static Vector3 _cachedLocalMin;
         static Vector3 _cachedLocalMax;
 
-        public static GizmoMode CurrentMode { get; set; } = GizmoMode.Select;
+        public static GizmoMode CurrentMode { get; set; } = GizmoMode.None;
 
         public static Matrix4x4 ModelMatrix { get; private set; } = Matrix4x4.Identity;
 
@@ -101,17 +101,6 @@ namespace DotnetGltfViewer.Windows {
             _initialized = true;
         }
 
-        public static void SetMode(GizmoMode mode) {
-            // 如果切换到变换模式但没有选中模型，且场景中只有一个模型，自动选中
-            if (mode != GizmoMode.Select
-                && _scene?.SelectedModel == null
-                && _scene?.Models.Count == 1) {
-                _scene.SelectModel(_scene.Models[0]);
-                _initialized = false;
-            }
-            CurrentMode = mode;
-        }
-
         public static void ResetModelMatrix() {
             _userTransform = Matrix4x4.Identity;
             _initialized = false;
@@ -135,10 +124,14 @@ namespace DotnetGltfViewer.Windows {
         }
 
         public static void RenderToolbar() {
-            ImGui.SetNextWindowPos(new Vector2(8f, 48f));
-            ImGui.SetNextWindowSize(new Vector2(116f, 184f));
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(8f, 8f));
-            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0, 8f));
+            const float buttonWidth = 100f;
+            const float buttonHeight = 36f;
+            const float padding = 8f;
+            // 左侧工具栏
+            ImGui.SetNextWindowPos(new Vector2(padding, 48f));
+            ImGui.SetNextWindowSize(new Vector2(buttonWidth + padding * 2, buttonHeight * 4 + padding * 5));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding, padding));
+            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0, padding));
             ImGuiWindowFlags flags = ImGuiWindowFlags.NoTitleBar
                 | ImGuiWindowFlags.NoResize
                 | ImGuiWindowFlags.NoMove
@@ -146,22 +139,38 @@ namespace DotnetGltfViewer.Windows {
                 | ImGuiWindowFlags.NoScrollWithMouse
                 | ImGuiWindowFlags.NoCollapse
                 | ImGuiWindowFlags.NoBringToFrontOnFocus;
-            if (ImGui.Begin("GizmoToolbar", flags)) {
-                RenderToolbarButton("Select", GizmoMode.Select);
-                RenderToolbarButton("Move", GizmoMode.Translate);
-                RenderToolbarButton("Rotate", GizmoMode.Rotate);
-                RenderToolbarButton("Scale", GizmoMode.Scale);
+            if (ImGui.Begin("GizmoToolbar1", flags)) {
+                RenderToolbarButton("Select", GizmoMode.None, buttonWidth, buttonHeight);
+                RenderToolbarButton("Move", GizmoMode.Translate, buttonWidth, buttonHeight);
+                RenderToolbarButton("Rotate", GizmoMode.Rotate, buttonWidth, buttonHeight);
+                RenderToolbarButton("Scale", GizmoMode.Scale, buttonWidth, buttonHeight);
+            }
+            ImGui.End();
+            ImGui.PopStyleVar(2);
+
+            // 第二组工具栏
+            ImGui.SetNextWindowPos(new Vector2(padding, 48f + buttonHeight * 4 + padding * 5 + 8f));
+            ImGui.SetNextWindowSize(new Vector2(buttonWidth + padding * 2, buttonHeight + padding * 2));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding, padding));
+            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0, padding));
+            if (ImGui.Begin("GizmoToolbar2", flags)) {
+                if (ImGui.Button("Focus", new Vector2(buttonWidth, buttonHeight))) {
+                    MainWindow.FocusOnSelection();
+                }
+                if (ImGui.IsItemHovered()) {
+                    ImGui.SetTooltip("Focus camera on selection (F)");
+                }
             }
             ImGui.End();
             ImGui.PopStyleVar(2);
         }
 
-        static void RenderToolbarButton(string label, GizmoMode mode) {
+        static void RenderToolbarButton(string label, GizmoMode mode, float buttonWidth, float buttonHeight) {
             bool isActive = CurrentMode == mode;
             if (isActive) {
                 ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.28f, 0.56f, 0.88f, 1.0f));
             }
-            if (ImGui.Button(label, new Vector2(100f, 36f))) {
+            if (ImGui.Button(label, new Vector2(buttonWidth, buttonHeight))) {
                 CurrentMode = mode;
             }
             if (ImGui.IsItemHovered()) {
@@ -174,7 +183,7 @@ namespace DotnetGltfViewer.Windows {
 
         static string GetShortcut(GizmoMode mode) {
             return mode switch {
-                GizmoMode.Select => "Num 1",
+                GizmoMode.None => "Num 1",
                 GizmoMode.Translate => "Num 2",
                 GizmoMode.Rotate => "Num 3",
                 GizmoMode.Scale => "Num 4",
@@ -183,8 +192,8 @@ namespace DotnetGltfViewer.Windows {
         }
 
         public static unsafe bool Manipulate(Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix) {
-            // Select 模式不显示变换 Gizmo
-            if (CurrentMode == GizmoMode.Select) {
+            // None 模式不显示变换 Gizmo
+            if (CurrentMode == GizmoMode.None) {
                 return false;
             }
 

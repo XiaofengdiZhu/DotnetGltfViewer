@@ -229,5 +229,27 @@ namespace DotnetGltfRenderer {
             NearPlane = MathF.Max(0.01f, radius / 200f);
             FarPlane = MathF.Max(200f, distance + radius * 10f);
         }
+
+        /// <summary>
+        /// 将相机聚焦到指定的包围盒，保持当前视角方向不变
+        /// 只改变焦点位置和距离，使模型显示在画面中心
+        /// </summary>
+        public void FocusOnBoundingBox(Vector3 min, Vector3 max, float aspect, float distanceMargin = DefaultDistanceMargin) {
+            Vector3 modelCenter = (min + max) * 0.5f;
+            Vector3 extents = (max - min) * 0.5f;
+            float radius = MathF.Max(extents.Length(), 0.5f);
+
+            // 计算合适的距离
+            float verticalHalfFov = MathHelper.DegreesToRadians(Zoom) * 0.5f;
+            float horizontalHalfFov = MathF.Atan(MathF.Tan(verticalHalfFov) * aspect);
+            float limitingHalfFov = MathF.Min(verticalHalfFov, horizontalHalfFov);
+            float distance = radius / MathF.Max(0.01f, MathF.Tan(limitingHalfFov)) * distanceMargin;
+
+            // 保持当前视角方向，只改变焦点和距离
+            FocalPoint = modelCenter;
+            Distance = distance;
+            UpdateDerivedProperties(radius, distance);
+            UpdatePosition();
+        }
     }
 }
