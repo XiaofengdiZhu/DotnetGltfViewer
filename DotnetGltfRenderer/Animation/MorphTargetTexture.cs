@@ -16,6 +16,9 @@ namespace DotnetGltfRenderer {
     public class MorphTargetTexture : IDisposable {
         bool _disposed;
 
+        // 预分配的层数据数组，避免每次上传时分配
+        readonly float[] _layerData;
+
         // Attribute offsets (layer index offset for each attribute type)
 
         // Active attributes (sorted in canonical order)
@@ -153,6 +156,11 @@ namespace DotnetGltfRenderer {
 
             // 总层数 = targetCount * attributeCount
             LayerCount = targetCount * _activeAttributes.Count;
+
+            // 预分配层数据数组（每层 textureSize * textureSize * 4 floats）
+            int layerPixelCount = TextureSize * TextureSize;
+            _layerData = new float[layerPixelCount * 4];
+
             CreateTexture();
         }
 
@@ -200,10 +208,7 @@ namespace DotnetGltfRenderer {
             IReadOnlyList<Vector4>[] colors0) {
             GlContext.GL.BindTexture(TextureTarget.Texture2DArray, TextureHandle);
 
-            // 每层纹理的大小（像素数 * 4 floats）
-            int layerPixelCount = TextureSize * TextureSize;
-            float[] layerData = new float[layerPixelCount * 4];
-
+            // 使用预分配的层数据数组
             // 上传每个 target 的每个属性
             for (int t = 0; t < TargetCount; t++) {
                 // POSITION
@@ -211,7 +216,7 @@ namespace DotnetGltfRenderer {
                     && positions != null
                     && t < positions.Length
                     && positions[t] != null) {
-                    UploadAttributeLayer(layerData, positions[t], PositionOffset + t);
+                    UploadAttributeLayer(_layerData, positions[t], PositionOffset + t);
                 }
 
                 // NORMAL
@@ -219,7 +224,7 @@ namespace DotnetGltfRenderer {
                     && normals != null
                     && t < normals.Length
                     && normals[t] != null) {
-                    UploadAttributeLayer(layerData, normals[t], NormalOffset + t);
+                    UploadAttributeLayer(_layerData, normals[t], NormalOffset + t);
                 }
 
                 // TANGENT
@@ -227,7 +232,7 @@ namespace DotnetGltfRenderer {
                     && tangents != null
                     && t < tangents.Length
                     && tangents[t] != null) {
-                    UploadAttributeLayer(layerData, tangents[t], TangentOffset + t);
+                    UploadAttributeLayer(_layerData, tangents[t], TangentOffset + t);
                 }
 
                 // TEXCOORD_0
@@ -235,7 +240,7 @@ namespace DotnetGltfRenderer {
                     && texCoords0 != null
                     && t < texCoords0.Length
                     && texCoords0[t] != null) {
-                    UploadAttributeLayer(layerData, texCoords0[t], TexCoord0Offset + t);
+                    UploadAttributeLayer(_layerData, texCoords0[t], TexCoord0Offset + t);
                 }
 
                 // TEXCOORD_1
@@ -243,7 +248,7 @@ namespace DotnetGltfRenderer {
                     && texCoords1 != null
                     && t < texCoords1.Length
                     && texCoords1[t] != null) {
-                    UploadAttributeLayer(layerData, texCoords1[t], TexCoord1Offset + t);
+                    UploadAttributeLayer(_layerData, texCoords1[t], TexCoord1Offset + t);
                 }
 
                 // COLOR_0
@@ -251,7 +256,7 @@ namespace DotnetGltfRenderer {
                     && colors0 != null
                     && t < colors0.Length
                     && colors0[t] != null) {
-                    UploadAttributeLayer(layerData, colors0[t], Color0Offset + t);
+                    UploadAttributeLayer(_layerData, colors0[t], Color0Offset + t);
                 }
             }
             GlContext.GL.BindTexture(TextureTarget.Texture2DArray, 0);

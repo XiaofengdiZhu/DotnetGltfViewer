@@ -103,25 +103,28 @@ namespace DotnetGltfRenderer {
         public SceneModel SelectedModel { get; private set; }
 
         // ========== 渲染队列分类 ==========
+        // 预分配合理的初始容量，避免频繁扩容
+        const int DefaultQueueCapacity = 64;
+
         /// <summary>
         /// 不透明物体队列
         /// </summary>
-        public List<MeshInstance> OpaqueInstances { get; } = new();
+        public List<MeshInstance> OpaqueInstances { get; } = new(DefaultQueueCapacity);
 
         /// <summary>
         /// 透明物体队列
         /// </summary>
-        public List<MeshInstance> TransparentInstances { get; } = new();
+        public List<MeshInstance> TransparentInstances { get; } = new(16);
 
         /// <summary>
         /// Transmission 物体队列
         /// </summary>
-        public List<MeshInstance> TransmissionInstances { get; } = new();
+        public List<MeshInstance> TransmissionInstances { get; } = new(16);
 
         /// <summary>
         /// Scatter 物体队列
         /// </summary>
-        public List<MeshInstance> ScatterInstances { get; } = new();
+        public List<MeshInstance> ScatterInstances { get; } = new(8);
 
         /// <summary>
         /// 是否存在 Transmission 物体

@@ -71,53 +71,29 @@ namespace DotnetGltfRenderer {
 
         /// <summary>
         /// 创建用于 Scatter Pass 的上下文
+        /// 使用 with 表达式，编译器可优化复制
         /// </summary>
-        public RenderContext ForScatterPass() => new() {
-            View = View,
-            Projection = Projection,
-            UseIBL = UseIBL,
+        public RenderContext ForScatterPass() => this with {
             UseLinearOutput = true,
-            IsScatterPass = true,
-            ToneMapMode = ToneMapMode,
-            LightCount = LightCount,
-            FramebufferWidth = FramebufferWidth,
-            FramebufferHeight = FramebufferHeight,
-            HasTransmissionFramebuffer = HasTransmissionFramebuffer,
-            HasScatterFramebuffer = HasScatterFramebuffer
+            IsScatterPass = true
         };
 
         /// <summary>
         /// 创建用于 Transmission Pass 的上下文
+        /// 使用 with 表达式，编译器可优化复制
         /// </summary>
-        public RenderContext ForTransmissionPass() => new() {
-            View = View,
-            Projection = Projection,
-            UseIBL = UseIBL,
+        public RenderContext ForTransmissionPass() => this with {
             UseLinearOutput = true,
-            IsScatterPass = false,
-            ToneMapMode = ToneMapMode,
-            LightCount = LightCount,
-            FramebufferWidth = FramebufferWidth,
-            FramebufferHeight = FramebufferHeight,
-            HasTransmissionFramebuffer = HasTransmissionFramebuffer,
-            HasScatterFramebuffer = HasScatterFramebuffer
+            IsScatterPass = false
         };
 
         /// <summary>
         /// 创建用于 Main Pass 的上下文
+        /// 使用 with 表达式，编译器可优化复制
         /// </summary>
-        public RenderContext ForMainPass() => new() {
-            View = View,
-            Projection = Projection,
-            UseIBL = UseIBL,
+        public RenderContext ForMainPass() => this with {
             UseLinearOutput = false,
-            IsScatterPass = false,
-            ToneMapMode = ToneMapMode,
-            LightCount = LightCount,
-            FramebufferWidth = FramebufferWidth,
-            FramebufferHeight = FramebufferHeight,
-            HasTransmissionFramebuffer = HasTransmissionFramebuffer,
-            HasScatterFramebuffer = HasScatterFramebuffer
+            IsScatterPass = false
         };
     }
 }

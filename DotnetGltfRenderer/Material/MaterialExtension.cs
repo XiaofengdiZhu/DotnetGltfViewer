@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using SharpGLTF.IO;
@@ -82,17 +83,37 @@ namespace DotnetGltfRenderer {
 
         #region 反射辅助方法（用于读取 SharpGLTF 不支持的扩展）
 
+        // 缓存的 PropertyInfo，避免重复反射查找
+        static readonly Dictionary<Type, PropertyInfo> _namePropertyCache = new();
+        static readonly Dictionary<Type, PropertyInfo> _propertiesPropertyCache = new();
+
+        // UnknownNode 类型缓存
+        static Type _unknownNodeType;
+
         /// <summary>
         /// 通过反射获取未知扩展对象（用于 SharpGLTF 不支持的扩展）
+        /// 使用 PropertyInfo 缓存优化性能
         /// </summary>
         protected static object GetUnknownExtension(IExtraProperties target, string extensionName) {
+            // 懒加载 UnknownNode 类型
+            _unknownNodeType ??= AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => a.GetTypes())
+                .FirstOrDefault(t => t.FullName == "SharpGLTF.IO.UnknownNode");
+
+            if (_unknownNodeType == null) return null;
+
             foreach (JsonSerializable ext in target.Extensions) {
-                // UnknownNode 是 internal 类型，通过类型全名判断
-                if (ext.GetType().FullName == "SharpGLTF.IO.UnknownNode") {
-                    PropertyInfo nameProp = ext.GetType().GetProperty("Name", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (nameProp?.GetValue(ext)?.ToString() == extensionName) {
-                        return ext;
-                    }
+                Type extType = ext.GetType();
+                if (extType != _unknownNodeType) continue;
+
+                // 使用缓存的 PropertyInfo
+                if (!_namePropertyCache.TryGetValue(extType, out PropertyInfo nameProp)) {
+                    nameProp = extType.GetProperty("Name", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    _namePropertyCache[extType] = nameProp;
+                }
+
+                if (nameProp?.GetValue(ext)?.ToString() == extensionName) {
+                    return ext;
                 }
             }
             return null;
@@ -100,13 +121,20 @@ namespace DotnetGltfRenderer {
 
         /// <summary>
         /// 从未知扩展对象中获取属性值
+        /// 使用 PropertyInfo 缓存优化性能
         /// </summary>
         protected static object GetExtensionProperty(object unknownExtension, string propertyName) {
             if (unknownExtension == null) {
                 return null;
             }
             Type extType = unknownExtension.GetType();
-            PropertyInfo propsProp = extType.GetProperty("Properties", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+            // 使用缓存的 PropertyInfo
+            if (!_propertiesPropertyCache.TryGetValue(extType, out PropertyInfo propsProp)) {
+                propsProp = extType.GetProperty("Properties", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                _propertiesPropertyCache[extType] = propsProp;
+            }
+
             IReadOnlyDictionary<string, JsonNode> properties = propsProp?.GetValue(unknownExtension) as IReadOnlyDictionary<string, JsonNode>;
             if (properties != null
                 && properties.TryGetValue(propertyName, out JsonNode value)) {
