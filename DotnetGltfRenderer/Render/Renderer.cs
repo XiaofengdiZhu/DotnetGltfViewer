@@ -10,7 +10,8 @@ namespace DotnetGltfRenderer {
     public class Renderer : IDisposable {
         // Uniform Buffer Objects
         readonly UniformBuffer<SceneData> _sceneUBO;
-        readonly UniformBuffer<MaterialData> _materialUBO;
+        readonly UniformBuffer<MaterialCoreData> _materialCoreUBO;
+        readonly UniformBuffer<MaterialExtensionData> _materialExtUBO;
         readonly UniformBuffer<LightsData> _lightsUBO;
         readonly UniformBuffer<RenderStateData> _renderStateUBO;
         readonly UniformBuffer<UVTransformData> _uvTransformUBO;
@@ -87,7 +88,8 @@ namespace DotnetGltfRenderer {
 
             // 创建 UBO
             _sceneUBO = new UniformBuffer<SceneData>(0);
-            _materialUBO = new UniformBuffer<MaterialData>(1);
+            _materialCoreUBO = new UniformBuffer<MaterialCoreData>(1);
+            _materialExtUBO = new UniformBuffer<MaterialExtensionData>(6);
             _lightsUBO = new UniformBuffer<LightsData>(2);
             _renderStateUBO = new UniformBuffer<RenderStateData>(3);
             _uvTransformUBO = new UniformBuffer<UVTransformData>(4);
@@ -98,7 +100,7 @@ namespace DotnetGltfRenderer {
 
             // 初始化子系统
             _framebufferManager = new FramebufferManager();
-            _meshInstanceRenderer = new MeshInstanceRenderer(_materialUBO, _sceneUBO, _lightsUBO, _renderStateUBO, _uvTransformUBO, _volumeScatterUBO);
+            _meshInstanceRenderer = new MeshInstanceRenderer(_materialCoreUBO, _materialExtUBO, _sceneUBO, _lightsUBO, _renderStateUBO, _uvTransformUBO, _volumeScatterUBO);
             _renderPassManager = new RenderPassManager(_framebufferManager, _meshInstanceRenderer);
 
             // 初始化天空渲染器
@@ -260,7 +262,8 @@ namespace DotnetGltfRenderer {
             Skybox?.Dispose();
             IBLManager?.Dispose();
             _sceneUBO?.Dispose();
-            _materialUBO?.Dispose();
+            _materialCoreUBO?.Dispose();
+            _materialExtUBO?.Dispose();
             _lightsUBO?.Dispose();
             _renderStateUBO?.Dispose();
             _uvTransformUBO?.Dispose();

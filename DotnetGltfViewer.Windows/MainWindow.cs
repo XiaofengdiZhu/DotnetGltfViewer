@@ -17,6 +17,7 @@ namespace DotnetGltfViewer.Windows {
     public static class MainWindow {
         static IWindow _window;
         static GL _gl;
+        static bool _isClosing;
 
         static Scene _scene;
         static Renderer _renderer;
@@ -43,7 +44,7 @@ namespace DotnetGltfViewer.Windows {
             options.API = new GraphicsAPI(ContextAPI.OpenGLES, new APIVersion(3, 0));
             options.Size = new Vector2D<int>(1280, 720);
             options.Title = "DotnetGltfViewer";
-            options.VSync = true;
+            options.VSync = true;options.UpdatesPerSecond = 60;
             _window = Window.Create(options);
         }
 
@@ -54,7 +55,6 @@ namespace DotnetGltfViewer.Windows {
             _window.ShouldSwapAutomatically = false;
             _window.Load += OnLoad;
             _window.Render += OnRender;
-            _window.Update += OnUpdate;
             _window.FramebufferResize += OnFramebufferResize;
             _window.Closing += OnClosing;
             _window.Run();
@@ -94,19 +94,16 @@ namespace DotnetGltfViewer.Windows {
         }
 
         /// <summary>
-        /// 窗口更新事件处理。
-        /// </summary>
-        /// <param name="deltaTime">帧间隔时间（秒）。</param>
-        static void OnUpdate(double deltaTime) {
-            InputManager.Update((float)deltaTime);
-            _scene.Update((float)deltaTime);
-        }
-
-        /// <summary>
         /// 窗口渲染事件处理。
         /// </summary>
         /// <param name="deltaTime">帧间隔时间（秒）。</param>
         static void OnRender(double deltaTime) {
+            if (_isClosing) {
+                _window.Close();
+                return;
+            }
+            InputManager.Update((float)deltaTime);
+            _scene.Update((float)deltaTime);
             _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             _renderer.Render();
             RenderUI(deltaTime);
@@ -131,7 +128,6 @@ namespace DotnetGltfViewer.Windows {
             _gl.Viewport(0, 0, (uint)newSize.X, (uint)newSize.Y);
             _gl.Scissor(0, 0, (uint)newSize.X, (uint)newSize.Y);
             _renderer?.SetFramebufferSize(newSize.X, newSize.Y);
-            LogManager.Logger.ZLogDebug($"帧缓冲区大小变化: {newSize.X}x{newSize.Y}");
         }
 
         /// <summary>
@@ -147,7 +143,7 @@ namespace DotnetGltfViewer.Windows {
         }
 
         public static void Close() {
-            _window.Close();
+            _isClosing = true;
         }
 
         public static void ResetCameraToModel() {

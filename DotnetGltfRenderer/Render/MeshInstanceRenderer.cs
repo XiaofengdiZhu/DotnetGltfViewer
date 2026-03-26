@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Numerics;
 using Silk.NET.OpenGLES;
 
@@ -7,7 +8,8 @@ namespace DotnetGltfRenderer {
     /// 负责渲染单个 MeshInstance，包括着色器选择、材质绑定、绘制调用
     /// </summary>
     public class MeshInstanceRenderer {
-        readonly UniformBuffer<MaterialData> _materialUBO;
+        readonly UniformBuffer<MaterialCoreData> _materialCoreUBO;
+        readonly UniformBuffer<MaterialExtensionData> _materialExtUBO;
         readonly UniformBuffer<SceneData> _sceneUBO;
         readonly UniformBuffer<LightsData> _lightsUBO;
         readonly UniformBuffer<RenderStateData> _renderStateUBO;
@@ -16,6 +18,16 @@ namespace DotnetGltfRenderer {
 
         // 当前渲染状态数据（用于 UBO 更新）
         RenderStateData _renderStateData;
+
+        // ScatterSamples 静态数据已设置的着色器程序集合（一次性设置）
+        readonly HashSet<uint> _scatterSamplesSetShaders = new();
+
+        // 材质缓存（用于避免重复更新相同材质的 UBO）
+        Material _lastMaterial;
+        int _lastExtensionFlags;
+
+        // UV 变换 dirty flag
+        bool _uvTransformDirty = true;
 
         /// <summary>
         /// 当前视图投影矩阵
@@ -35,8 +47,16 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建 Drawable 渲染器
         /// </summary>
-        public MeshInstanceRenderer(UniformBuffer<MaterialData> materialUBO, UniformBuffer<SceneData> sceneUBO, UniformBuffer<LightsData> lightsUBO, UniformBuffer<RenderStateData> renderStateUBO, UniformBuffer<UVTransformData> uvTransformUBO, UniformBuffer<VolumeScatterData> volumeScatterUBO) {
-            _materialUBO = materialUBO;
+        public MeshInstanceRenderer(
+            UniformBuffer<MaterialCoreData> materialCoreUBO,
+            UniformBuffer<MaterialExtensionData> materialExtUBO,
+            UniformBuffer<SceneData> sceneUBO,
+            UniformBuffer<LightsData> lightsUBO,
+            UniformBuffer<RenderStateData> renderStateUBO,
+            UniformBuffer<UVTransformData> uvTransformUBO,
+            UniformBuffer<VolumeScatterData> volumeScatterUBO) {
+            _materialCoreUBO = materialCoreUBO;
+            _materialExtUBO = materialExtUBO;
             _sceneUBO = sceneUBO;
             _lightsUBO = lightsUBO;
             _renderStateUBO = renderStateUBO;
@@ -83,13 +103,11 @@ namespace DotnetGltfRenderer {
             // 设置 Morph Target
             SetupMorphTargets(mesh, shader);
 
-            // 更新材质 UBO
-            MaterialData matData = MaterialUboBuilder.BuildMaterialData(material, mesh.UseGeneratedTangents);
-            _materialUBO.Update(ref matData);
+            // 更新材质 UBO（带缓存优化）
+            UpdateMaterialUBOs(material, mesh.UseGeneratedTangents);
 
-            // 更新 UV 变换 UBO
-            UVTransformData uvTransformData = MaterialTextureBinder.BuildUVTransformData(material);
-            _uvTransformUBO.Update(ref uvTransformData);
+            // 更新 UV 变换 UBO（懒更新）
+            UpdateUVTransformUBO(material);
 
             // 绑定材质纹理
             if (material != null) {
@@ -114,11 +132,49 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
+        /// 更新材质 UBO（带缓存优化，避免重复更新相同材质）
+        /// </summary>
+        void UpdateMaterialUBOs(Material material, bool useGeneratedTangents) {
+            int extensionFlags = (int)MaterialUboBuilder.BuildExtensionFlags(material);
+
+            // 仅当材质变化时更新 MaterialCoreData UBO
+            if (_lastMaterial != material) {
+                MaterialCoreData coreData = MaterialUboBuilder.BuildMaterialCoreData(material, useGeneratedTangents);
+                _materialCoreUBO.Update(ref coreData);
+                _lastMaterial = material;
+                _lastExtensionFlags = extensionFlags;
+                _uvTransformDirty = true;
+
+                // 材质变化时也需要更新 MaterialExtensionData UBO
+                MaterialExtensionData extData = MaterialUboBuilder.BuildMaterialExtensionData(material);
+                _materialExtUBO.Update(ref extData);
+            }
+            else if (_lastExtensionFlags != extensionFlags) {
+                // 仅扩展标志变化时更新扩展数据
+                MaterialExtensionData extData = MaterialUboBuilder.BuildMaterialExtensionData(material);
+                _materialExtUBO.Update(ref extData);
+                _lastExtensionFlags = extensionFlags;
+            }
+        }
+
+        /// <summary>
+        /// 更新 UV 变换 UBO（懒更新）
+        /// </summary>
+        void UpdateUVTransformUBO(Material material) {
+            if (!_uvTransformDirty) return;
+
+            UVTransformData uvTransformData = MaterialTextureBinder.BuildUVTransformData(material);
+            _uvTransformUBO.Update(ref uvTransformData);
+            _uvTransformDirty = false;
+        }
+
+        /// <summary>
         /// 绑定 UBO 到着色器
         /// </summary>
         void BindUBOsToShader(Shader shader) {
             _sceneUBO.BindToShader(shader.ProgramHandle, "SceneData");
-            _materialUBO.BindToShader(shader.ProgramHandle, "MaterialData");
+            _materialCoreUBO.BindToShader(shader.ProgramHandle, "MaterialCoreData");
+            _materialExtUBO.BindToShader(shader.ProgramHandle, "MaterialExtensionData");
             _lightsUBO.BindToShader(shader.ProgramHandle, "LightsData");
             _renderStateUBO.BindToShader(shader.ProgramHandle, "RenderStateData");
             _uvTransformUBO.BindToShader(shader.ProgramHandle, "UVTransformData");
@@ -221,7 +277,8 @@ namespace DotnetGltfRenderer {
             _volumeScatterUBO.Update(ref scatterData);
 
             // Scatter samples 保持独立 uniform（数组太大不适合 UBO）
-            SetScatterSamplesUniforms(shader);
+            // 只在首次使用该着色器时设置（静态数据）
+            SetScatterSamplesUniformsOnce(shader);
 
             if (!context.IsScatterPass && context.HasScatterFramebuffer) {
                 shader.SetUniform("u_ScatterFramebufferSampler", (int)MaterialTextureSlot.ScatterFramebuffer);
@@ -230,9 +287,15 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
-        /// 设置散射样本 uniform
+        /// 设置散射样本 uniform（仅在首次使用该着色器时设置）
+        /// ScatterSamples 是静态数据，无需每帧更新
         /// </summary>
-        void SetScatterSamplesUniforms(Shader shader) {
+        void SetScatterSamplesUniformsOnce(Shader shader) {
+            // 检查是否已设置过
+            if (_scatterSamplesSetShaders.Contains(shader.ProgramHandle)) {
+                return;
+            }
+
             float[] samples = VolumeScatterExtension.ScatterSamples;
             if (samples == null) return;
 
@@ -241,6 +304,9 @@ namespace DotnetGltfRenderer {
                 int idx = i * 3;
                 shader.SetUniform($"u_ScatterSamples[{i}]", new Vector3(samples[idx], samples[idx + 1], samples[idx + 2]));
             }
+
+            // 标记为已设置
+            _scatterSamplesSetShaders.Add(shader.ProgramHandle);
         }
 
         /// <summary>

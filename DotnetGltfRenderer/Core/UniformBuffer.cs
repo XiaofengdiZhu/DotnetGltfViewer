@@ -78,137 +78,146 @@ namespace DotnetGltfRenderer {
     }
 
     /// <summary>
-    /// 材质数据 UBO（每个 mesh 更新）
-    /// std140 布局，对齐官方 material_info.glsl 的 uniform 定义
-    /// 注意：std140 布局中 vec3 需要 16 字节对齐
+    /// 材质核心数据 UBO（高频更新，每个材质更新）
+    /// Binding Point: 1
+    /// std140 布局
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct MaterialData {
-        // ============ PBR Core (对齐官方) ============
-        public Vector4 BaseColorFactor; // u_BaseColorFactor (vec4) - 16 bytes, offset 0
-        public Vector4 EmissiveFactor; // u_EmissiveFactor (vec4) - 16 bytes, offset 16
+    public struct MaterialCoreData {
+        // ============ PBR Core ============
+        public Vector4 BaseColorFactor; // 16 bytes, offset 0
+        public Vector4 EmissiveFactor; // 16 bytes, offset 16
 
-        public float MetallicFactor; // u_MetallicFactor - 4 bytes, offset 32
-        public float RoughnessFactor; // u_RoughnessFactor - 4 bytes, offset 36
-        public float NormalScale; // u_NormalScale - 4 bytes, offset 40
-        public float OcclusionStrength; // u_OcclusionStrength - 4 bytes, offset 44
+        public float MetallicFactor; // 4 bytes, offset 32
+        public float RoughnessFactor; // 4 bytes, offset 36
+        public float NormalScale; // 4 bytes, offset 40
+        public float OcclusionStrength; // 4 bytes, offset 44
 
         // ============ Alpha ============
-        public int AlphaMode; // 0=OPAQUE, 1=MASK, 2=BLEND - 4 bytes, offset 48
-        public float AlphaCutoff; // u_AlphaCutoff - 4 bytes, offset 52
+        public int AlphaMode; // 4 bytes, offset 48
+        public float AlphaCutoff; // 4 bytes, offset 52
         public int UseGeneratedTangents; // 4 bytes, offset 56
-        public float UnlitPadding0; // 4 bytes, offset 60
+        public float CorePadding0; // 4 bytes, offset 60
 
-        // ============ IOR (KHR_materials_ior) ============
-        public float Ior; // u_Ior (default: 1.5) - 4 bytes, offset 64
-        public float IorPadding0; // padding for 16-byte alignment - 4 bytes, offset 68
-        public float IorPadding1; // padding - 4 bytes, offset 72
-        public float IorPadding2; // padding - 4 bytes, offset 76
-
-        // ============ Emissive Strength (KHR_materials_emissive_strength) ============
-        public float EmissiveStrength; // u_EmissiveStrength (default: 1.0) - 4 bytes, offset 80
-        public float EmissiveStrengthPadding0; // padding - 4 bytes, offset 84
-        public float EmissiveStrengthPadding1; // padding - 4 bytes, offset 88
-        public float EmissiveStrengthPadding2; // padding - 4 bytes, offset 92
-
-        // ============ Specular (KHR_materials_specular) ============
-        public float SpecularFactor; // u_KHR_materials_specular_specularFactor - 4 bytes, offset 96
-        public float SpecularPadding0; // padding - 4 bytes, offset 100
-        public float SpecularPadding1; // padding - 4 bytes, offset 104
-        public float SpecularPadding2; // padding - 4 bytes, offset 108
-        public Vector4 SpecularColorFactor; // u_KHR_materials_specular_specularColorFactor (vec4 for alignment) - 16 bytes, offset 112
-
-        // ============ Sheen (KHR_materials_sheen) ============
-        public Vector4 SheenColorFactor; // u_SheenColorFactor (vec4 for alignment) - 16 bytes, offset 128
-        public float SheenRoughnessFactor; // u_SheenRoughnessFactor - 4 bytes, offset 144
-        public float SheenPadding0; // padding - 4 bytes, offset 148
-        public float SheenPadding1; // padding - 4 bytes, offset 152
-        public float SheenPadding2; // padding - 4 bytes, offset 156
-
-        // ============ ClearCoat (KHR_materials_clearcoat) ============
-        public float ClearCoatFactor; // u_ClearcoatFactor - 4 bytes, offset 160
-        public float ClearCoatRoughness; // u_ClearcoatRoughnessFactor - 4 bytes, offset 164
-        public float ClearCoatNormalScale; // u_ClearcoatNormalScale - 4 bytes, offset 168
-        public float ClearCoatPadding0; // padding - 4 bytes, offset 172
-
-        // ============ Transmission (KHR_materials_transmission) ============
-        public float TransmissionFactor; // u_TransmissionFactor - 4 bytes, offset 176
-        public float TransmissionPadding0; // padding - 4 bytes, offset 180
-        public float TransmissionPadding1; // padding - 4 bytes, offset 184
-        public float TransmissionPadding2; // padding - 4 bytes, offset 188
-
-        // ============ Volume (KHR_materials_volume) ============
-        public float ThicknessFactor; // u_ThicknessFactor - 4 bytes, offset 192
-        public float AttenuationDistance; // u_AttenuationDistance - 4 bytes, offset 196
-        public float VolumePadding0; // padding - 4 bytes, offset 200
-        public float VolumePadding1; // padding - 4 bytes, offset 204
-        public Vector4 AttenuationColor; // u_AttenuationColor (vec4 for alignment) - 16 bytes, offset 208
-
-        // ============ Iridescence (KHR_materials_iridescence) ============
-        public float IridescenceFactor; // u_IridescenceFactor - 4 bytes, offset 224
-        public float IridescenceIor; // u_IridescenceIor - 4 bytes, offset 228
-        public float IridescenceThicknessMin; // u_IridescenceThicknessMinimum - 4 bytes, offset 232
-        public float IridescenceThicknessMax; // u_IridescenceThicknessMaximum - 4 bytes, offset 236
-
-        // ============ Dispersion (KHR_materials_dispersion) ============
-        public float Dispersion; // u_Dispersion - 4 bytes, offset 240
-        public float DispersionPadding0; // padding - 4 bytes, offset 244
-        public float DispersionPadding1; // padding - 4 bytes, offset 248
-        public float DispersionPadding2; // padding - 4 bytes, offset 252
-
-        // ============ Diffuse Transmission (KHR_materials_diffuse_transmission) ============
-        public float DiffuseTransmissionFactor; // u_DiffuseTransmissionFactor - 4 bytes, offset 256
-        public float DiffuseTransmissionPadding0; // padding - 4 bytes, offset 260
-        public float DiffuseTransmissionPadding1; // padding - 4 bytes, offset 264
-        public float DiffuseTransmissionPadding2; // padding - 4 bytes, offset 268
-        public Vector4 DiffuseTransmissionColorFactor; // u_DiffuseTransmissionColorFactor (vec4 for alignment) - 16 bytes, offset 272
-
-        // ============ Anisotropy (KHR_materials_anisotropy) ============
-        public Vector4 Anisotropy; // u_Anisotropy (xyz=direction, w=strength) - 16 bytes, offset 288
-
-        // ============ UV Indices (用于纹理采样) ============
-        public int BaseColorUVSet; // u_BaseColorUVSet - 4 bytes, offset 304
-        public int MetallicRoughnessUVSet; // u_MetallicRoughnessUVSet - 4 bytes, offset 308
-        public int NormalUVSet; // u_NormalUVSet - 4 bytes, offset 312
-        public int OcclusionUVSet; // u_OcclusionUVSet - 4 bytes, offset 316
-        public int EmissiveUVSet; // u_EmissiveUVSet - 4 bytes, offset 320
-        public int DiffuseUVSet; // u_DiffuseUVSet (SpecularGlossiness) - 4 bytes, offset 324
-        public int SpecularGlossinessUVSet; // u_SpecularGlossinessUVSet - 4 bytes, offset 328
-        public int UVPadding0; // padding - 4 bytes, offset 332
-
-        // Extension UV sets (继续)
-        public int ClearCoatUVSet; // u_ClearcoatUVSet - 4 bytes, offset 336
-        public int ClearCoatRoughnessUVSet; // u_ClearcoatRoughnessUVSet - 4 bytes, offset 340
-        public int ClearCoatNormalUVSet; // u_ClearcoatNormalUVSet - 4 bytes, offset 344
-        public int IridescenceUVSet; // u_IridescenceUVSet - 4 bytes, offset 348
-        public int IridescenceThicknessUVSet; // u_IridescenceThicknessUVSet - 4 bytes, offset 352
-        public int SheenColorUVSet; // u_SheenColorUVSet - 4 bytes, offset 356
-        public int SheenRoughnessUVSet; // u_SheenRoughnessUVSet - 4 bytes, offset 360
-        public int SpecularUVSet; // u_SpecularUVSet - 4 bytes, offset 364
-        public int SpecularColorUVSet; // u_SpecularColorUVSet - 4 bytes, offset 368
-        public int TransmissionUVSet; // u_TransmissionUVSet - 4 bytes, offset 372
-        public int ThicknessUVSet; // u_ThicknessUVSet - 4 bytes, offset 376
-        public int DiffuseTransmissionUVSet; // u_DiffuseTransmissionUVSet - 4 bytes, offset 380
-        public int DiffuseTransmissionColorUVSet; // u_DiffuseTransmissionColorUVSet - 4 bytes, offset 384
-        public int AnisotropyUVSet; // u_AnisotropyUVSet - 4 bytes, offset 388
-        public int UVSetPadding0; // padding - 4 bytes, offset 392
-        public int UVSetPadding1; // padding - 4 bytes, offset 396
+        // ============ UV Indices ============
+        public int BaseColorUVSet; // 4 bytes, offset 64
+        public int MetallicRoughnessUVSet; // 4 bytes, offset 68
+        public int NormalUVSet; // 4 bytes, offset 72
+        public int OcclusionUVSet; // 4 bytes, offset 76
+        public int EmissiveUVSet; // 4 bytes, offset 80
+        public int DiffuseUVSet; // 4 bytes, offset 84
+        public int SpecularGlossinessUVSet; // 4 bytes, offset 88
+        public int CoreUVPadding0; // 4 bytes, offset 92
 
         // ============ Flags ============
-        public int ExtensionFlags; // 启用的扩展标志 - 4 bytes, offset 400
-        public int TextureFlags; // 纹理存在标志 - 4 bytes, offset 404
-        public int FlagsPadding0; // padding - 4 bytes, offset 408
-        public int FlagsPadding1; // padding - 4 bytes, offset 412
+        public int ExtensionFlags; // 4 bytes, offset 96
+        public int TextureFlags; // 4 bytes, offset 100
+        public int FlagsPadding0; // 4 bytes, offset 104
+        public int FlagsPadding1; // 4 bytes, offset 108
 
-        // ============ SpecularGlossiness (KHR_materials_pbrSpecularGlossiness) ============
-        // std140 布局中 vec3 需要 16 字节对齐，必须使用 Vector4 来保证正确的内存布局
-        public Vector4 SpecularFactorSG; // u_SpecularFactor (vec4 for std140 alignment, only xyz used) - 16 bytes, offset 416
-        public float GlossinessFactor; // uGlContext.GLossinessFactor - 4 bytes, offset 432
-        public float _SGPad0; // padding - 4 bytes, offset 436
-        public float _SGPad1; // padding - 4 bytes, offset 440
-        public float _SGPad2; // padding - 4 bytes, offset 444
+        // Total: 112 bytes
+    }
 
-        // Total: 448 bytes
+    /// <summary>
+    /// 材质扩展数据 UBO（仅在启用扩展时更新）
+    /// Binding Point: 6
+    /// std140 布局
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct MaterialExtensionData {
+        // ============ IOR ============
+        public float Ior; // 4 bytes, offset 0
+        public float IorPadding0; // 4 bytes, offset 4
+        public float IorPadding1; // 4 bytes, offset 8
+        public float IorPadding2; // 4 bytes, offset 12
+
+        // ============ Emissive Strength ============
+        public float EmissiveStrength; // 4 bytes, offset 16
+        public float EmissiveStrengthPadding0; // 4 bytes, offset 20
+        public float EmissiveStrengthPadding1; // 4 bytes, offset 24
+        public float EmissiveStrengthPadding2; // 4 bytes, offset 28
+
+        // ============ Specular ============
+        public float SpecularFactor; // 4 bytes, offset 32
+        public float SpecularPadding0; // 4 bytes, offset 36
+        public float SpecularPadding1; // 4 bytes, offset 40
+        public float SpecularPadding2; // 4 bytes, offset 44
+        public Vector4 SpecularColorFactor; // 16 bytes, offset 48
+
+        // ============ Sheen ============
+        public Vector4 SheenColorFactor; // 16 bytes, offset 64
+        public float SheenRoughnessFactor; // 4 bytes, offset 80
+        public float SheenPadding0; // 4 bytes, offset 84
+        public float SheenPadding1; // 4 bytes, offset 88
+        public float SheenPadding2; // 4 bytes, offset 92
+
+        // ============ ClearCoat ============
+        public float ClearCoatFactor; // 4 bytes, offset 96
+        public float ClearCoatRoughness; // 4 bytes, offset 100
+        public float ClearCoatNormalScale; // 4 bytes, offset 104
+        public float ClearCoatPadding0; // 4 bytes, offset 108
+
+        // ============ Transmission ============
+        public float TransmissionFactor; // 4 bytes, offset 112
+        public float TransmissionPadding0; // 4 bytes, offset 116
+        public float TransmissionPadding1; // 4 bytes, offset 120
+        public float TransmissionPadding2; // 4 bytes, offset 124
+
+        // ============ Volume ============
+        public float ThicknessFactor; // 4 bytes, offset 128
+        public float AttenuationDistance; // 4 bytes, offset 132
+        public float VolumePadding0; // 4 bytes, offset 136
+        public float VolumePadding1; // 4 bytes, offset 140
+        public Vector4 AttenuationColor; // 16 bytes, offset 144
+
+        // ============ Iridescence ============
+        public float IridescenceFactor; // 4 bytes, offset 160
+        public float IridescenceIor; // 4 bytes, offset 164
+        public float IridescenceThicknessMin; // 4 bytes, offset 168
+        public float IridescenceThicknessMax; // 4 bytes, offset 172
+
+        // ============ Dispersion ============
+        public float Dispersion; // 4 bytes, offset 176
+        public float DispersionPadding0; // 4 bytes, offset 180
+        public float DispersionPadding1; // 4 bytes, offset 184
+        public float DispersionPadding2; // 4 bytes, offset 188
+
+        // ============ Diffuse Transmission ============
+        public float DiffuseTransmissionFactor; // 4 bytes, offset 192
+        public float DiffuseTransmissionPadding0; // 4 bytes, offset 196
+        public float DiffuseTransmissionPadding1; // 4 bytes, offset 200
+        public float DiffuseTransmissionPadding2; // 4 bytes, offset 204
+        public Vector4 DiffuseTransmissionColorFactor; // 16 bytes, offset 208
+
+        // ============ Anisotropy ============
+        public Vector4 Anisotropy; // 16 bytes, offset 224
+
+        // ============ Extension UV Sets ============
+        public int ClearCoatUVSet; // 4 bytes, offset 240
+        public int ClearCoatRoughnessUVSet; // 4 bytes, offset 244
+        public int ClearCoatNormalUVSet; // 4 bytes, offset 248
+        public int IridescenceUVSet; // 4 bytes, offset 252
+        public int IridescenceThicknessUVSet; // 4 bytes, offset 256
+        public int SheenColorUVSet; // 4 bytes, offset 260
+        public int SheenRoughnessUVSet; // 4 bytes, offset 264
+        public int SpecularUVSet; // 4 bytes, offset 268
+        public int SpecularColorUVSet; // 4 bytes, offset 272
+        public int TransmissionUVSet; // 4 bytes, offset 276
+        public int ThicknessUVSet; // 4 bytes, offset 280
+        public int DiffuseTransmissionUVSet; // 4 bytes, offset 284
+        public int DiffuseTransmissionColorUVSet; // 4 bytes, offset 288
+        public int AnisotropyUVSet; // 4 bytes, offset 292
+        public int UVSetPadding0; // 4 bytes, offset 296
+        public int UVSetPadding1; // 4 bytes, offset 300
+
+        // ============ SpecularGlossiness ============
+        public Vector4 SpecularFactorSG; // 16 bytes, offset 304
+        public float GlossinessFactor; // 4 bytes, offset 320
+        public float SGPad0; // 4 bytes, offset 324
+        public float SGPad1; // 4 bytes, offset 328
+        public float SGPad2; // 4 bytes, offset 332
+
+        // Total: 336 bytes
     }
 
     /// <summary>

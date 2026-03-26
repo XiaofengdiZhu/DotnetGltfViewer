@@ -19,134 +19,139 @@ layout(std140) uniform SceneData {
 } scene;
 
 // ============================================================================
-// MaterialData UBO - 材质数据 (Binding Point 1)
-// Total: 448 bytes
+// MaterialCoreData UBO - 材质核心数据 (Binding Point 1)
+// Total: 112 bytes
 // ============================================================================
-layout(std140) uniform MaterialData {
-// ============ PBR Core ============
-    vec4 BaseColorFactor;// offset 0, u_BaseColorFactor
-    vec4 EmissiveFactor;// offset 16, u_EmissiveFactor
+layout(std140) uniform MaterialCoreData {
+    // ============ PBR Core ============
+    vec4 BaseColorFactor;     // offset 0
+    vec4 EmissiveFactor;      // offset 16
 
-    float MetallicFactor;// offset 32, u_MetallicFactor
-    float RoughnessFactor;// offset 36, u_RoughnessFactor
-    float NormalScale;// offset 40, u_NormalScale
-    float OcclusionStrength;// offset 44, u_OcclusionStrength
+    float MetallicFactor;     // offset 32
+    float RoughnessFactor;    // offset 36
+    float NormalScale;        // offset 40
+    float OcclusionStrength;  // offset 44
 
-// ============ Alpha ============
-    int AlphaMode;// offset 48, 0=OPAQUE, 1=MASK, 2=BLEND
-    float AlphaCutoff;// offset 52, u_AlphaCutoff
-    int UseGeneratedTangents;// offset 56
-    float _Padding0;// offset 60
+    // ============ Alpha ============
+    int AlphaMode;            // offset 48
+    float AlphaCutoff;        // offset 52
+    int UseGeneratedTangents; // offset 56
+    float _CorePad0;          // offset 60
 
-// ============ IOR (KHR_materials_ior) ============
-    float Ior;// offset 64, u_Ior (default: 1.5)
-    float _IorPad0;// offset 68
-    float _IorPad1;// offset 72
-    float _IorPad2;// offset 76
+    // ============ UV Indices ============
+    int BaseColorUVSet;       // offset 64
+    int MetallicRoughnessUVSet; // offset 68
+    int NormalUVSet;          // offset 72
+    int OcclusionUVSet;       // offset 76
+    int EmissiveUVSet;        // offset 80
+    int DiffuseUVSet;         // offset 84
+    int SpecularGlossinessUVSet; // offset 88
+    int _CoreUVPad0;          // offset 92
 
-// ============ Emissive Strength (KHR_materials_emissive_strength) ============
-    float EmissiveStrength;// offset 80, u_EmissiveStrength (default: 1.0)
-    float _EmissiveStrPad0;// offset 84
-    float _EmissiveStrPad1;// offset 88
-    float _EmissiveStrPad2;// offset 92
+    // ============ Flags ============
+    int ExtensionFlags;       // offset 96
+    int TextureFlags;         // offset 100
+    int _FlagsPad0;           // offset 104
+    int _FlagsPad1;           // offset 108
+} MaterialCore;
 
-// ============ Specular (KHR_materials_specular) ============
-    float SpecularFactor;// offset 96, u_KHR_materials_specular_specularFactor
-    float _SpecularPad0;// offset 100
-    float _SpecularPad1;// offset 104
-    float _SpecularPad2;// offset 108
-    vec4 SpecularColorFactor;// offset 112, u_KHR_materials_specular_specularColorFactor
+// ============================================================================
+// MaterialExtensionData UBO - 材质扩展数据 (Binding Point 6)
+// Total: 336 bytes
+// ============================================================================
+layout(std140) uniform MaterialExtensionData {
+    // ============ IOR ============
+    float Ior;                // offset 0
+    float _IorPad0;           // offset 4
+    float _IorPad1;           // offset 8
+    float _IorPad2;           // offset 12
 
-// ============ Sheen (KHR_materials_sheen) ============
-    vec4 SheenColorFactor;// offset 128, u_SheenColorFactor
-    float SheenRoughnessFactor;// offset 144, u_SheenRoughnessFactor
-    float _SheenPad0;// offset 148
-    float _SheenPad1;// offset 152
-    float _SheenPad2;// offset 156
+    // ============ Emissive Strength ============
+    float EmissiveStrength;   // offset 16
+    float _EmissiveStrPad0;   // offset 20
+    float _EmissiveStrPad1;   // offset 24
+    float _EmissiveStrPad2;   // offset 28
 
-// ============ ClearCoat (KHR_materials_clearcoat) ============
-    float ClearCoatFactor;// offset 160, u_ClearcoatFactor
-    float ClearCoatRoughness;// offset 164, u_ClearcoatRoughnessFactor
-    float ClearCoatNormalScale;// offset 168, u_ClearcoatNormalScale
-    float _ClearCoatPad0;// offset 172
+    // ============ Specular ============
+    float SpecularFactor;     // offset 32
+    float _SpecularPad0;      // offset 36
+    float _SpecularPad1;      // offset 40
+    float _SpecularPad2;      // offset 44
+    vec4 SpecularColorFactor; // offset 48
 
-// ============ Transmission (KHR_materials_transmission) ============
-    float TransmissionFactor;// offset 176, u_TransmissionFactor
-    float _TransmissionPad0;// offset 180
-    float _TransmissionPad1;// offset 184
-    float _TransmissionPad2;// offset 188
+    // ============ Sheen ============
+    vec4 SheenColorFactor;    // offset 64
+    float SheenRoughnessFactor; // offset 80
+    float _SheenPad0;         // offset 84
+    float _SheenPad1;         // offset 88
+    float _SheenPad2;         // offset 92
 
-// ============ Volume (KHR_materials_volume) ============
-    float ThicknessFactor;// offset 192, u_ThicknessFactor
-    float AttenuationDistance;// offset 196, u_AttenuationDistance
-    float _VolumePad0;// offset 200
-    float _VolumePad1;// offset 204
-    vec4 AttenuationColor;// offset 208, u_AttenuationColor
+    // ============ ClearCoat ============
+    float ClearCoatFactor;    // offset 96
+    float ClearCoatRoughness; // offset 100
+    float ClearCoatNormalScale; // offset 104
+    float _ClearCoatPad0;     // offset 108
 
-// ============ Iridescence (KHR_materials_iridescence) ============
-    float IridescenceFactor;// offset 224, u_IridescenceFactor
-    float IridescenceIor;// offset 228, u_IridescenceIor
-    float IridescenceThicknessMin;// offset 232, u_IridescenceThicknessMinimum
-    float IridescenceThicknessMax;// offset 236, u_IridescenceThicknessMaximum
+    // ============ Transmission ============
+    float TransmissionFactor; // offset 112
+    float _TransmissionPad0;  // offset 116
+    float _TransmissionPad1;  // offset 120
+    float _TransmissionPad2;  // offset 124
 
-// ============ Dispersion (KHR_materials_dispersion) ============
-    float Dispersion;// offset 240, u_Dispersion
-    float _DispersionPad0;// offset 244
-    float _DispersionPad1;// offset 248
-    float _DispersionPad2;// offset 252
+    // ============ Volume ============
+    float ThicknessFactor;    // offset 128
+    float AttenuationDistance; // offset 132
+    float _VolumePad0;        // offset 136
+    float _VolumePad1;        // offset 140
+    vec4 AttenuationColor;    // offset 144
 
-// ============ Diffuse Transmission (KHR_materials_diffuse_transmission) ============
-    float DiffuseTransmissionFactor;// offset 256, u_DiffuseTransmissionFactor
-    float _DiffTransPad0;// offset 260
-    float _DiffTransPad1;// offset 264
-    float _DiffTransPad2;// offset 268
-    vec4 DiffuseTransmissionColorFactor;// offset 272, u_DiffuseTransmissionColorFactor
+    // ============ Iridescence ============
+    float IridescenceFactor;  // offset 160
+    float IridescenceIor;     // offset 164
+    float IridescenceThicknessMin; // offset 168
+    float IridescenceThicknessMax; // offset 172
 
-// ============ Anisotropy (KHR_materials_anisotropy) ============
-    vec4 Anisotropy;// offset 288, u_Anisotropy (xyz=direction, w=strength)
+    // ============ Dispersion ============
+    float Dispersion;         // offset 176
+    float _DispersionPad0;    // offset 180
+    float _DispersionPad1;    // offset 184
+    float _DispersionPad2;    // offset 188
 
-// ============ UV Indices ============
-    int BaseColorUVSet;// offset 304
-    int MetallicRoughnessUVSet;// offset 308
-    int NormalUVSet;// offset 312
-    int OcclusionUVSet;// offset 316
-    int EmissiveUVSet;// offset 320
-    int DiffuseUVSet;// offset 324 (SpecularGlossiness)
-    int SpecularGlossinessUVSet;// offset 328
-    int _UVPad0;// offset 332
+    // ============ Diffuse Transmission ============
+    float DiffuseTransmissionFactor; // offset 192
+    float _DiffTransPad0;     // offset 196
+    float _DiffTransPad1;     // offset 200
+    float _DiffTransPad2;     // offset 204
+    vec4 DiffuseTransmissionColorFactor; // offset 208
 
-// Extension UV sets
-    int ClearCoatUVSet;// offset 336
-    int ClearCoatRoughnessUVSet;// offset 340
-    int ClearCoatNormalUVSet;// offset 344
-    int IridescenceUVSet;// offset 348
-    int IridescenceThicknessUVSet;// offset 352
-    int SheenColorUVSet;// offset 356
-    int SheenRoughnessUVSet;// offset 360
-    int SpecularUVSet;// offset 364
-    int SpecularColorUVSet;// offset 368
-    int TransmissionUVSet;// offset 372
-    int ThicknessUVSet;// offset 376
-    int DiffuseTransmissionUVSet;// offset 380
-    int DiffuseTransmissionColorUVSet;// offset 384
-    int AnisotropyUVSet;// offset 388
-    int _UVSetPad0;// offset 392
-    int _UVSetPad1;// offset 396
+    // ============ Anisotropy ============
+    vec4 Anisotropy;          // offset 224
 
-// ============ Flags ============
-    int ExtensionFlags;// offset 400
-    int TextureFlags;// offset 404
-    int _FlagsPad0;// offset 408
-    int _FlagsPad1;// offset 412
+    // ============ Extension UV Sets ============
+    int ClearCoatUVSet;       // offset 240
+    int ClearCoatRoughnessUVSet; // offset 244
+    int ClearCoatNormalUVSet; // offset 248
+    int IridescenceUVSet;     // offset 252
+    int IridescenceThicknessUVSet; // offset 256
+    int SheenColorUVSet;      // offset 260
+    int SheenRoughnessUVSet;  // offset 264
+    int SpecularUVSet;        // offset 268
+    int SpecularColorUVSet;   // offset 272
+    int TransmissionUVSet;    // offset 276
+    int ThicknessUVSet;       // offset 280
+    int DiffuseTransmissionUVSet; // offset 284
+    int DiffuseTransmissionColorUVSet; // offset 288
+    int AnisotropyUVSet;      // offset 292
+    int _UVSetPad0;           // offset 296
+    int _UVSetPad1;           // offset 300
 
-// ============ SpecularGlossiness (KHR_materials_pbrSpecularGlossiness) ============
-// std140 布局中 vec3 需要 16 字节对齐，使用 vec4 保证正确对齐
-    vec4 SpecularFactorSG;// offset 416, u_SpecularFactor (vec4, only xyz used)
-    float GlossinessFactor;// offset 432, u_GlossinessFactor
-    float _SGPad0;// offset 436
-    float _SGPad1;// offset 440
-    float _SGPad2;// offset 444
-} Material;
+    // ============ SpecularGlossiness ============
+    vec4 SpecularFactorSG;    // offset 304
+    float GlossinessFactor;   // offset 320
+    float _SGPad0;            // offset 324
+    float _SGPad1;            // offset 328
+    float _SGPad2;            // offset 332
+} MaterialExt;
 
 // ============================================================================
 // LightsData UBO - 多光源支持 (Binding Point 2)
@@ -191,57 +196,65 @@ layout(std140) uniform LightsData {
 #define u_MipCount scene.MipCount
 // EnvRotation: construct mat3 from 3 vec4 columns (using xyz)
 #define u_EnvRotation mat3(scene.EnvRotationCol0.xyz, scene.EnvRotationCol1.xyz, scene.EnvRotationCol2.xyz)
-#define u_MetallicFactor Material.MetallicFactor
-#define u_RoughnessFactor Material.RoughnessFactor
-#define u_BaseColorFactor Material.BaseColorFactor
-#define u_EmissiveFactor Material.EmissiveFactor.xyz
-#define u_NormalScale Material.NormalScale
-#define u_OcclusionStrength Material.OcclusionStrength
-#define u_AlphaCutoff Material.AlphaCutoff
-#define u_Ior Material.Ior
-#define u_EmissiveStrength Material.EmissiveStrength
-#define u_ClearcoatFactor Material.ClearCoatFactor
-#define u_ClearcoatRoughnessFactor Material.ClearCoatRoughness
-#define u_ClearcoatNormalScale Material.ClearCoatNormalScale
-#define u_SheenColorFactor Material.SheenColorFactor.xyz
-#define u_SheenRoughnessFactor Material.SheenRoughnessFactor
-#define u_KHR_materials_specular_specularFactor Material.SpecularFactor
-#define u_KHR_materials_specular_specularColorFactor Material.SpecularColorFactor.xyz
-#define u_TransmissionFactor Material.TransmissionFactor
-#define u_ThicknessFactor Material.ThicknessFactor
-#define u_AttenuationColor Material.AttenuationColor.xyz
-#define u_AttenuationDistance Material.AttenuationDistance
-#define u_IridescenceFactor Material.IridescenceFactor
-#define u_IridescenceIor Material.IridescenceIor
-#define u_IridescenceThicknessMinimum Material.IridescenceThicknessMin
-#define u_IridescenceThicknessMaximum Material.IridescenceThicknessMax
-#define u_Dispersion Material.Dispersion
-#define u_DiffuseTransmissionFactor Material.DiffuseTransmissionFactor
-#define u_DiffuseTransmissionColorFactor Material.DiffuseTransmissionColorFactor.xyz
-#define u_Anisotropy Material.Anisotropy
+#define u_MetallicFactor MaterialCore.MetallicFactor
+#define u_RoughnessFactor MaterialCore.RoughnessFactor
+#define u_BaseColorFactor MaterialCore.BaseColorFactor
+#define u_EmissiveFactor MaterialCore.EmissiveFactor.xyz
+#define u_NormalScale MaterialCore.NormalScale
+#define u_OcclusionStrength MaterialCore.OcclusionStrength
+#define u_AlphaCutoff MaterialCore.AlphaCutoff
 
-// UV Set 访问
-#define u_BaseColorUVSet Material.BaseColorUVSet
-#define u_MetallicRoughnessUVSet Material.MetallicRoughnessUVSet
-#define u_NormalUVSet Material.NormalUVSet
-#define u_OcclusionUVSet Material.OcclusionUVSet
-#define u_EmissiveUVSet Material.EmissiveUVSet
-#define u_DiffuseUVSet Material.DiffuseUVSet
-#define u_SpecularGlossinessUVSet Material.SpecularGlossinessUVSet
-#define u_ClearcoatUVSet Material.ClearCoatUVSet
-#define u_ClearcoatRoughnessUVSet Material.ClearCoatRoughnessUVSet
-#define u_ClearcoatNormalUVSet Material.ClearCoatNormalUVSet
-#define u_IridescenceUVSet Material.IridescenceUVSet
-#define u_IridescenceThicknessUVSet Material.IridescenceThicknessUVSet
-#define u_SheenColorUVSet Material.SheenColorUVSet
-#define u_SheenRoughnessUVSet Material.SheenRoughnessUVSet
-#define u_SpecularUVSet Material.SpecularUVSet
-#define u_SpecularColorUVSet Material.SpecularColorUVSet
-#define u_TransmissionUVSet Material.TransmissionUVSet
-#define u_ThicknessUVSet Material.ThicknessUVSet
-#define u_DiffuseTransmissionUVSet Material.DiffuseTransmissionUVSet
-#define u_DiffuseTransmissionColorUVSet Material.DiffuseTransmissionColorUVSet
-#define u_AnisotropyUVSet Material.AnisotropyUVSet
+// Extension factors (from MaterialExt)
+#define u_Ior MaterialExt.Ior
+#define u_EmissiveStrength MaterialExt.EmissiveStrength
+#define u_ClearcoatFactor MaterialExt.ClearCoatFactor
+#define u_ClearcoatRoughnessFactor MaterialExt.ClearCoatRoughness
+#define u_ClearcoatNormalScale MaterialExt.ClearCoatNormalScale
+#define u_SheenColorFactor MaterialExt.SheenColorFactor.xyz
+#define u_SheenRoughnessFactor MaterialExt.SheenRoughnessFactor
+#define u_KHR_materials_specular_specularFactor MaterialExt.SpecularFactor
+#define u_KHR_materials_specular_specularColorFactor MaterialExt.SpecularColorFactor.xyz
+#define u_TransmissionFactor MaterialExt.TransmissionFactor
+#define u_ThicknessFactor MaterialExt.ThicknessFactor
+#define u_AttenuationColor MaterialExt.AttenuationColor.xyz
+#define u_AttenuationDistance MaterialExt.AttenuationDistance
+#define u_IridescenceFactor MaterialExt.IridescenceFactor
+#define u_IridescenceIor MaterialExt.IridescenceIor
+#define u_IridescenceThicknessMinimum MaterialExt.IridescenceThicknessMin
+#define u_IridescenceThicknessMaximum MaterialExt.IridescenceThicknessMax
+#define u_Dispersion MaterialExt.Dispersion
+#define u_DiffuseTransmissionFactor MaterialExt.DiffuseTransmissionFactor
+#define u_DiffuseTransmissionColorFactor MaterialExt.DiffuseTransmissionColorFactor.xyz
+#define u_Anisotropy MaterialExt.Anisotropy
+
+// UV Set 访问 (Core)
+#define u_BaseColorUVSet MaterialCore.BaseColorUVSet
+#define u_MetallicRoughnessUVSet MaterialCore.MetallicRoughnessUVSet
+#define u_NormalUVSet MaterialCore.NormalUVSet
+#define u_OcclusionUVSet MaterialCore.OcclusionUVSet
+#define u_EmissiveUVSet MaterialCore.EmissiveUVSet
+#define u_DiffuseUVSet MaterialCore.DiffuseUVSet
+#define u_SpecularGlossinessUVSet MaterialCore.SpecularGlossinessUVSet
+
+// UV Set 访问 (Extension)
+#define u_ClearcoatUVSet MaterialExt.ClearCoatUVSet
+#define u_ClearcoatRoughnessUVSet MaterialExt.ClearCoatRoughnessUVSet
+#define u_ClearcoatNormalUVSet MaterialExt.ClearCoatNormalUVSet
+#define u_IridescenceUVSet MaterialExt.IridescenceUVSet
+#define u_IridescenceThicknessUVSet MaterialExt.IridescenceThicknessUVSet
+#define u_SheenColorUVSet MaterialExt.SheenColorUVSet
+#define u_SheenRoughnessUVSet MaterialExt.SheenRoughnessUVSet
+#define u_SpecularUVSet MaterialExt.SpecularUVSet
+#define u_SpecularColorUVSet MaterialExt.SpecularColorUVSet
+#define u_TransmissionUVSet MaterialExt.TransmissionUVSet
+#define u_ThicknessUVSet MaterialExt.ThicknessUVSet
+#define u_DiffuseTransmissionUVSet MaterialExt.DiffuseTransmissionUVSet
+#define u_DiffuseTransmissionColorUVSet MaterialExt.DiffuseTransmissionColorUVSet
+#define u_AnisotropyUVSet MaterialExt.AnisotropyUVSet
+
+// Flags
+#define u_ExtensionFlags MaterialCore.ExtensionFlags
+#define u_TextureFlags MaterialCore.TextureFlags
 
 // Light access
 #define u_Lights lightsData.lights
