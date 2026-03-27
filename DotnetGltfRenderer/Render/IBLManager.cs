@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using Silk.NET.OpenGLES;
 
 namespace DotnetGltfRenderer {
@@ -64,12 +65,7 @@ namespace DotnetGltfRenderer {
             }
 
             // 设置环境旋转矩阵（默认单位矩阵）
-            shader.SetUniformMatrix3(
-                "u_EnvRotation",
-                new System.Numerics.Vector3(1f, 0f, 0f),
-                new System.Numerics.Vector3(0f, 1f, 0f),
-                new System.Numerics.Vector3(0f, 0f, 1f)
-            );
+            shader.SetUniformMatrix3("u_EnvRotation", new Vector3(1f, 0f, 0f), new Vector3(0f, 1f, 0f), new Vector3(0f, 0f, 1f));
 
             // 绑定 IBL 纹理
             MaterialTextureBinder.BindIBLTextures(IblSampler);

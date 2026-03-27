@@ -31,7 +31,9 @@ namespace DotnetGltfRenderer {
 
         // 缓存的 context hash（每个 Pass 更新一次）
         int _cachedContextHash;
-        (bool useIBL, bool useLinearOutput, ToneMapMode toneMapMode, int lightCount, bool isScatterPass, DebugChannel debugChannel) _lastContextParams;
+
+        (bool useIBL, bool useLinearOutput, ToneMapMode toneMapMode, int lightCount, bool isScatterPass, DebugChannel debugChannel)
+            _lastContextParams;
 
         // 缓存的顶点着色器 hash（每帧更新一次，用于所有 MeshInstance）
         int _cachedVertShaderBaseHash;
@@ -92,8 +94,9 @@ namespace DotnetGltfRenderer {
         /// 计算 context defines hash，避免每个 MeshInstance 重复计算
         /// </summary>
         void UpdateContextHashIfNeeded(in RenderContext context) {
-            (bool UseIBL, bool UseLinearOutput, ToneMapMode ToneMapMode, int LightCount, bool IsScatterPass, DebugChannel DebugChannel) contextParams = (context.UseIBL,
-                context.UseLinearOutput, context.ToneMapMode, context.LightCount, context.IsScatterPass, context.DebugChannel);
+            (bool UseIBL, bool UseLinearOutput, ToneMapMode ToneMapMode, int LightCount, bool IsScatterPass, DebugChannel DebugChannel)
+                contextParams = (context.UseIBL, context.UseLinearOutput, context.ToneMapMode, context.LightCount, context.IsScatterPass,
+                    context.DebugChannel);
             if (_lastContextParams == contextParams) {
                 return; // context 未变化，使用缓存的 hash
             }
@@ -137,7 +140,6 @@ namespace DotnetGltfRenderer {
                 if (context.DebugChannel != DebugChannel.None) {
                     hash = hash * 31 + $"DEBUG {(int)context.DebugChannel}".GetHashCode();
                 }
-
                 return hash;
             }
         }
@@ -293,16 +295,17 @@ namespace DotnetGltfRenderer {
                 int hash = mesh.GetVertDefines().ComputeHash();
 
                 // 如果禁用蒙皮，移除蒙皮相关的 hash
-                if (!enableSkinning && mesh.HasSkinAttributes) {
+                if (!enableSkinning
+                    && mesh.HasSkinAttributes) {
                     hash ^= "HAS_JOINTS".GetHashCode();
                     hash ^= "HAS_WEIGHTS".GetHashCode();
                 }
 
                 // 如果禁用 Morph Target，移除相关 hash
-                if (!enableMorphing && mesh.HasMorphTargets) {
+                if (!enableMorphing
+                    && mesh.HasMorphTargets) {
                     hash ^= "HAS_MORPH_TARGETS".GetHashCode();
                 }
-
                 return hash;
             }
         }
@@ -337,9 +340,7 @@ namespace DotnetGltfRenderer {
                 return;
             }
             bool useSkinning = context.EnableSkinning && instance.HasSkinning;
-            Matrix4x4 modelMatrix = useSkinning
-                ? instance.GetGizmoTransform()
-                : instance.WorldMatrix;
+            Matrix4x4 modelMatrix = useSkinning ? instance.GetGizmoTransform() : instance.WorldMatrix;
             if (useSkinning) {
                 const int jointTextureSlot = 30;
                 instance.JointTexture?.Bind((TextureUnit)((int)TextureUnit.Texture0 + jointTextureSlot));

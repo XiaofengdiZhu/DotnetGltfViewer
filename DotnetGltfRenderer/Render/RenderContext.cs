@@ -9,7 +9,7 @@ namespace DotnetGltfRenderer {
         UV0 = 1,
         UV1 = 2,
         NormalMap = 3,
-        Normal = 4,           // DEBUG_NORMAL_SHADING
+        Normal = 4, // DEBUG_NORMAL_SHADING
         GeometricNormal = 5,
         Tangent = 6,
         TangentW = 7,
@@ -109,7 +109,8 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 创建默认渲染上下文
         /// </summary>
-        public static RenderContext Default => new() { UseIBL = true, ToneMapMode = ToneMapMode.KhrPbrNeutral, EnableSkinning = true, EnableMorphing = true };
+        public static RenderContext Default =>
+            new() { UseIBL = true, ToneMapMode = ToneMapMode.KhrPbrNeutral, EnableSkinning = true, EnableMorphing = true };
 
         /// <summary>
         /// 创建用于 Scatter Pass 的上下文

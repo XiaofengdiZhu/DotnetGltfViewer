@@ -88,7 +88,6 @@ namespace DotnetGltfRenderer {
 
             // 恢复视口设置
             GlContext.GL.Viewport(viewport[0], viewport[1], (uint)viewport[2], (uint)viewport[3]);
-
             LogManager.Logger.ZLogInformation($"[IBL] Processing complete!");
         }
 

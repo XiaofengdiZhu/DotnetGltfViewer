@@ -1,4 +1,5 @@
-﻿using ZLogger;
+﻿using DotnetGltfRenderer;
+using ZLogger;
 
 namespace DotnetGltfViewer.Windows {
     /// <summary>
@@ -10,12 +11,12 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         /// <param name="args">命令行参数。</param>
         static void Main(string[] args) {
-            DotnetGltfRenderer.LogManager.Initialize();
-            DotnetGltfRenderer.LogManager.Logger.ZLogInformation($"DotnetGltfViewer 启动中...");
+            LogManager.Initialize();
+            LogManager.Logger.ZLogInformation($"DotnetGltfViewer 启动中...");
             MainWindow.Initialize();
             MainWindow.Run();
-            DotnetGltfRenderer.LogManager.Logger.ZLogInformation($"DotnetGltfViewer 已退出");
-            DotnetGltfRenderer.LogManager.Shutdown();
+            LogManager.Logger.ZLogInformation($"DotnetGltfViewer 已退出");
+            LogManager.Shutdown();
         }
     }
 }

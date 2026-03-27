@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Silk.NET.OpenGLES;
 
@@ -103,7 +104,7 @@ namespace DotnetGltfRenderer {
             // 使用 LINEAR_OUTPUT 版本的天空盒着色器
             ShaderDefines skyFragDefines = new();
             skyFragDefines.Add("LINEAR_OUTPUT");
-            int skyVertHash = ShaderCache.SelectShader("cubemap.vert", new System.Collections.Generic.List<string>());
+            int skyVertHash = ShaderCache.SelectShader("cubemap.vert", new List<string>());
             int skyFragHash = ShaderCache.SelectShader("cubemap.frag", skyFragDefines.GetDefinesList());
             Shader linearSkyShader = ShaderCache.GetShaderProgram(skyVertHash, skyFragHash);
             linearSkyShader.Use();

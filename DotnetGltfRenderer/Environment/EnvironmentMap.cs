@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Silk.NET.OpenGLES;
 
@@ -193,7 +195,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 将单个 RGBE 像素转换为 float RGB
         /// </summary>
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void RgbeToFloat(byte r, byte g, byte b, byte e, float[] output, int outputIndex) {
             if (e == 0) {
                 // 指数为0表示黑色
@@ -343,7 +345,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 根据方向向量采样环境贴图
         /// </summary>
-        public (float R, float G, float B) SampleDirection(System.Numerics.Vector3 direction) {
+        public (float R, float G, float B) SampleDirection(Vector3 direction) {
             // 将方向转换为 equirectangular UV 坐标
             float u = MathF.Atan2(direction.Z, direction.X) / (2 * MathF.PI) + 0.5f;
             float v = MathF.Asin(Math.Clamp(direction.Y, -1, 1)) / MathF.PI + 0.5f;

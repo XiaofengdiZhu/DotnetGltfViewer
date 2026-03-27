@@ -91,7 +91,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 背景颜色（当 Environment Map 关闭时使用）
         /// </summary>
-        public System.Numerics.Vector3 BackgroundColor { get; set; } = new(0.1f, 0.1f, 0.1f);
+        public Vector3 BackgroundColor { get; set; } = new(0.1f, 0.1f, 0.1f);
 
         /// <summary>
         /// Debug 渲染通道
@@ -272,7 +272,6 @@ namespace DotnetGltfRenderer {
             float rotRad = EnvironmentRotation * MathF.PI / 180.0f;
             float cosR = MathF.Cos(rotRad);
             float sinR = MathF.Sin(rotRad);
-
             SceneData sceneData = new() {
                 CameraPos = new Vector4(Camera.Position, 0f),
                 Exposure = LightingSystem.Exposure,
@@ -320,13 +319,7 @@ namespace DotnetGltfRenderer {
                 RenderBackgroundColor();
                 return;
             }
-            SkyRenderer?.RenderLinear(
-                view,
-                projection,
-                SkyboxIntensity,
-                LightingSystem.Exposure,
-                IBLManager.IblSampler
-            );
+            SkyRenderer?.RenderLinear(view, projection, SkyboxIntensity, LightingSystem.Exposure, IBLManager.IblSampler);
         }
 
         /// <summary>

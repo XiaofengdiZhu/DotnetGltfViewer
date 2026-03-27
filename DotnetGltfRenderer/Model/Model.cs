@@ -22,7 +22,6 @@ namespace DotnetGltfRenderer {
 
         Animation _activeAnimation;
         float _animationTimeSeconds;
-        bool _isAnimationPaused;
         int _activeAnimationIndex;
 
         // 动画名称列表
@@ -92,7 +91,10 @@ namespace DotnetGltfRenderer {
         public float AnimationTimeSeconds {
             get => _animationTimeSeconds;
             set {
-                if (_activeAnimation == null || AnimationDurationSeconds <= 0f) return;
+                if (_activeAnimation == null
+                    || AnimationDurationSeconds <= 0f) {
+                    return;
+                }
                 _animationTimeSeconds = Math.Clamp(value, 0f, AnimationDurationSeconds);
             }
         }
@@ -100,10 +102,7 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 动画是否暂停
         /// </summary>
-        public bool IsAnimationPaused {
-            get => _isAnimationPaused;
-            set => _isAnimationPaused = value;
-        }
+        public bool IsAnimationPaused { get; set; }
 
         /// <summary>
         /// 所有动画名称列表
@@ -116,7 +115,8 @@ namespace DotnetGltfRenderer {
         public int ActiveAnimationIndex {
             get => _activeAnimationIndex;
             set {
-                if (value < 0 || value >= _animationNames.Count) {
+                if (value < 0
+                    || value >= _animationNames.Count) {
                     return;
                 }
                 if (value == _activeAnimationIndex) {
@@ -524,7 +524,8 @@ namespace DotnetGltfRenderer {
         /// 设置活动动画
         /// </summary>
         public void SetActiveAnimation(int index) {
-            if (index < 0 || index >= _animationNames.Count) {
+            if (index < 0
+                || index >= _animationNames.Count) {
                 return;
             }
             _activeAnimationIndex = index;
@@ -541,13 +542,12 @@ namespace DotnetGltfRenderer {
 
         public void Update(float deltaTimeSeconds) {
             // 检查暂停状态
-            if (_isAnimationPaused) {
+            if (IsAnimationPaused) {
                 // 即使暂停也需要更新变换（使用当前时间）
                 _pointerProcessor?.Update(_animationTimeSeconds);
                 UpdateMeshInstanceTransforms();
                 return;
             }
-
             if (_activeAnimation != null
                 && AnimationDurationSeconds > 0f) {
                 _animationTimeSeconds += MathF.Max(0f, deltaTimeSeconds);

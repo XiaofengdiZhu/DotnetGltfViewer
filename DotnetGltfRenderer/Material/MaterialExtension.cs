@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using SharpGLTF.IO;
@@ -166,18 +167,16 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 获取扩展的颜色属性值（RGB 数组）
         /// </summary>
-        protected static System.Numerics.Vector3 GetExtensionColor(object extension,
-            string propertyName,
-            System.Numerics.Vector3? defaultValue = null) {
+        protected static Vector3 GetExtensionColor(object extension, string propertyName, Vector3? defaultValue = null) {
             object value = GetExtensionProperty(extension, propertyName);
             if (value is JsonArray array
                 && array.Count >= 3) {
                 float r = array[0]?.GetValue<float>() ?? 0f;
                 float g = array[1]?.GetValue<float>() ?? 0f;
                 float b = array[2]?.GetValue<float>() ?? 0f;
-                return new System.Numerics.Vector3(r, g, b);
+                return new Vector3(r, g, b);
             }
-            return defaultValue ?? System.Numerics.Vector3.One;
+            return defaultValue ?? Vector3.One;
         }
 
         /// <summary>

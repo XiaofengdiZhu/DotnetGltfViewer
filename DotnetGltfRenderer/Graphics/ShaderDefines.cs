@@ -368,7 +368,17 @@ namespace DotnetGltfRenderer {
             bool isScatterPass,
             ToneMapMode toneMapMode,
             int lightCount,
-            Mesh mesh = null) => CreateFromMaterial(material, useIBL, useLinearOutput, isScatterPass, toneMapMode, lightCount, mesh, true, DebugChannel.None);
+            Mesh mesh = null) => CreateFromMaterial(
+            material,
+            useIBL,
+            useLinearOutput,
+            isScatterPass,
+            toneMapMode,
+            lightCount,
+            mesh,
+            true,
+            DebugChannel.None
+        );
 
         /// <summary>
         /// 从材质和渲染状态创建片段着色器 defines（支持禁用 Morph Target）
@@ -380,7 +390,17 @@ namespace DotnetGltfRenderer {
             ToneMapMode toneMapMode,
             int lightCount,
             Mesh mesh,
-            bool enableMorphing) => CreateFromMaterial(material, useIBL, useLinearOutput, isScatterPass, toneMapMode, lightCount, mesh, enableMorphing, DebugChannel.None);
+            bool enableMorphing) => CreateFromMaterial(
+            material,
+            useIBL,
+            useLinearOutput,
+            isScatterPass,
+            toneMapMode,
+            lightCount,
+            mesh,
+            enableMorphing,
+            DebugChannel.None
+        );
 
         /// <summary>
         /// 从材质和渲染状态创建片段着色器 defines（支持禁用 Morph Target 和 Debug Channel）
@@ -450,7 +470,6 @@ namespace DotnetGltfRenderer {
             if (debugChannel != DebugChannel.None) {
                 defines.AddRaw($"DEBUG {(int)debugChannel}");
             }
-
             return defines;
         }
 

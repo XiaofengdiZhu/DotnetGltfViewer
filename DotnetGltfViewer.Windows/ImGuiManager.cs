@@ -4,6 +4,7 @@ using DotnetGltfRenderer;
 using DotnetGltfViewer.Windows.Sidebar;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImGuizmo;
+using Silk.NET.Input;
 using Silk.NET.OpenGLES.Extensions.Hexa.ImGui;
 using Silk.NET.Windowing;
 using ZLogger;
@@ -32,7 +33,7 @@ namespace DotnetGltfViewer.Windows {
         /// <param name="imGuiFontConfig">ImGui 字体配置。</param>
         /// <param name="onConfigureIO">配置 ImGui IO 回调。</param>
         public static void Initialize(IWindow window,
-            Silk.NET.Input.IInputContext input,
+            IInputContext input,
             AppContext context,
             ImGuiFontConfig? imGuiFontConfig = null,
             Action onConfigureIO = null) {
@@ -161,7 +162,13 @@ namespace DotnetGltfViewer.Windows {
                 RenderToolbar1Button("Move", GizmoMode.Translate, "Num 2", buttonWidth, buttonHeight);
                 RenderToolbar1Button("Rotate", GizmoMode.Rotate, "Num 3", buttonWidth, buttonHeight);
                 RenderToolbar1Button("Scale", GizmoMode.Scale, "Num 4", buttonWidth, buttonHeight);
-                RenderToolbar2Button("Reset\nTrans.", "Reset transform to default", () => GizmoManager.ResetModelMatrix(), buttonWidth, buttonHeight * 1.6f);
+                RenderToolbar2Button(
+                    "Reset\nTrans.",
+                    "Reset transform to default",
+                    () => GizmoManager.ResetModelMatrix(),
+                    buttonWidth,
+                    buttonHeight * 1.6f
+                );
             }
             ImGui.End();
             ImGui.PopStyleVar(2);
