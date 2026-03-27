@@ -59,14 +59,17 @@ namespace DotnetGltfViewer.Windows {
         /// <summary>Skybox 开关</summary>
         public bool ShowSkybox { get; set; } = true;
 
+        /// <summary>Skybox Blur 模糊程度 (0.0 = 无模糊, 1.0 = 最大模糊)</summary>
+        public float SkyboxBlur { get; set; } = 0.5f;
+
         /// <summary>背景颜色</summary>
         public System.Numerics.Vector3 BackgroundColor { get; set; } = new(0.1f, 0.1f, 0.1f);
 
-        /// <summary>环境旋转索引（0: +Z, 1: -X, 2: -Z, 3: +X）</summary>
-        public int EnvironmentRotationIndex { get; set; } = 0;
+        /// <summary>Skybox 旋转索引（0: +X, 1: +Z, 2: -X, 3: -Z）</summary>
+        public int SkyboxRotationIndex { get; set; } = 1;
 
-        /// <summary>环境旋转名称列表</summary>
-        public static readonly string[] EnvironmentRotations = { "+Z", "-X", "-Z", "+X" };
+        /// <summary>Skybox 旋转名称列表</summary>
+        public static readonly string[] SkyboxRotations = { "+X", "+Z", "-X", "-Z" };
 
         /// <summary>可用环境贴图列表</summary>
         public List<string> AvailableEnvironments { get; private set; } = new();

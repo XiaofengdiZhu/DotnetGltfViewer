@@ -31,7 +31,7 @@ DotnetGltfViewer/
 │   ├── Lighting/             # 光照系统
 │   ├── Environment/          # IBL 环境贴图
 │   ├── Animation/            # 骨骼动画与 Morph Target
-│   └── shaders/              # GLSL 着色器文件
+│   └── shaders/              # GLSL 着色器文件，改编自 gltf 官方渲染器项目
 └── DotnetGltfViewer.Windows/ # Windows 桌面应用程序
     ├── MainWindow.cs         # 窗口与渲染循环
     ├── ImGuiManager.cs       # ImGui UI 管理

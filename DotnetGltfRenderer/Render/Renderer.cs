@@ -75,12 +75,18 @@ namespace DotnetGltfRenderer {
         /// 环境旋转角度（度数，绕 Y 轴）
         /// 0: +Z, 90: -X, 180: -Z, 270: +X
         /// </summary>
-        public float EnvironmentRotation { get; set; } = 0f;
+        public float EnvironmentRotation { get; set; } = 90f;
 
         /// <summary>
         /// 天空盒亮度（独立于模型反射强度）
         /// </summary>
         public float SkyboxIntensity { get; set; } = 1.0f;
+
+        /// <summary>
+        /// 天空盒模糊程度 (0.0 = 无模糊, 1.0 = 最大模糊)
+        /// 通过采样预过滤环境贴图的更高 mip level 实现模糊效果
+        /// </summary>
+        public float SkyboxBlur { get; set; } = 0.5f;
 
         /// <summary>
         /// 背景颜色（当 Environment Map 关闭时使用）
@@ -298,7 +304,7 @@ namespace DotnetGltfRenderer {
                 view,
                 projection,
                 SkyboxIntensity,
-                envBlur,
+                SkyboxBlur,
                 EnvironmentRotation,
                 LightingSystem.Exposure,
                 IBLManager.IblSampler

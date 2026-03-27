@@ -297,6 +297,13 @@ namespace DotnetGltfViewer.Windows {
                     _state.SkyboxIntensity = skyboxIntensity;
                     ApplySkyboxIntensity();
                 }
+
+                // Skybox Blur 滑动条
+                float skyboxBlur = _state.SkyboxBlur;
+                if (ImGui.SliderFloat("Skybox Blur", ref skyboxBlur, 0.0f, 1.0f)) {
+                    _state.SkyboxBlur = skyboxBlur;
+                    ApplySkyboxBlur();
+                }
             }
 
             // Background Color 颜色选择器
@@ -306,17 +313,17 @@ namespace DotnetGltfViewer.Windows {
                 ApplyBackgroundColor();
             }
 
-            // Environment Rotation 下拉菜单
-            ImGui.Text("Environment Rotation");
+            // Skybox Rotation 下拉菜单
+            ImGui.Text("Skybox Rotation");
             ImGui.SetNextItemWidth(-1);
-            int envRotIndex = _state.EnvironmentRotationIndex;
-            if (ImGui.Combo("##EnvRotation", ref envRotIndex, SidebarState.EnvironmentRotations, SidebarState.EnvironmentRotations.Length)) {
-                _state.EnvironmentRotationIndex = envRotIndex;
-                ApplyEnvironmentRotation();
+            int envRotIndex = _state.SkyboxRotationIndex;
+            if (ImGui.Combo("##EnvRotation", ref envRotIndex, SidebarState.SkyboxRotations, SidebarState.SkyboxRotations.Length)) {
+                _state.SkyboxRotationIndex = envRotIndex;
+                ApplySkyboxRotation();
             }
 
-            // Active Environment 下拉菜单
-            ImGui.Text("Active Environment");
+            // Active Skybox 下拉菜单
+            ImGui.Text("Active Skybox");
             ImGui.SetNextItemWidth(-1);
             int envIndex = _state.SelectedEnvironmentIndex;
             if (ImGui.Combo("##Environment", ref envIndex, _state.AvailableEnvironments.ToArray(), _state.AvailableEnvironments.Count)) {
@@ -343,18 +350,24 @@ namespace DotnetGltfViewer.Windows {
             }
         }
 
+        static void ApplySkyboxBlur() {
+            if (_renderer != null) {
+                _renderer.SkyboxBlur = _state.SkyboxBlur;
+            }
+        }
+
         static void ApplyToneMapSetting() {
             if (_renderer != null) {
                 _renderer.ToneMapMode = (ToneMapMode)_state.ToneMapIndex;
             }
         }
 
-        static void ApplyEnvironmentRotation() {
+        static void ApplySkyboxRotation() {
             if (_renderer == null) {
                 return;
             }
             // 根据索引转换为角度：0: +Z (0°), 1: -X (90°), 2: -Z (180°), 3: +X (270°)
-            _renderer.EnvironmentRotation = _state.EnvironmentRotationIndex * 90f;
+            _renderer.EnvironmentRotation = _state.SkyboxRotationIndex * 90f;
         }
 
         static void ApplyEnvironmentMapVisibility() {
