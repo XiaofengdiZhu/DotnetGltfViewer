@@ -17,7 +17,7 @@ precision highp float;
 
 layout(location = 0) out vec4 frontColor;
 
-uniform int u_MaterialID;
+// u_MaterialID 由 ubos.glsl 中的 VolumeScatterData UBO 提供
 
 
 void main()

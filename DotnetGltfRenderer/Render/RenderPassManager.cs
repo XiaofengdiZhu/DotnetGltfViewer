@@ -96,6 +96,13 @@ namespace DotnetGltfRenderer {
                 }
             }
 
+            // 渲染 Scatter 物体（VolumeScatter 物体先在 scatter pass 渲染到 framebuffer，然后在主 pass 中渲染）
+            foreach (MeshInstance instance in scene.ScatterInstances) {
+                if (instance.IsVisible) {
+                    _meshInstanceRenderer.Render(instance, in mainContext);
+                }
+            }
+
             // 渲染 Transmission 物体
             if (scene.TransmissionInstances.Count > 0) {
                 onBindTransmissionTexture?.Invoke();
