@@ -12,6 +12,10 @@ using GltfPrimitiveType = SharpGLTF.Schema2.PrimitiveType;
 
 namespace DotnetGltfRenderer {
     public class Model : IDisposable {
+        static readonly Dictionary<string, Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh>> _globalMeshCache = new();
+        static readonly Dictionary<string, int> _globalMeshRefCount = new();
+        static readonly object _cacheLock = new();
+
         Dictionary<int, Texture> _texturesLoaded;
         readonly List<MeshInstance> _meshInstances = [];
         readonly List<Mesh> _uniqueMeshes = [];
@@ -47,6 +51,7 @@ namespace DotnetGltfRenderer {
         readonly Dictionary<int, List<Light>> _sceneLights = new();
 
         public string Directory { get; protected set; } = string.Empty;
+        public string FilePath { get; private set; }
         public IReadOnlyList<Mesh> Meshes => _uniqueMeshes;
         public IReadOnlyList<MeshInstance> MeshInstances => _meshInstances;
         public IReadOnlyList<Light> Lights => _lights;
@@ -141,11 +146,28 @@ namespace DotnetGltfRenderer {
 
         void LoadModel(string path) {
             string fullPath = Path.GetFullPath(path);
+            FilePath = fullPath;
             Directory = Path.GetDirectoryName(fullPath) ?? string.Empty;
+
+            Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> cachedMeshes = null;
+            lock (_cacheLock) {
+                if (_globalMeshCache.TryGetValue(fullPath, out cachedMeshes)) {
+                    foreach (Mesh mesh in cachedMeshes.Values) {
+                        _uniqueMeshes.Add(mesh);
+                    }
+                    _globalMeshRefCount[fullPath] = _globalMeshRefCount.GetValueOrDefault(fullPath, 0) + 1;
+                }
+            }
+
+            if (cachedMeshes != null) {
+                _modelRoot = ModelRoot.Load(fullPath, new ReadSettings { Validation = ValidationMode.Skip });
+                LoadMaterialsAndInstances(cachedMeshes);
+                return;
+            }
+
             _modelRoot = ModelRoot.Load(fullPath, new ReadSettings { Validation = ValidationMode.Skip });
             DetectExtensions(_modelRoot);
 
-            // 加载变体
             List<string> variants = GltfVariantLoader.LoadVariants(_modelRoot);
             _variants.AddRange(variants);
             _variantMappings.Clear();
@@ -154,13 +176,9 @@ namespace DotnetGltfRenderer {
                 _variantMappings[kvp.Key] = kvp.Value;
             }
 
-            // 加载纹理
             _texturesLoaded = GltfTextureLoader.LoadTextures(_modelRoot);
+            Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> newCache = PreloadAllScenesAndCache();
 
-            // 预缓存所有场景
-            PreloadAllScenes();
-
-            // 设置默认场景
             int defaultSceneIndex = 0;
             if (_modelRoot.DefaultScene != null) {
                 defaultSceneIndex = _modelRoot.DefaultScene.LogicalIndex;
@@ -170,28 +188,188 @@ namespace DotnetGltfRenderer {
                 _activeSceneIndex = 0;
             }
 
-            // 切换到默认场景
             SwitchToScene(_activeSceneIndex);
 
-            // 加载所有动画名称
             _animationNames.Clear();
             foreach (Animation anim in _modelRoot.LogicalAnimations) {
                 _animationNames.Add(anim.Name ?? $"Animation {_animationNames.Count}");
             }
 
-            // 设置默认动画
             _activeAnimationIndex = _animationNames.Count > 0 ? 0 : -1;
             _activeAnimation = _activeAnimationIndex >= 0 ? _modelRoot.LogicalAnimations[_activeAnimationIndex] : null;
             AnimationDurationSeconds = _activeAnimation?.Duration ?? 0f;
             _animationTimeSeconds = 0f;
 
-            // 构建 morph target sampler 缓存
             BuildMorphSamplerCache();
 
-            // Initialize KHR_animation_pointer processor
             _pointerProcessor = new AnimationPointerProcessor();
             _pointerProcessor.ProcessAnimation(_activeAnimation, _modelRoot, this);
             UpdateMeshInstanceTransforms();
+
+            lock (_cacheLock) {
+                _globalMeshCache[fullPath] = newCache;
+                _globalMeshRefCount[fullPath] = 1;
+            }
+        }
+
+        void LoadMaterialsAndInstances(Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> cachedMeshes) {
+            DetectExtensions(_modelRoot);
+
+            List<string> variants = GltfVariantLoader.LoadVariants(_modelRoot);
+            _variants.AddRange(variants);
+            _variantMappings.Clear();
+            foreach (KeyValuePair<(int MeshIndex, int PrimitiveIndex), Dictionary<int, int>> kvp in
+                GltfVariantLoader.LoadVariantMappings(_modelRoot)) {
+                _variantMappings[kvp.Key] = kvp.Value;
+            }
+
+            if (_texturesLoaded != null) {
+                foreach (Texture texture in _texturesLoaded.Values) {
+                    texture.Dispose();
+                }
+            }
+            _texturesLoaded = GltfTextureLoader.LoadTextures(_modelRoot);
+            PreloadAllScenesWithCachedMeshes(cachedMeshes);
+
+            int defaultSceneIndex = 0;
+            if (_modelRoot.DefaultScene != null) {
+                defaultSceneIndex = _modelRoot.DefaultScene.LogicalIndex;
+            }
+            _activeSceneIndex = Math.Min(defaultSceneIndex, _sceneNames.Count - 1);
+            if (_activeSceneIndex < 0) {
+                _activeSceneIndex = 0;
+            }
+
+            SwitchToScene(_activeSceneIndex);
+
+            _animationNames.Clear();
+            foreach (Animation anim in _modelRoot.LogicalAnimations) {
+                _animationNames.Add(anim.Name ?? $"Animation {_animationNames.Count}");
+            }
+
+            _activeAnimationIndex = _animationNames.Count > 0 ? 0 : -1;
+            _activeAnimation = _activeAnimationIndex >= 0 ? _modelRoot.LogicalAnimations[_activeAnimationIndex] : null;
+            AnimationDurationSeconds = _activeAnimation?.Duration ?? 0f;
+            _animationTimeSeconds = 0f;
+
+            BuildMorphSamplerCache();
+
+            _pointerProcessor = new AnimationPointerProcessor();
+            _pointerProcessor.ProcessAnimation(_activeAnimation, _modelRoot, this);
+            UpdateMeshInstanceTransforms();
+        }
+
+        Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> PreloadAllScenesAndCache() {
+            _sceneNames.Clear();
+            foreach (GltfScene scene in _modelRoot.LogicalScenes) {
+                _sceneNames.Add(scene.Name ?? $"Scene {scene.LogicalIndex}");
+            }
+            if (_sceneNames.Count == 0) {
+                _sceneNames.Add("Default Scene");
+            }
+            _sceneMeshInstances.Clear();
+            _sceneLights.Clear();
+            Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> primitiveMeshCache = new();
+            for (int sceneIndex = 0; sceneIndex < _modelRoot.LogicalScenes.Count; sceneIndex++) {
+                GltfScene scene = _modelRoot.LogicalScenes[sceneIndex];
+                ProcessScene(scene, sceneIndex, primitiveMeshCache);
+            }
+            if (_modelRoot.LogicalScenes.Count == 0) {
+                ProcessScene(null, 0, primitiveMeshCache);
+            }
+            return new Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh>(primitiveMeshCache);
+        }
+
+        void PreloadAllScenesWithCachedMeshes(Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> cachedMeshes) {
+            _sceneNames.Clear();
+            foreach (GltfScene scene in _modelRoot.LogicalScenes) {
+                _sceneNames.Add(scene.Name ?? $"Scene {scene.LogicalIndex}");
+            }
+            if (_sceneNames.Count == 0) {
+                _sceneNames.Add("Default Scene");
+            }
+            _sceneMeshInstances.Clear();
+            _sceneLights.Clear();
+
+            for (int sceneIndex = 0; sceneIndex < _modelRoot.LogicalScenes.Count; sceneIndex++) {
+                GltfScene scene = _modelRoot.LogicalScenes[sceneIndex];
+                ProcessSceneWithCachedMeshes(scene, sceneIndex, cachedMeshes);
+            }
+            if (_modelRoot.LogicalScenes.Count == 0) {
+                ProcessSceneWithCachedMeshes(null, 0, cachedMeshes);
+            }
+        }
+
+        void ProcessSceneWithCachedMeshes(GltfScene scene, int sceneIndex, Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> cachedMeshes) {
+            List<MeshInstance> instances = new();
+            List<Light> lights = new();
+
+            if (scene != null) {
+                foreach (Node rootNode in scene.VisualChildren) {
+                    ProcessNodeWithCachedMeshes(rootNode, Matrix4x4.Identity, instances, lights, cachedMeshes);
+                }
+            }
+            else {
+                foreach (Node rootNode in _modelRoot.LogicalNodes.Where(node => node.VisualParent == null)) {
+                    ProcessNodeWithCachedMeshes(rootNode, Matrix4x4.Identity, instances, lights, cachedMeshes);
+                }
+            }
+            _sceneMeshInstances[sceneIndex] = instances;
+            _sceneLights[sceneIndex] = lights;
+        }
+
+        void ProcessNodeWithCachedMeshes(Node node, Matrix4x4 parentWorldMatrix, List<MeshInstance> instances, List<Light> lights, Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> cachedMeshes) {
+            if (node.TryGetVisibility(out bool isVisible) && !isVisible) {
+                return;
+            }
+            Matrix4x4 worldMatrix = node.LocalMatrix * parentWorldMatrix;
+
+            PunctualLight punctualLight = node.PunctualLight;
+            if (punctualLight != null) {
+                Light light = Light.ConvertFromGltf(punctualLight, worldMatrix, node);
+                if (light != null) {
+                    lights.Add(light);
+                }
+            }
+
+            MeshGpuInstancing gpuInstancing = node.GetGpuInstancing();
+            if (node.Mesh != null) {
+                if (gpuInstancing != null && gpuInstancing.Count > 0) {
+                    ProcessInstancedNodeWithCachedMeshes(node, gpuInstancing, instances, cachedMeshes);
+                }
+                else {
+                    for (int i = 0; i < node.Mesh.Primitives.Count; i++) {
+                        MeshPrimitive primitive = node.Mesh.Primitives[i];
+                        if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) {
+                            continue;
+                        }
+                        (int MeshIndex, int PrimitiveIndex) key = (node.Mesh.LogicalIndex, i);
+                        if (cachedMeshes.TryGetValue(key, out Mesh mesh)) {
+                            instances.Add(new MeshInstance(node, mesh, node.Skin));
+                        }
+                    }
+                }
+            }
+
+            foreach (Node child in node.VisualChildren) {
+                ProcessNodeWithCachedMeshes(child, worldMatrix, instances, lights, cachedMeshes);
+            }
+        }
+
+        void ProcessInstancedNodeWithCachedMeshes(Node node, MeshGpuInstancing gpuInstancing, List<MeshInstance> instances, Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> cachedMeshes) {
+            if (node.Skin != null) {
+                for (int i = 0; i < node.Mesh.Primitives.Count; i++) {
+                    MeshPrimitive primitive = node.Mesh.Primitives[i];
+                    if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) {
+                        continue;
+                    }
+                    (int MeshIndex, int PrimitiveIndex) key = (node.Mesh.LogicalIndex, i);
+                    if (cachedMeshes.TryGetValue(key, out Mesh mesh)) {
+                        instances.Add(new MeshInstance(node, mesh, node.Skin));
+                    }
+                }
+                return;
+            }
         }
 
         void BuildMorphSamplerCache() {
@@ -631,8 +809,29 @@ namespace DotnetGltfRenderer {
         }
 
         public void Dispose() {
-            foreach (Mesh mesh in _uniqueMeshes) {
-                mesh.Dispose();
+            if (!string.IsNullOrEmpty(FilePath)) {
+                lock (_cacheLock) {
+                    if (_globalMeshRefCount.TryGetValue(FilePath, out int count)) {
+                        count--;
+                        if (count <= 0) {
+                            if (_globalMeshCache.TryGetValue(FilePath, out Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> meshes)) {
+                                foreach (Mesh mesh in meshes.Values) {
+                                    mesh.Dispose();
+                                }
+                            }
+                            _globalMeshCache.Remove(FilePath);
+                            _globalMeshRefCount.Remove(FilePath);
+                        }
+                        else {
+                            _globalMeshRefCount[FilePath] = count;
+                        }
+                    }
+                }
+            }
+            else {
+                foreach (Mesh mesh in _uniqueMeshes) {
+                    mesh.Dispose();
+                }
             }
             foreach (Texture texture in _texturesLoaded.Values) {
                 texture.Dispose();

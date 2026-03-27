@@ -3,23 +3,18 @@ using System.Collections.Generic;
 using System.Numerics;
 
 namespace DotnetGltfRenderer {
-    /// <summary>
-    /// 渲染 Pass 管理器
-    /// 管理多 Pass 渲染流程：Scatter Pass、Transmission Pass、Main Pass
-    /// </summary>
-    public class RenderPassManager {
+    public class RenderPassManager : IDisposable {
         readonly FramebufferManager _framebufferManager;
         readonly MeshInstanceRenderer _meshInstanceRenderer;
+        readonly InstancingBatchManager _batchManager = new();
+        readonly List<MeshInstance> _nonBatchedInstances = new(64);
+        bool _disposed;
 
         public RenderPassManager(FramebufferManager framebufferManager, MeshInstanceRenderer meshInstanceRenderer) {
             _framebufferManager = framebufferManager;
             _meshInstanceRenderer = meshInstanceRenderer;
         }
 
-        /// <summary>
-        /// 执行 Scatter Pass
-        /// 渲染 VolumeScatter 物体到 Scatter 帧缓冲区
-        /// </summary>
         public void ExecuteScatterPass(List<MeshInstance> scatterInstances, in RenderContext context) {
             if (scatterInstances.Count == 0) {
                 return;
@@ -37,10 +32,6 @@ namespace DotnetGltfRenderer {
             _framebufferManager.UnbindFramebuffer();
         }
 
-        /// <summary>
-        /// 执行 Transmission Pass
-        /// 渲染场景到 Transmission 帧缓冲区（用于折射效果）
-        /// </summary>
         public void ExecuteTransmissionPass(Scene scene, in RenderContext context, Action<Matrix4x4, Matrix4x4> renderSkyLinear = null) {
             if (scene.TransmissionInstances.Count == 0) {
                 return;
@@ -50,10 +41,8 @@ namespace DotnetGltfRenderer {
             _framebufferManager.ClearTransmissionFramebuffer();
             _meshInstanceRenderer.SetViewProjectionMatrices(context.View, context.Projection);
 
-            // 渲染天空盒（线性输出）
             renderSkyLinear?.Invoke(context.View, context.Projection);
 
-            // 渲染不透明和透明物体（线性输出）
             RenderContext transmissionContext = context.ForTransmissionPass();
             foreach (MeshInstance instance in scene.OpaqueInstances) {
                 if (instance.IsVisible) {
@@ -69,10 +58,6 @@ namespace DotnetGltfRenderer {
             _framebufferManager.UnbindFramebuffer();
         }
 
-        /// <summary>
-        /// 执行 Main Pass
-        /// 渲染天空盒和所有物体
-        /// </summary>
         public void ExecuteMainPass(Scene scene,
             in RenderContext context,
             Action<Matrix4x4, Matrix4x4> renderSky = null,
@@ -80,30 +65,29 @@ namespace DotnetGltfRenderer {
             Action onBindTransmissionTexture = null) {
             _meshInstanceRenderer.SetViewProjectionMatrices(context.View, context.Projection);
 
-            // 渲染天空盒
             renderSky?.Invoke(context.View, context.Projection);
 
-            // 绑定 Scatter 纹理
             if (scene.ScatterInstances.Count > 0) {
                 onBindScatterTextures?.Invoke();
             }
             RenderContext mainContext = context.ForMainPass();
 
-            // 渲染不透明物体
-            foreach (MeshInstance instance in scene.OpaqueInstances) {
+            BuildBatches(scene.OpaqueInstances);
+            foreach (DynamicInstancingBatch batch in _batchManager.AllBatches) {
+                _meshInstanceRenderer.RenderBatch(batch, in mainContext);
+            }
+            foreach (MeshInstance instance in _nonBatchedInstances) {
                 if (instance.IsVisible) {
                     _meshInstanceRenderer.Render(instance, in mainContext);
                 }
             }
 
-            // 渲染 Scatter 物体（VolumeScatter 物体先在 scatter pass 渲染到 framebuffer，然后在主 pass 中渲染）
             foreach (MeshInstance instance in scene.ScatterInstances) {
                 if (instance.IsVisible) {
                     _meshInstanceRenderer.Render(instance, in mainContext);
                 }
             }
 
-            // 渲染 Transmission 物体
             if (scene.TransmissionInstances.Count > 0) {
                 onBindTransmissionTexture?.Invoke();
                 foreach (MeshInstance instance in scene.TransmissionInstances) {
@@ -113,12 +97,55 @@ namespace DotnetGltfRenderer {
                 }
             }
 
-            // 渲染透明物体
             foreach (MeshInstance instance in scene.TransparentInstances) {
                 if (instance.IsVisible) {
                     _meshInstanceRenderer.Render(instance, in mainContext);
                 }
             }
+        }
+
+        void BuildBatches(List<MeshInstance> instances) {
+            _batchManager.Clear();
+            _nonBatchedInstances.Clear();
+
+            Dictionary<(Mesh, Material), DynamicInstancingBatch> batchMap = new();
+
+            foreach (MeshInstance instance in instances) {
+                if (!instance.IsVisible) {
+                    continue;
+                }
+
+                if (!InstancingBatchManager.CanBatch(instance)) {
+                    _nonBatchedInstances.Add(instance);
+                    continue;
+                }
+
+                Mesh mesh = instance.Mesh;
+                Material material = instance.CurrentMaterial;
+                (Mesh, Material) key = (mesh, material);
+
+                if (!batchMap.TryGetValue(key, out DynamicInstancingBatch batch)) {
+                    batch = _batchManager.FindOrCreateBatch(mesh, material);
+                    batchMap[key] = batch;
+                }
+
+                if (batch.CanAddInstance) {
+                    batch.AddInstance(instance);
+                }
+                else {
+                    batch = _batchManager.FindOrCreateBatch(mesh, material);
+                    batchMap[key] = batch;
+                    batch.AddInstance(instance);
+                }
+            }
+        }
+
+        public void Dispose() {
+            if (_disposed) {
+                return;
+            }
+            _batchManager?.Dispose();
+            _disposed = true;
         }
     }
 }

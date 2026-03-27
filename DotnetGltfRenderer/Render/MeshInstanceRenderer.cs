@@ -209,6 +209,108 @@ namespace DotnetGltfRenderer {
             DrawMesh(mesh);
         }
 
+        public void RenderBatch(DynamicInstancingBatch batch, in RenderContext context) {
+            if (batch == null || batch.IsEmpty) {
+                return;
+            }
+
+            UpdateContextHashIfNeeded(in context);
+            Mesh mesh = batch.Mesh;
+            Material material = batch.Material;
+            if (material == null) {
+                return;
+            }
+
+            Shader shader = GetOrCreateInstancingShaderVariant(mesh, material, in context);
+            if (shader == null) {
+                return;
+            }
+            shader.Use();
+
+            mesh.Bind();
+
+            _renderStateData.ModelMatrix = Matrix4x4.Identity;
+            _renderStateData.NormalMatrix = Matrix4x4.Identity;
+            _renderStateUBO.Update(ref _renderStateData);
+
+            UpdateMaterialUBOs(material, mesh.UseGeneratedTangents);
+            UpdateUVTransformUBO(material);
+
+            if (material != null) {
+                MaterialTextureBinder.BindMaterialTextures(material, shader);
+            }
+            MaterialTextureBinder.SetTextureSlotUniforms(shader);
+
+            SetupTransmissionUniforms(material, shader, context);
+            SetupVolumeScatterUniforms(material, shader, context);
+
+            if (material?.DoubleSided == true) {
+                GlContext.DisableCullFace();
+            }
+            else {
+                GlContext.EnableCullFace();
+            }
+            SetupBlendMode(material, context);
+
+            batch.UpdateMatrices();
+            batch.Draw();
+        }
+
+        Shader GetOrCreateInstancingShaderVariant(Mesh mesh, Material material, in RenderContext context) {
+            int vertHash = _cachedVertShaderBaseHash ^ GetInstancingVertDefinesHash(mesh);
+
+            string fragShaderName = context.IsScatterPass ? "scatter.frag" :
+                material?.SpecularGlossiness?.IsEnabled == true ? "specular_glossiness.frag" : "pbr.frag";
+            int fragShaderNameHash = ComputeHash(fragShaderName);
+            int materialHash = material?.GetDefines().ComputeHash() ?? 0;
+            int meshFragAttrHash = mesh.GetFragAttrHash();
+
+            int contextHash = _cachedContextHash;
+            if (material?.DiffuseTransmission?.IsEnabled == true && !context.UseIBL) {
+                contextHash ^= "USE_IBL 1".GetHashCode();
+            }
+            if (material?.Unlit?.IsEnabled == true && context.LightCount > 0) {
+                contextHash ^= "USE_PUNCTUAL 1".GetHashCode();
+            }
+            int fragHash = fragShaderNameHash ^ materialHash ^ meshFragAttrHash ^ contextHash;
+
+            Shader shader = ShaderCache.TryGetShaderProgram(vertHash, fragHash);
+            if (shader != null) {
+                return shader;
+            }
+
+            return CreateInstancingShaderWithDefines(mesh, material, in context, fragShaderName);
+        }
+
+        static int GetInstancingVertDefinesHash(Mesh mesh) {
+            unchecked {
+                int hash = mesh.GetVertDefines().ComputeHash();
+                hash ^= "USE_INSTANCING".GetHashCode();
+                return hash;
+            }
+        }
+
+        static Shader CreateInstancingShaderWithDefines(Mesh mesh, Material material, in RenderContext context, string fragShaderName) {
+            ShaderDefines vertDefines = ShaderDefines.CreateFromMesh(mesh, false, false);
+            vertDefines.Add("USE_INSTANCING");
+
+            ShaderDefines fragDefines = ShaderDefines.CreateFromMaterial(
+                material,
+                context.UseIBL,
+                context.UseLinearOutput,
+                context.IsScatterPass,
+                context.ToneMapMode,
+                context.LightCount,
+                mesh,
+                false,
+                context.DebugChannel
+            );
+            return ShaderCache.GetShaderProgram(
+                ShaderCache.SelectShader("primitive.vert", vertDefines.GetDefinesList()),
+                ShaderCache.SelectShader(fragShaderName, fragDefines.GetDefinesList())
+            );
+        }
+
         /// <summary>
         /// 更新材质 UBO（带缓存优化，避免重复更新相同材质）
         /// </summary>

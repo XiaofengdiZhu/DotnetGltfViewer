@@ -343,6 +343,7 @@ namespace DotnetGltfRenderer {
             _uvTransformUBO?.Dispose();
             _volumeScatterUBO?.Dispose();
             FramebufferManager?.Dispose();
+            _renderPassManager?.Dispose();
             SkyRenderer = null;
         }
     }
