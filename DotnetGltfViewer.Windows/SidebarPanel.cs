@@ -98,8 +98,7 @@ namespace DotnetGltfViewer.Windows {
             ImGui.SetNextWindowSizeConstraints(new Vector2(MinSidebarWidth, 100), new Vector2(MaxSidebarWidth, displaySize.Y));
 
             // 窗口标志（移除 NoResize 允许调整宽度）
-            ImGuiWindowFlags flags = ImGuiWindowFlags.NoMove |
-                                     ImGuiWindowFlags.NoCollapse |
+            ImGuiWindowFlags flags = ImGuiWindowFlags.NoCollapse |
                                      ImGuiWindowFlags.NoBringToFrontOnFocus;
 
             // 开始渲染窗口

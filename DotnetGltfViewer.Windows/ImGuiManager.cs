@@ -66,8 +66,9 @@ namespace DotnetGltfViewer.Windows {
         public static void Render(float deltaTime) {
             GizmoManager.Update();
             _controller.Update(deltaTime);
+            ImGui.DockSpaceOverViewport(0, ImGui.GetMainViewport(), ImGuiDockNodeFlags.PassthruCentralNode);
             RenderMainMenuBar();
-            GizmoManager.RenderToolbar();
+            RenderToolbar();
             RenderOptionalWindows();
             RenderGizmo();
             SidebarPanel.Render();
@@ -149,6 +150,69 @@ namespace DotnetGltfViewer.Windows {
                     ImGui.EndMenu();
                 }
                 ImGui.EndMainMenuBar();
+            }
+        }
+
+        public static void RenderToolbar() {
+            const float buttonWidth = 100f;
+            const float buttonHeight = 36f;
+            const float padding = 8f;
+            // 左侧工具栏
+            ImGui.SetNextWindowPos(new Vector2(padding, 48f));
+            ImGui.SetNextWindowSize(new Vector2(buttonWidth + padding * 2, buttonHeight * 4 + padding * 5));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding, padding));
+            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0, padding));
+            ImGuiWindowFlags flags = ImGuiWindowFlags.NoTitleBar
+                | ImGuiWindowFlags.NoResize
+                | ImGuiWindowFlags.NoMove
+                | ImGuiWindowFlags.NoScrollbar
+                | ImGuiWindowFlags.NoScrollWithMouse
+                | ImGuiWindowFlags.NoCollapse
+                | ImGuiWindowFlags.NoBringToFrontOnFocus;
+            if (ImGui.Begin("GizmoToolbar1", flags)) {
+                RenderToolbar1Button("Select", GizmoMode.None, "Num 1", buttonWidth, buttonHeight);
+                RenderToolbar1Button("Move", GizmoMode.Translate, "Num 2", buttonWidth, buttonHeight);
+                RenderToolbar1Button("Rotate", GizmoMode.Rotate, "Num 3", buttonWidth, buttonHeight);
+                RenderToolbar1Button("Scale", GizmoMode.Scale, "Num 4", buttonWidth, buttonHeight);
+            }
+            ImGui.End();
+            ImGui.PopStyleVar(2);
+
+            // 第二组工具栏
+            ImGui.SetNextWindowPos(new Vector2(padding, 48f + buttonHeight * 4 + padding * 5 + 8f));
+            ImGui.SetNextWindowSize(new Vector2(buttonWidth + padding * 2, buttonHeight * 2 + padding * 3));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding, padding));
+            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0, padding));
+            if (ImGui.Begin("GizmoToolbar2", flags)) {
+                RenderToolbar2Button("Focus", "Focus camera on selection (F)", () => MainWindow.FocusOnSelection(), buttonWidth, buttonHeight);
+                RenderToolbar2Button("Delete" , "Delete selected object (Del)", () => _scene.RemoveModel(_scene.SelectedModel), buttonWidth, buttonHeight);
+            }
+            ImGui.End();
+            ImGui.PopStyleVar(2);
+        }
+
+        static void RenderToolbar1Button(string label, GizmoMode mode, string shortcut, float buttonWidth, float buttonHeight) {
+            bool isActive = GizmoManager.CurrentMode == mode;
+            if (isActive) {
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.28f, 0.56f, 0.88f, 1.0f));
+            }
+            if (ImGui.Button(label, new Vector2(buttonWidth, buttonHeight))) {
+                GizmoManager.CurrentMode = mode;
+            }
+            if (ImGui.IsItemHovered()) {
+                ImGui.SetTooltip($"{label} ({shortcut})");
+            }
+            if (isActive) {
+                ImGui.PopStyleColor();
+            }
+        }
+
+        static void RenderToolbar2Button(string label, string toolTip, Action action, float buttonWidth, float buttonHeight) {
+            if (ImGui.Button(label, new Vector2(buttonWidth, buttonHeight))) {
+                action();
+            }
+            if (ImGui.IsItemHovered()) {
+                ImGui.SetTooltip(toolTip);
             }
         }
 
