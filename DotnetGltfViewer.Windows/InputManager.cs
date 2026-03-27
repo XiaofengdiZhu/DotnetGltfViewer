@@ -11,8 +11,7 @@ namespace DotnetGltfViewer.Windows {
     public static class InputManager {
         static IInputContext _input;
         static IKeyboard _primaryKeyboard;
-        static Camera _camera;
-        static Scene _scene;
+        static AppContext _context;
 
         static Vector2 _lastMousePosition;
         static bool _hasMousePosition;
@@ -39,8 +38,8 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         public static float KeyboardMoveMultiplier { get; set; } = 4f;
 
-        public static void Initialize(Camera camera, IInputContext input) {
-            _camera = camera;
+        public static void Initialize(AppContext context, IInputContext input) {
+            _context = context;
             _input = input;
             _primaryKeyboard = _input.Keyboards.FirstOrDefault();
             foreach (IMouse mouse in _input.Mice) {
@@ -49,13 +48,6 @@ namespace DotnetGltfViewer.Windows {
                 mouse.MouseMove += OnMouseMove;
                 mouse.Scroll += OnMouseScroll;
             }
-        }
-
-        /// <summary>
-        /// 设置场景引用（用于射线拾取）
-        /// </summary>
-        public static void SetScene(Scene scene) {
-            _scene = scene;
         }
 
         /// <summary>
@@ -69,12 +61,12 @@ namespace DotnetGltfViewer.Windows {
 
             // 左键点击进行射线拾取（任何模式下都可以选择）
             if (button == MouseButton.Left) {
-                if (_scene != null
-                    && _camera != null) {
+                if (_context?.Scene != null
+                    && _context.Camera != null) {
                     Vector2 screenPos = mouse.Position;
-                    Vector2 screenSize = new(MainWindow.Size.X, MainWindow.Size.Y);
-                    Ray ray = RayPicker.CreateRayFromScreen(screenPos, screenSize, _camera);
-                    PickingResult result = RayPicker.Pick(_scene, ray);
+                    Vector2 screenSize = new(_context.Size.X, _context.Size.Y);
+                    Ray ray = RayPicker.CreateRayFromScreen(screenPos, screenSize, _context.Camera);
+                    PickingResult result = RayPicker.Pick(_context.Scene, ray);
                     if (result.Hit) {
                         SelectionManager.Select(result.Model, result.MeshInstance);
                     }
@@ -118,11 +110,11 @@ namespace DotnetGltfViewer.Windows {
             _lastMousePosition = position;
             if (_leftMouseDown) {
                 // 左键拖拽：以固定点为中心旋转相机
-                _camera.Orbit(delta.X * MouseOrbitSensitivity, -delta.Y * MouseOrbitSensitivity);
+                _context?.Camera?.Orbit(delta.X * MouseOrbitSensitivity, -delta.Y * MouseOrbitSensitivity);
             }
             else if (_rightMouseDown) {
                 // 右键拖拽：平移相机和固定点
-                _camera.Pan(-delta.X * MousePanSensitivity, delta.Y * MousePanSensitivity);
+                _context?.Camera?.Pan(-delta.X * MousePanSensitivity, delta.Y * MousePanSensitivity);
             }
         }
 
@@ -137,7 +129,7 @@ namespace DotnetGltfViewer.Windows {
             // 滚轮：缩放（靠近/远离固定点）
             float delta = scrollWheel.Y;
             if (MathF.Abs(delta) > 0.0001f) {
-                _camera.ZoomDistance(delta * ScrollSpeed);
+                _context?.Camera?.ZoomDistance(delta * ScrollSpeed);
             }
         }
 
@@ -156,7 +148,7 @@ namespace DotnetGltfViewer.Windows {
                 return;
             }
             if (_primaryKeyboard.IsKeyPressed(Key.Escape)) {
-                MainWindow.Close();
+                _context?.RequestClose();
                 return;
             }
             if (_primaryKeyboard.IsKeyPressed(Key.Number1)) {
@@ -172,12 +164,15 @@ namespace DotnetGltfViewer.Windows {
                 GizmoManager.CurrentMode = GizmoMode.Scale;
             }
             if (_primaryKeyboard.IsKeyPressed(Key.F)) {
-                MainWindow.FocusOnSelection();
+                _context?.RequestFocus();
             }
-            float speed = _camera.MoveSpeed * KeyboardMoveMultiplier * deltaTime;
+            if (_context?.Camera == null) {
+                return;
+            }
+            float speed = _context.Camera.MoveSpeed * KeyboardMoveMultiplier * deltaTime;
             // 计算相机的前方向（朝向固定点的方向）和右方向
-            Vector3 forward = _camera.GetForwardDirection();
-            Vector3 right = _camera.GetRightDirection();
+            Vector3 forward = _context.Camera.GetForwardDirection();
+            Vector3 right = _context.Camera.GetRightDirection();
             Vector3 up = Vector3.UnitY;
             Vector3 movement = Vector3.Zero;
             if (_primaryKeyboard.IsKeyPressed(Key.W)) {
@@ -202,7 +197,7 @@ namespace DotnetGltfViewer.Windows {
             if (movement.LengthSquared() > 0f) {
                 movement = Vector3.Normalize(movement) * speed;
                 // 键盘移动：同时平移相机和固定点
-                _camera.Pan(movement);
+                _context.Camera.Pan(movement);
             }
         }
 

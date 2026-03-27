@@ -17,7 +17,7 @@ namespace DotnetGltfViewer.Windows {
         static Vector3 _snapTranslate = new(0.5f, 0.5f, 0.5f);
         static float _snapRotate = 5f;
         static float _snapScale = 0.1f;
-        static Scene _scene;
+        static AppContext _context;
 
         static bool _initialized;
 
@@ -34,8 +34,8 @@ namespace DotnetGltfViewer.Windows {
             set => _useSnap = value;
         }
 
-        public static void Initialize(Scene scene) {
-            _scene = scene;
+        public static void Initialize(AppContext context) {
+            _context = context;
             _initialized = false;
             _userTransform = Matrix4x4.Identity;
 
@@ -43,9 +43,9 @@ namespace DotnetGltfViewer.Windows {
             SelectionManager.OnSelectionChanged += OnSelectionChanged;
 
             // 如果场景只有一个模型，自动选中
-            if (_scene != null
-                && _scene.Models.Count == 1) {
-                _scene.SelectModel(_scene.Models[0]);
+            if (_context?.Scene != null
+                && _context.Scene.Models.Count == 1) {
+                _context.Scene.SelectModel(_context.Scene.Models[0]);
             }
         }
 
@@ -63,7 +63,7 @@ namespace DotnetGltfViewer.Windows {
             if (_initialized) {
                 return;
             }
-            SceneModel selectedModel = _scene?.SelectedModel;
+            SceneModel selectedModel = _context?.Scene?.SelectedModel;
             if (selectedModel?.Model == null
                 || selectedModel.Model.MeshInstances.Count == 0) {
                 return;
@@ -106,7 +106,7 @@ namespace DotnetGltfViewer.Windows {
             _initialized = false;
 
             // 重置选中模型的变换
-            SceneModel selectedModel = _scene?.SelectedModel;
+            SceneModel selectedModel = _context?.Scene?.SelectedModel;
             if (selectedModel?.Model != null) {
                 foreach (MeshInstance instance in selectedModel.Model.MeshInstances) {
                     instance.ResetGizmoTransform();
@@ -130,7 +130,7 @@ namespace DotnetGltfViewer.Windows {
             }
 
             // 检查是否有选中的模型
-            SceneModel selectedModel = _scene?.SelectedModel;
+            SceneModel selectedModel = _context?.Scene?.SelectedModel;
             if (selectedModel?.Model == null) {
                 return false;
             }
@@ -138,7 +138,7 @@ namespace DotnetGltfViewer.Windows {
             ImGuizmo.SetDrawlist(ImGui.GetBackgroundDrawList());
             ImGuizmo.Enable(true);
             ImGuizmo.SetOrthographic(false);
-            ImGuizmo.SetRect(0, 0, MainWindow.Size.X, MainWindow.Size.Y);
+            ImGuizmo.SetRect(0, 0, _context.Size.X, _context.Size.Y);
             ImGuizmoOperation operation = CurrentMode switch {
                 GizmoMode.Translate => ImGuizmoOperation.Translate,
                 GizmoMode.Rotate => ImGuizmoOperation.Rotate,
@@ -187,7 +187,7 @@ namespace DotnetGltfViewer.Windows {
         }
 
         static void ApplyTransformToModel() {
-            SceneModel selectedModel = _scene?.SelectedModel;
+            SceneModel selectedModel = _context?.Scene?.SelectedModel;
             if (selectedModel?.Model == null) {
                 return;
             }
@@ -209,7 +209,7 @@ namespace DotnetGltfViewer.Windows {
         /// 绘制选中模型的包围盒高亮（使用 ImGuizmoOperation.Bounds）
         /// </summary>
         static unsafe void DrawSelectionBounds(Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix) {
-            SceneModel selectedModel = _scene?.SelectedModel;
+            SceneModel selectedModel = _context?.Scene?.SelectedModel;
             if (selectedModel?.Model == null) {
                 return;
             }
@@ -222,7 +222,7 @@ namespace DotnetGltfViewer.Windows {
             ImGuizmo.SetDrawlist(ImGui.GetBackgroundDrawList());
             ImGuizmo.Enable(true);
             ImGuizmo.SetOrthographic(false);
-            ImGuizmo.SetRect(0, 0, MainWindow.Size.X, MainWindow.Size.Y);
+            ImGuizmo.SetRect(0, 0, _context.Size.X, _context.Size.Y);
 
             // 使用缓存的原始局部包围盒
             // localBounds: [min.x, min.y, min.z, max.x, max.y, max.z]
@@ -267,6 +267,7 @@ namespace DotnetGltfViewer.Windows {
         }
 
         public static void Dispose() {
+            SelectionManager.OnSelectionChanged -= OnSelectionChanged;
             ImGuizmo.SetImGuiContext(null);
         }
     }

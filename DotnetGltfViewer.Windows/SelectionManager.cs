@@ -6,6 +6,8 @@ namespace DotnetGltfViewer.Windows {
     /// 选择管理器，处理模型选择和高亮
     /// </summary>
     public static class SelectionManager {
+        static AppContext _context;
+
         /// <summary>
         /// 当前选中的场景模型
         /// </summary>
@@ -27,6 +29,13 @@ namespace DotnetGltfViewer.Windows {
         public static event Action<SceneModel, MeshInstance> OnSelectionChanged;
 
         /// <summary>
+        /// 初始化选择管理器
+        /// </summary>
+        public static void Initialize(AppContext context) {
+            _context = context;
+        }
+
+        /// <summary>
         /// 选中模型
         /// </summary>
         /// <param name="model">场景模型</param>
@@ -41,8 +50,7 @@ namespace DotnetGltfViewer.Windows {
 
             // 同步更新场景的选择状态
             if (model != null) {
-                Scene scene = MainWindow.GetScene();
-                scene?.SelectModel(model);
+                _context?.Scene?.SelectModel(model);
                 // 更新选中模型的包围盒，确保 Gizmo 位置正确
                 model.UpdateWorldBounds();
             }
@@ -60,8 +68,7 @@ namespace DotnetGltfViewer.Windows {
             SelectedInstance = null;
 
             // 同步清除场景的选择状态
-            Scene scene = MainWindow.GetScene();
-            scene?.ClearSelection();
+            _context?.Scene?.ClearSelection();
             OnSelectionChanged?.Invoke(null, null);
         }
 
@@ -70,12 +77,11 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         /// <returns>是否成功选择</returns>
         public static bool SelectSingleModel() {
-            Scene scene = MainWindow.GetScene();
-            if (scene == null
-                || scene.Models.Count != 1) {
+            if (_context?.Scene == null
+                || _context.Scene.Models.Count != 1) {
                 return false;
             }
-            Select(scene.Models[0]);
+            Select(_context.Scene.Models[0]);
             return true;
         }
     }

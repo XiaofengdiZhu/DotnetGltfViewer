@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using DotnetGltfRenderer;
+using DotnetGltfViewer.Windows.Sidebar;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImGuizmo;
 using Silk.NET.OpenGLES.Extensions.Hexa.ImGui;
@@ -18,8 +19,7 @@ namespace DotnetGltfViewer.Windows {
         static bool _showMetricsWindow;
         static bool _showGizmoOptions;
         static bool _showScenePanel;
-        static Camera _camera;
-        static Scene _scene;
+        static AppContext _context;
 
         public static ImGuiIOPtr IO => _io;
 
@@ -28,29 +28,26 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         /// <param name="window">窗口实例。</param>
         /// <param name="input">输入上下文。</param>
-        /// <param name="camera">相机实例。</param>
-        /// <param name="scene">场景实例。</param>
+        /// <param name="context">应用上下文。</param>
         /// <param name="imGuiFontConfig">ImGui 字体配置。</param>
         /// <param name="onConfigureIO">配置 ImGui IO 回调。</param>
         public static void Initialize(IWindow window,
             Silk.NET.Input.IInputContext input,
-            Camera camera,
-            Scene scene,
+            AppContext context,
             ImGuiFontConfig? imGuiFontConfig = null,
             Action onConfigureIO = null) {
             _controller = new ImGuiController(GlContext.GL, window, input, imGuiFontConfig, onConfigureIO ?? DefaultOnConfigureIO);
             ImGuizmo.SetImGuiContext(_controller.Context);
-            _camera = camera;
-            _scene = scene;
-            GizmoManager.Initialize(scene);
-            float scale = MainWindow.MonitorScale;
+            _context = context;
+            GizmoManager.Initialize(context);
+            float scale = context.MonitorScale;
             if (scale > 1.0f) {
                 ImGuiStylePtr style = ImGui.GetStyle();
                 style.ScaleAllSizes(scale);
                 style.FontScaleMain = scale;
             }
             // 初始化侧边栏
-            SidebarPanel.Initialize(scene, MainWindow.GetRenderer());
+            SidebarPanel.Initialize(context.Scene, context.Renderer);
             LogManager.Logger.ZLogDebug($"ImGui 管理器初始化完成");
         }
 
@@ -80,11 +77,11 @@ namespace DotnetGltfViewer.Windows {
         /// 渲染 Gizmo
         /// </summary>
         static void RenderGizmo() {
-            if (_camera == null) {
+            if (_context?.Camera == null) {
                 return;
             }
-            Matrix4x4 viewMatrix = _camera.ViewMatrix;
-            Matrix4x4 projectionMatrix = _camera.GetProjectionMatrix((float)MainWindow.Size.X / MainWindow.Size.Y);
+            Matrix4x4 viewMatrix = _context.Camera.ViewMatrix;
+            Matrix4x4 projectionMatrix = _context.Camera.GetProjectionMatrix((float)_context.Size.X / _context.Size.Y);
             GizmoManager.Render(viewMatrix, projectionMatrix);
         }
 
@@ -235,18 +232,18 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         static void RenderScenePanel() {
             ImGui.Begin("Scene", ref _showScenePanel);
-            if (_scene == null) {
+            if (_context?.Scene == null) {
                 ImGui.Text("No scene loaded");
                 ImGui.End();
                 return;
             }
 
             // 模型列表
-            ImGui.Text($"Models: {_scene.Models.Count}");
+            ImGui.Text($"Models: {_context.Scene.Models.Count}");
             ImGui.Separator();
-            for (int i = 0; i < _scene.Models.Count; i++) {
-                SceneModel model = _scene.Models[i];
-                bool isSelected = _scene.SelectedModel == model;
+            for (int i = 0; i < _context.Scene.Models.Count; i++) {
+                SceneModel model = _context.Scene.Models[i];
+                bool isSelected = _context.Scene.SelectedModel == model;
 
                 // 可见性复选框
                 bool isVisible = model.IsVisible;
@@ -259,13 +256,13 @@ namespace DotnetGltfViewer.Windows {
 
                 // 选中状态
                 if (ImGui.Selectable($"{model.Name}", isSelected)) {
-                    _scene.SelectModel(model);
+                    _context.Scene.SelectModel(model);
                 }
 
                 // 右键菜单
                 if (ImGui.BeginPopupContextItem()) {
                     if (ImGui.MenuItem("Remove")) {
-                        _scene.RemoveModel(model);
+                        _context.Scene.RemoveModel(model);
                         break; // 避免在枚举时修改集合
                     }
                     ImGui.EndPopup();

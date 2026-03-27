@@ -1,8 +1,8 @@
 using System;
 using System.IO;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using DotnetGltfRenderer;
+using DotnetGltfViewer.Windows.Sidebar;
 using NativeFileDialogCore;
 using Silk.NET.Input;
 using Silk.NET.Maths;
@@ -22,6 +22,7 @@ namespace DotnetGltfViewer.Windows {
         static Scene _scene;
         static Renderer _renderer;
         static Camera _camera;
+        static AppContext _context;
 
         // 默认路径
         const string DefaultModelPath = "Models/DamagedHelmet/glTF/DamagedHelmet.gltf";
@@ -88,11 +89,18 @@ namespace DotnetGltfViewer.Windows {
             // 初始化渲染器
             _renderer = new Renderer(_scene, DefaultEnvironmentMapPath, ShadersDirectory);
             _camera = _renderer.Camera;
-            ImGuiManager.Initialize(_window, input, _camera, _scene);
+
+            // 创建 AppContext
+            _context = new AppContext(_scene, _renderer, _camera);
+            _context.FocusRequested += () => FocusOnSelection();
+            _context.CloseRequested += Close;
+
+            // 初始化各管理器
             OnFramebufferResize(_window.FramebufferSize);
-            ResetCameraToScene();
-            InputManager.Initialize(_camera, input);
-            InputManager.SetScene(_scene);
+            SelectionManager.Initialize(_context);
+            ImGuiManager.Initialize(_window, input, _context);
+            InputManager.Initialize(_context, input);
+            CameraController.ResetCameraToScene(_scene, _camera, _window.Size);
             PerformanceManager.Initialize();
         }
 
@@ -128,6 +136,10 @@ namespace DotnetGltfViewer.Windows {
         /// <param name="newSize">新的帧缓冲区大小。</param>
         static void OnFramebufferResize(Vector2D<int> newSize) {
             Size = newSize;
+            if (_context != null) {
+                _context.Size = newSize;
+                _context.MonitorScale = MonitorScale;
+            }
             _gl.Viewport(0, 0, (uint)newSize.X, (uint)newSize.Y);
             _gl.Scissor(0, 0, (uint)newSize.X, (uint)newSize.Y);
             _renderer?.SetFramebufferSize(newSize.X, newSize.Y);
@@ -139,6 +151,7 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         static void OnClosing() {
             LogManager.Logger.ZLogInformation($"正在关闭窗口...");
+            SidebarPanel.Dispose();
             ImGuiManager.Dispose();
             InputManager.Dispose();
             PerformanceManager.Dispose();
@@ -150,56 +163,24 @@ namespace DotnetGltfViewer.Windows {
         }
 
         /// <summary>
-        /// 重置相机以正视整个场景（启动时调用）
+        /// 重置相机以正视整个场景
         /// </summary>
         public static void ResetCameraToScene() {
-            if (_scene.TryGetSceneBounds(out Vector3 min, out Vector3 max)) {
-                Vector2D<int> size = _window.Size;
-                float aspect = (float)Math.Max(size.X, 1) / Math.Max(size.Y, 1);
-                _renderer.Camera.LookAtBoundingBox(min, max, aspect);
-            }
+            CameraController.ResetCameraToScene(_scene, _camera, _window.Size);
         }
 
         /// <summary>
         /// 聚焦到选中的物品，保持当前视角方向不变
         /// </summary>
         public static void FocusOnSelection(SceneModel selectedModel = null) {
-            selectedModel ??= _scene?.SelectedModel;
-            if (selectedModel == null) {
-                return;
-            }
-            BoundingBox bounds = selectedModel.WorldBounds;
-            if (bounds.IsValid) {
-                Vector2D<int> size = _window.Size;
-                float aspect = (float)Math.Max(size.X, 1) / Math.Max(size.Y, 1);
-                _renderer.Camera.FocusOnBoundingBox(bounds.Min, bounds.Max, aspect);
-            }
+            CameraController.FocusOnSelection(_scene, _camera, _window.Size, selectedModel);
         }
 
         /// <summary>
         /// 移动模型到画面中心，保持相机不动
         /// </summary>
         public static void MoveModelToScreenCenter(SceneModel sceneModel) {
-            if (sceneModel?.Model == null) {
-                return;
-            }
-            BoundingBox bounds = sceneModel.WorldBounds;
-            if (!bounds.IsValid) {
-                return;
-            }
-            // 模型中心
-            Vector3 modelCenter = (bounds.Min + bounds.Max) * 0.5f;
-            // 画面中心（相机焦点）
-            Vector3 screenCenter = _camera.FocalPoint;
-            // 计算需要的平移量
-            Vector3 translation = screenCenter - modelCenter;
-            // 应用平移变换到模型的所有 MeshInstance
-            Matrix4x4 translateMatrix = Matrix4x4.CreateTranslation(translation);
-            foreach (MeshInstance instance in sceneModel.Model.MeshInstances) {
-                instance.SetGizmoTransform(translateMatrix);
-            }
-            // 更新包围盒
-            sceneModel.UpdateWorldBounds();
+            CameraController.MoveModelToScreenCenter(sceneModel, _camera);
         }
 
         /// <summary>
@@ -208,15 +189,10 @@ namespace DotnetGltfViewer.Windows {
         public static void OpenModelFileDialog() {
             DialogResult result = Dialog.FileOpenEx("[glTF Files (*.gltf;*.glb)|*.gltf;*.glb]", null, "Open glTF Model");
             if (result.IsOk) {
-                try {
-                    SceneModel sceneModel = _scene.AddModel(result.Path);
+                SceneModel sceneModel = SceneLoader.LoadModel(_scene, result.Path, _renderer);
+                if (sceneModel != null) {
                     SelectionManager.Select(sceneModel);
                     MoveModelToScreenCenter(sceneModel);
-                    _renderer.UpdateLightsFromScene();
-                    LogManager.Logger.ZLogInformation($"Loaded model: {result.Path}");
-                }
-                catch (Exception ex) {
-                    LogManager.Logger.ZLogError($"Failed to load model: {ex.Message}");
                 }
             }
         }
@@ -227,13 +203,7 @@ namespace DotnetGltfViewer.Windows {
         public static void OpenEnvironmentMapDialog() {
             DialogResult result = Dialog.FileOpenEx("[HDR Files (*.hdr)|*.hdr]", null, "Open Environment Map");
             if (result.IsOk) {
-                try {
-                    _renderer.SetEnvironmentMap(result.Path);
-                    LogManager.Logger.ZLogInformation($"Loaded environment map: {result.Path}");
-                }
-                catch (Exception ex) {
-                    LogManager.Logger.ZLogError($"Failed to load environment map: {ex.Message}");
-                }
+                SceneLoader.LoadEnvironmentMap(_renderer, result.Path);
             }
         }
 
@@ -241,20 +211,8 @@ namespace DotnetGltfViewer.Windows {
         /// 清除场景中的所有模型
         /// </summary>
         public static void ClearScene() {
-            SelectionManager.ClearSelection();
-            _scene.Clear();
-            _renderer.UpdateLightsFromScene();
+            SceneLoader.ClearScene(_scene, _renderer);
         }
-
-        /// <summary>
-        /// 获取当前场景
-        /// </summary>
-        public static Scene GetScene() => _scene;
-
-        /// <summary>
-        /// 获取当前渲染器
-        /// </summary>
-        public static Renderer GetRenderer() => _renderer;
 
         [DllImport("user32.dll", SetLastError = true)]
         static extern uint GetDpiForWindow(IntPtr hwnd);

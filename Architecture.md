@@ -33,9 +33,24 @@ DotnetGltfViewer/
 │   ├── Animation/            # 骨骼动画与 Morph Target
 │   └── shaders/              # GLSL 着色器文件，改编自 gltf 官方渲染器项目
 └── DotnetGltfViewer.Windows/ # Windows 桌面应用程序
+    ├── Program.cs            # 应用程序入口
     ├── MainWindow.cs         # 窗口与渲染循环
+    ├── AppContext.cs         # 共享上下文，传递核心引用
+    ├── SceneLoader.cs        # 模型与环境贴图加载
+    ├── CameraController.cs   # 相机操作
+    ├── InputManager.cs       # 输入处理
     ├── ImGuiManager.cs       # ImGui UI 管理
-    └── InputManager.cs       # 输入处理
+    ├── GizmoManager.cs       # Gizmo 变换操作
+    ├── SelectionManager.cs   # 模型选择管理
+    ├── RayPicker.cs          # 射线拾取
+    ├── PerformanceManager.cs # FPS 统计
+    └── Sidebar/              # 侧边栏 UI 组件
+        ├── SidebarPanel.cs   # 侧边栏容器
+        ├── SidebarState.cs   # 侧边栏状态
+        ├── ModelsTab.cs      # Models Tab
+        ├── DisplayTab.cs     # Display Tab
+        ├── AnimationTab.cs   # Animation Tab
+        └── AdvancedTab.cs    # Advanced Tab
 ```
 
 ## 核心架构
@@ -83,6 +98,34 @@ DotnetGltfViewer/
 - 处理骨骼动画和 Morph Target
 - 支持 GPU 实例化（EXT_mesh_gpu_instancing）
 - 支持材质变体（KHR_materials_variants）
+
+## Windows 应用程序架构
+
+### AppContext
+
+`AppContext` 是共享上下文类，持有核心引用（Scene、Renderer、Camera），用于：
+- 传递依赖引用，避免循环依赖
+- 提供事件机制（FocusRequested、CloseRequested）
+
+### 管理器类
+
+| 类名 | 职责 |
+|------|------|
+| `MainWindow` | 窗口创建、渲染循环协调 |
+| `InputManager` | 键盘鼠标输入、相机控制 |
+| `ImGuiManager` | ImGui 初始化与渲染 |
+| `GizmoManager` | Gizmo 变换操作（平移/旋转/缩放） |
+| `SelectionManager` | 模型选择状态管理 |
+| `SceneLoader` | 模型与环境贴图加载 |
+| `CameraController` | 相机操作（聚焦、重置） |
+
+### 侧边栏
+
+侧边栏采用 Tab 结构，每个 Tab 独立文件：
+- `ModelsTab`：模型选择、场景切换、变体选择
+- `DisplayTab`：光照设置、天空盒设置
+- `AnimationTab`：动画播放控制
+- `AdvancedTab`：调试通道、材质扩展开关、统计信息
 
 ## 支持的 glTF 扩展
 
