@@ -49,6 +49,8 @@ namespace DotnetGltfViewer.Windows {
                 style.ScaleAllSizes(scale);
                 style.FontScaleMain = scale;
             }
+            // 初始化侧边栏
+            SidebarPanel.Initialize(scene, MainWindow.GetRenderer());
             LogManager.Logger.ZLogDebug($"ImGui 管理器初始化完成");
         }
 
@@ -68,6 +70,8 @@ namespace DotnetGltfViewer.Windows {
             GizmoManager.RenderToolbar();
             RenderOptionalWindows();
             RenderGizmo();
+            SidebarPanel.Render();
+            SidebarPanel.Update();
             _controller.Render();
         }
 
@@ -122,6 +126,10 @@ namespace DotnetGltfViewer.Windows {
                     ImGui.EndMenu();
                 }
                 if (ImGui.BeginMenu("View")) {
+                    bool showSidebar = SidebarPanel.State?.IsVisible ?? false;
+                    if (ImGui.MenuItem("Sidebar", string.Empty, showSidebar)) {
+                        SidebarPanel.ToggleVisibility();
+                    }
                     ImGui.MenuItem("Demo", string.Empty, ref _showDemoWindow);
                     ImGui.MenuItem("Metrics", string.Empty, ref _showMetricsWindow);
                     ImGui.MenuItem("Gizmo Options", string.Empty, ref _showGizmoOptions);

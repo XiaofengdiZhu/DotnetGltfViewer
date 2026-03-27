@@ -251,6 +251,11 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         public static Scene GetScene() => _scene;
 
+        /// <summary>
+        /// 获取当前渲染器
+        /// </summary>
+        public static Renderer GetRenderer() => _renderer;
+
         [DllImport("user32.dll", SetLastError = true)]
         static extern uint GetDpiForWindow(IntPtr hwnd);
     }

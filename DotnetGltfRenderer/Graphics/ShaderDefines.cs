@@ -315,14 +315,19 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 从网格创建顶点着色器 defines
         /// </summary>
-        public static ShaderDefines CreateFromMesh(Mesh mesh) {
+        public static ShaderDefines CreateFromMesh(Mesh mesh) => CreateFromMesh(mesh, true, true);
+
+        /// <summary>
+        /// 从网格创建顶点着色器 defines（支持禁用蒙皮和 Morph Target）
+        /// </summary>
+        public static ShaderDefines CreateFromMesh(Mesh mesh, bool enableSkinning, bool enableMorphing) {
             ShaderDefines defines = CreateVertexDefines(
                 mesh.HasSurfaceAttributes,
                 mesh.HasSurfaceAttributes, // SurfaceVertices contains tangents (original or generated)
                 true,
                 mesh.HasUV1,
                 mesh.HasColor0,
-                mesh.HasSkinAttributes
+                enableSkinning && mesh.HasSkinAttributes
             );
 
             // 添加 GPU 实例化支持
@@ -331,7 +336,8 @@ namespace DotnetGltfRenderer {
             }
 
             // 添加 Morph Target 支持
-            if (mesh.HasMorphTargets
+            if (enableMorphing
+                && mesh.HasMorphTargets
                 && mesh.MorphTargetTexture != null) {
                 MorphTargetTexture tex = mesh.MorphTargetTexture;
                 defines.SetMorphTargetDefines(
@@ -362,7 +368,32 @@ namespace DotnetGltfRenderer {
             bool isScatterPass,
             ToneMapMode toneMapMode,
             int lightCount,
-            Mesh mesh = null) {
+            Mesh mesh = null) => CreateFromMaterial(material, useIBL, useLinearOutput, isScatterPass, toneMapMode, lightCount, mesh, true, DebugChannel.None);
+
+        /// <summary>
+        /// 从材质和渲染状态创建片段着色器 defines（支持禁用 Morph Target）
+        /// </summary>
+        public static ShaderDefines CreateFromMaterial(Material material,
+            bool useIBL,
+            bool useLinearOutput,
+            bool isScatterPass,
+            ToneMapMode toneMapMode,
+            int lightCount,
+            Mesh mesh,
+            bool enableMorphing) => CreateFromMaterial(material, useIBL, useLinearOutput, isScatterPass, toneMapMode, lightCount, mesh, enableMorphing, DebugChannel.None);
+
+        /// <summary>
+        /// 从材质和渲染状态创建片段着色器 defines（支持禁用 Morph Target 和 Debug Channel）
+        /// </summary>
+        public static ShaderDefines CreateFromMaterial(Material material,
+            bool useIBL,
+            bool useLinearOutput,
+            bool isScatterPass,
+            ToneMapMode toneMapMode,
+            int lightCount,
+            Mesh mesh,
+            bool enableMorphing,
+            DebugChannel debugChannel) {
             // 从材质获取基础 defines（已缓存），然后克隆一份添加上下文相关的 defines
             ShaderDefines defines = (material?.GetDefines() ?? CreateFragmentDefines()).Clone();
 
@@ -376,6 +407,7 @@ namespace DotnetGltfRenderer {
                 if (mesh.HasUV1) {
                     defines.AddVertexAttribute("TEXCOORD_1", 2);
                 }
+                // 如果启用了 Morphing 且网格有颜色属性，才添加颜色定义
                 if (mesh.HasColor0) {
                     defines.Add("HAS_COLOR_0_VEC4");
                 }
@@ -413,6 +445,12 @@ namespace DotnetGltfRenderer {
             else {
                 defines.Add("LINEAR_OUTPUT");
             }
+
+            // 添加 Debug Channel
+            if (debugChannel != DebugChannel.None) {
+                defines.AddRaw($"DEBUG {(int)debugChannel}");
+            }
+
             return defines;
         }
 

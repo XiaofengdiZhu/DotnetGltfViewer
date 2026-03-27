@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Silk.NET.OpenGLES;
 using ZLogger;
 
 namespace DotnetGltfRenderer {
@@ -64,6 +65,42 @@ namespace DotnetGltfRenderer {
         /// 色调映射模式
         /// </summary>
         public ToneMapMode ToneMapMode { get; set; } = ToneMapMode.KhrPbrNeutral;
+
+        /// <summary>
+        /// 是否显示环境贴图（天空盒）
+        /// </summary>
+        public bool ShowEnvironmentMap { get; set; } = true;
+
+        /// <summary>
+        /// 环境旋转角度（度数，绕 Y 轴）
+        /// 0: +Z, 90: -X, 180: -Z, 270: +X
+        /// </summary>
+        public float EnvironmentRotation { get; set; } = 0f;
+
+        /// <summary>
+        /// 天空盒亮度（独立于模型反射强度）
+        /// </summary>
+        public float SkyboxIntensity { get; set; } = 1.0f;
+
+        /// <summary>
+        /// 背景颜色（当 Environment Map 关闭时使用）
+        /// </summary>
+        public System.Numerics.Vector3 BackgroundColor { get; set; } = new(0.1f, 0.1f, 0.1f);
+
+        /// <summary>
+        /// Debug 渲染通道
+        /// </summary>
+        public DebugChannel DebugChannel { get; set; } = DebugChannel.None;
+
+        /// <summary>
+        /// 是否启用蒙皮动画
+        /// </summary>
+        public bool EnableSkinning { get; set; } = true;
+
+        /// <summary>
+        /// 是否启用 Morph Target 动画
+        /// </summary>
+        public bool EnableMorphing { get; set; } = true;
 
         /// <summary>
         /// 创建渲染器
@@ -186,7 +223,10 @@ namespace DotnetGltfRenderer {
                 FramebufferWidth = _framebufferWidth,
                 FramebufferHeight = _framebufferHeight,
                 HasTransmissionFramebuffer = FramebufferManager.HasTransmissionFramebuffer,
-                HasScatterFramebuffer = FramebufferManager.HasScatterFramebuffer
+                HasScatterFramebuffer = FramebufferManager.HasScatterFramebuffer,
+                DebugChannel = DebugChannel,
+                EnableSkinning = EnableSkinning,
+                EnableMorphing = EnableMorphing
             };
 
             // 更新 Scene UBO
@@ -222,18 +262,21 @@ namespace DotnetGltfRenderer {
         }
 
         void UpdateSceneUBO() {
-            // EnvRotation is identity matrix by default
-            // Can be modified for environment map rotation
+            // 计算环境旋转矩阵（绕 Y 轴旋转）
+            float rotRad = EnvironmentRotation * MathF.PI / 180.0f;
+            float cosR = MathF.Cos(rotRad);
+            float sinR = MathF.Sin(rotRad);
+
             SceneData sceneData = new() {
                 CameraPos = new Vector4(Camera.Position, 0f),
                 Exposure = LightingSystem.Exposure,
                 EnvironmentStrength = IBLManager.EnvironmentStrength,
                 MipCount = IBLManager.MipCount,
                 Padding0 = 0f,
-                // Identity rotation matrix columns
-                EnvRotationCol0 = new Vector4(1f, 0f, 0f, 0f),
+                // 环境旋转矩阵列
+                EnvRotationCol0 = new Vector4(cosR, 0f, -sinR, 0f),
                 EnvRotationCol1 = new Vector4(0f, 1f, 0f, 0f),
-                EnvRotationCol2 = new Vector4(0f, 0f, 1f, 0f)
+                EnvRotationCol2 = new Vector4(sinR, 0f, cosR, 0f)
             };
             _sceneUBO.Update(ref sceneData);
         }
@@ -246,12 +289,17 @@ namespace DotnetGltfRenderer {
             float envIntensity = 1.0f,
             float envBlur = 0.0f,
             float envRotationDegrees = 0.0f) {
+            // 如果不显示环境贴图，则渲染背景色
+            if (!ShowEnvironmentMap) {
+                RenderBackgroundColor();
+                return;
+            }
             SkyRenderer?.Render(
                 view,
                 projection,
-                envIntensity * IBLManager.EnvironmentStrength,
+                SkyboxIntensity,
                 envBlur,
-                envRotationDegrees,
+                EnvironmentRotation,
                 LightingSystem.Exposure,
                 IBLManager.IblSampler
             );
@@ -261,13 +309,27 @@ namespace DotnetGltfRenderer {
         /// 渲染天空盒（线性输出模式）
         /// </summary>
         public void RenderSkyLinear(Matrix4x4 view, Matrix4x4 projection, float envIntensity = 1.0f) {
+            // 如果不显示环境贴图，则渲染背景色
+            if (!ShowEnvironmentMap) {
+                RenderBackgroundColor();
+                return;
+            }
             SkyRenderer?.RenderLinear(
                 view,
                 projection,
-                envIntensity * IBLManager.EnvironmentStrength,
+                SkyboxIntensity,
                 LightingSystem.Exposure,
                 IBLManager.IblSampler
             );
+        }
+
+        /// <summary>
+        /// 渲染背景色
+        /// </summary>
+        void RenderBackgroundColor() {
+            // 设置清除颜色并清除颜色缓冲区
+            GlContext.GL.ClearColor(BackgroundColor.X, BackgroundColor.Y, BackgroundColor.Z, 1.0f);
+            GlContext.GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         }
 
         public void Dispose() {

@@ -38,6 +38,10 @@ namespace DotnetGltfRenderer {
         /// 初始化并处理环境贴图
         /// </summary>
         public void Process(EnvironmentMap panorama) {
+            // 保存当前视口设置
+            int[] viewport = new int[4];
+            GlContext.GL.GetInteger(GetPName.Viewport, viewport);
+
             // 确保进度目录存在
             if (!Directory.Exists(ProgressDirectory)) {
                 Directory.CreateDirectory(ProgressDirectory);
@@ -81,6 +85,10 @@ namespace DotnetGltfRenderer {
             GenerateCharlieLut();
             //SaveLutToBmp("charlie_lut", CharlieLut);
             GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+
+            // 恢复视口设置
+            GlContext.GL.Viewport(viewport[0], viewport[1], (uint)viewport[2], (uint)viewport[3]);
+
             LogManager.Logger.ZLogInformation($"[IBL] Processing complete!");
         }
 

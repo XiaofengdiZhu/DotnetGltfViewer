@@ -31,7 +31,7 @@ namespace DotnetGltfRenderer {
 
         // 缓存的 context hash（每个 Pass 更新一次）
         int _cachedContextHash;
-        (bool useIBL, bool useLinearOutput, ToneMapMode toneMapMode, int lightCount, bool isScatterPass) _lastContextParams;
+        (bool useIBL, bool useLinearOutput, ToneMapMode toneMapMode, int lightCount, bool isScatterPass, DebugChannel debugChannel) _lastContextParams;
 
         // 缓存的顶点着色器 hash（每帧更新一次，用于所有 MeshInstance）
         int _cachedVertShaderBaseHash;
@@ -92,8 +92,8 @@ namespace DotnetGltfRenderer {
         /// 计算 context defines hash，避免每个 MeshInstance 重复计算
         /// </summary>
         void UpdateContextHashIfNeeded(in RenderContext context) {
-            (bool UseIBL, bool UseLinearOutput, ToneMapMode ToneMapMode, int LightCount, bool IsScatterPass) contextParams = (context.UseIBL,
-                context.UseLinearOutput, context.ToneMapMode, context.LightCount, context.IsScatterPass);
+            (bool UseIBL, bool UseLinearOutput, ToneMapMode ToneMapMode, int LightCount, bool IsScatterPass, DebugChannel DebugChannel) contextParams = (context.UseIBL,
+                context.UseLinearOutput, context.ToneMapMode, context.LightCount, context.IsScatterPass, context.DebugChannel);
             if (_lastContextParams == contextParams) {
                 return; // context 未变化，使用缓存的 hash
             }
@@ -132,6 +132,12 @@ namespace DotnetGltfRenderer {
                     };
                     hash = hash * 31 + tonemapDefine.GetHashCode();
                 }
+
+                // DEBUG channel
+                if (context.DebugChannel != DebugChannel.None) {
+                    hash = hash * 31 + $"DEBUG {(int)context.DebugChannel}".GetHashCode();
+                }
+
                 return hash;
             }
         }
@@ -168,10 +174,10 @@ namespace DotnetGltfRenderer {
             mesh.Bind();
 
             // 设置变换 uniform
-            SetTransformUniforms(instance, shader);
+            SetTransformUniforms(instance, shader, in context);
 
             // 设置 Morph Target
-            SetupMorphTargets(mesh, shader);
+            SetupMorphTargets(mesh, shader, in context);
 
             // 更新材质 UBO（带缓存优化）
             UpdateMaterialUBOs(material, mesh.UseGeneratedTangents);
@@ -244,8 +250,8 @@ namespace DotnetGltfRenderer {
         /// 使用预计算的 hash 避免每帧创建 ShaderDefines 对象
         /// </summary>
         Shader GetOrCreateShaderVariant(Mesh mesh, Material material, in RenderContext context) {
-            // 顶点着色器：使用缓存的 defines hash
-            int vertHash = _cachedVertShaderBaseHash ^ mesh.GetVertDefines().ComputeHash();
+            // 顶点着色器：考虑 EnableSkinning 和 EnableMorphing 标志
+            int vertHash = _cachedVertShaderBaseHash ^ GetVertDefinesHash(mesh, context.EnableSkinning, context.EnableMorphing);
 
             // 片段着色器：组合各部分 hash
             // hash = shaderName ^ materialHash ^ meshFragAttrHash ^ contextHash
@@ -280,10 +286,32 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
+        /// 计算顶点着色器 defines hash（考虑 EnableSkinning 和 EnableMorphing）
+        /// </summary>
+        static int GetVertDefinesHash(Mesh mesh, bool enableSkinning, bool enableMorphing) {
+            unchecked {
+                int hash = mesh.GetVertDefines().ComputeHash();
+
+                // 如果禁用蒙皮，移除蒙皮相关的 hash
+                if (!enableSkinning && mesh.HasSkinAttributes) {
+                    hash ^= "HAS_JOINTS".GetHashCode();
+                    hash ^= "HAS_WEIGHTS".GetHashCode();
+                }
+
+                // 如果禁用 Morph Target，移除相关 hash
+                if (!enableMorphing && mesh.HasMorphTargets) {
+                    hash ^= "HAS_MORPH_TARGETS".GetHashCode();
+                }
+
+                return hash;
+            }
+        }
+
+        /// <summary>
         /// 创建着色器（首次编译时使用）
         /// </summary>
         static Shader CreateShaderWithDefines(Mesh mesh, Material material, in RenderContext context, string fragShaderName) {
-            ShaderDefines vertDefines = mesh.GetVertDefines();
+            ShaderDefines vertDefines = ShaderDefines.CreateFromMesh(mesh, context.EnableSkinning, context.EnableMorphing);
             ShaderDefines fragDefines = ShaderDefines.CreateFromMaterial(
                 material,
                 context.UseIBL,
@@ -291,7 +319,9 @@ namespace DotnetGltfRenderer {
                 context.IsScatterPass,
                 context.ToneMapMode,
                 context.LightCount,
-                mesh
+                mesh,
+                context.EnableMorphing,
+                context.DebugChannel
             );
             return ShaderCache.GetShaderProgram(
                 ShaderCache.SelectShader("primitive.vert", vertDefines),
@@ -302,12 +332,14 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 设置变换 uniform
         /// </summary>
-        void SetTransformUniforms(MeshInstance instance, Shader shader) {
+        void SetTransformUniforms(MeshInstance instance, Shader shader, in RenderContext context) {
             if (instance.Mesh.UseInstancing) {
                 return;
             }
-            Matrix4x4 modelMatrix = instance.HasSkinning ? Matrix4x4.Identity : instance.WorldMatrix;
-            if (instance.HasSkinning) {
+            // 只有当启用蒙皮且实例有蒙皮数据时才使用蒙皮
+            bool useSkinning = context.EnableSkinning && instance.HasSkinning;
+            Matrix4x4 modelMatrix = useSkinning ? Matrix4x4.Identity : instance.WorldMatrix;
+            if (useSkinning) {
                 const int jointTextureSlot = 30;
                 instance.JointTexture?.Bind((TextureUnit)((int)TextureUnit.Texture0 + jointTextureSlot));
                 shader.SetUniform("u_jointsSampler", jointTextureSlot);
@@ -325,8 +357,10 @@ namespace DotnetGltfRenderer {
         /// <summary>
         /// 设置 Morph Target 纹理和权重
         /// </summary>
-        void SetupMorphTargets(Mesh mesh, Shader shader) {
-            if (!mesh.HasMorphTargets
+        void SetupMorphTargets(Mesh mesh, Shader shader, in RenderContext context) {
+            // 只有当启用 Morph Target 且网格有 Morph Target 数据时才设置
+            if (!context.EnableMorphing
+                || !mesh.HasMorphTargets
                 || mesh.MorphTargetTexture == null) {
                 return;
             }

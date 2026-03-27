@@ -22,6 +22,11 @@ namespace DotnetGltfRenderer {
 
         Animation _activeAnimation;
         float _animationTimeSeconds;
+        bool _isAnimationPaused;
+        int _activeAnimationIndex;
+
+        // 动画名称列表
+        readonly List<string> _animationNames = new();
 
         // KHR_animation_pointer support
         AnimationPointerProcessor _pointerProcessor;
@@ -81,6 +86,42 @@ namespace DotnetGltfRenderer {
         public bool HasAnimation => _activeAnimation != null;
         public float AnimationDurationSeconds { get; private set; }
 
+        /// <summary>
+        /// 动画是否暂停
+        /// </summary>
+        public bool IsAnimationPaused {
+            get => _isAnimationPaused;
+            set => _isAnimationPaused = value;
+        }
+
+        /// <summary>
+        /// 所有动画名称列表
+        /// </summary>
+        public IReadOnlyList<string> AnimationNames => _animationNames;
+
+        /// <summary>
+        /// 当前活动动画索引
+        /// </summary>
+        public int ActiveAnimationIndex {
+            get => _activeAnimationIndex;
+            set {
+                if (value < 0 || value >= _animationNames.Count) {
+                    return;
+                }
+                if (value == _activeAnimationIndex) {
+                    return;
+                }
+                SetActiveAnimation(value);
+            }
+        }
+
+        /// <summary>
+        /// 当前活动动画名称
+        /// </summary>
+        public string ActiveAnimationName => _activeAnimationIndex >= 0 && _activeAnimationIndex < _animationNames.Count
+            ? _animationNames[_activeAnimationIndex]
+            : null;
+
         public Texture GetTexture(int logicalIndex) => _texturesLoaded.TryGetValue(logicalIndex, out Texture tex) ? tex : null;
 
         public Model(string path) {
@@ -120,8 +161,18 @@ namespace DotnetGltfRenderer {
 
             // 切换到默认场景
             SwitchToScene(_activeSceneIndex);
-            _activeAnimation = _modelRoot.LogicalAnimations.FirstOrDefault();
+
+            // 加载所有动画名称
+            _animationNames.Clear();
+            foreach (Animation anim in _modelRoot.LogicalAnimations) {
+                _animationNames.Add(anim.Name ?? $"Animation {_animationNames.Count}");
+            }
+
+            // 设置默认动画
+            _activeAnimationIndex = _animationNames.Count > 0 ? 0 : -1;
+            _activeAnimation = _activeAnimationIndex >= 0 ? _modelRoot.LogicalAnimations[_activeAnimationIndex] : null;
             AnimationDurationSeconds = _activeAnimation?.Duration ?? 0f;
+            _animationTimeSeconds = 0f;
 
             // 构建 morph target sampler 缓存
             BuildMorphSamplerCache();
@@ -458,7 +509,34 @@ namespace DotnetGltfRenderer {
             return mesh;
         }
 
+        /// <summary>
+        /// 设置活动动画
+        /// </summary>
+        public void SetActiveAnimation(int index) {
+            if (index < 0 || index >= _animationNames.Count) {
+                return;
+            }
+            _activeAnimationIndex = index;
+            _activeAnimation = _modelRoot.LogicalAnimations[index];
+            AnimationDurationSeconds = _activeAnimation?.Duration ?? 0f;
+            _animationTimeSeconds = 0f;
+
+            // 重新构建 morph target sampler 缓存
+            BuildMorphSamplerCache();
+
+            // 重新初始化 animation pointer processor
+            _pointerProcessor?.ProcessAnimation(_activeAnimation, _modelRoot, this);
+        }
+
         public void Update(float deltaTimeSeconds) {
+            // 检查暂停状态
+            if (_isAnimationPaused) {
+                // 即使暂停也需要更新变换（使用当前时间）
+                _pointerProcessor?.Update(_animationTimeSeconds);
+                UpdateMeshInstanceTransforms();
+                return;
+            }
+
             if (_activeAnimation != null
                 && AnimationDurationSeconds > 0f) {
                 _animationTimeSeconds += MathF.Max(0f, deltaTimeSeconds);
