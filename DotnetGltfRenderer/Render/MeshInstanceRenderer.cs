@@ -336,9 +336,10 @@ namespace DotnetGltfRenderer {
             if (instance.Mesh.UseInstancing) {
                 return;
             }
-            // 只有当启用蒙皮且实例有蒙皮数据时才使用蒙皮
             bool useSkinning = context.EnableSkinning && instance.HasSkinning;
-            Matrix4x4 modelMatrix = useSkinning ? Matrix4x4.Identity : instance.WorldMatrix;
+            Matrix4x4 modelMatrix = useSkinning
+                ? instance.GetGizmoTransform()
+                : instance.WorldMatrix;
             if (useSkinning) {
                 const int jointTextureSlot = 30;
                 instance.JointTexture?.Bind((TextureUnit)((int)TextureUnit.Texture0 + jointTextureSlot));
