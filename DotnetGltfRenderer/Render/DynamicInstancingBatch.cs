@@ -96,14 +96,14 @@ namespace DotnetGltfRenderer {
             _negativeScaleDirty = false;
         }
 
-        public unsafe void EnsureVBO() {
+        public void EnsureVBO() {
             int count = _instances.Count;
             if (count == 0) {
                 return;
             }
 
             if (_instanceBufferHandle == 0) {
-                CreateVBO(count);
+                CreateVBO();
                 return;
             }
 
@@ -112,13 +112,13 @@ namespace DotnetGltfRenderer {
             }
         }
 
-        unsafe void CreateVBO(int count) {
+        unsafe void CreateVBO() {
             _instanceBufferHandle = GlContext.GL.GenBuffer();
             GlContext.GL.BindBuffer(BufferTargetARB.ArrayBuffer, _instanceBufferHandle);
             fixed (float* ptr = _matrixData) {
                 GlContext.GL.BufferData(
                     BufferTargetARB.ArrayBuffer,
-                    (nuint)(MaxInstancesPerBatch * 16 * sizeof(float)),
+                    MaxInstancesPerBatch * 16 * sizeof(float),
                     ptr,
                     BufferUsageARB.DynamicDraw
                 );

@@ -106,7 +106,6 @@ namespace DotnetGltfViewer.Windows.Sidebar {
             string modelPath = _scene.SelectedModel.FilePath;
             try {
                 // 移除当前模型
-                string modelName = _scene.SelectedModel.Name;
                 _scene.RemoveModel(_scene.SelectedModel);
 
                 // 重新加载模型

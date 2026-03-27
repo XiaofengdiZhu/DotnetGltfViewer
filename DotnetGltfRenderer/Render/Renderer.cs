@@ -144,8 +144,6 @@ namespace DotnetGltfRenderer {
             MeshInstanceRenderer meshInstanceRenderer = new(
                 _materialCoreUBO,
                 _materialExtUBO,
-                _sceneUBO,
-                _lightsUBO,
                 _renderStateUBO,
                 _uvTransformUBO,
                 _volumeScatterUBO

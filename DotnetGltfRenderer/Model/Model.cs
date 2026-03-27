@@ -149,7 +149,7 @@ namespace DotnetGltfRenderer {
             FilePath = fullPath;
             Directory = Path.GetDirectoryName(fullPath) ?? string.Empty;
 
-            Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> cachedMeshes = null;
+            Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> cachedMeshes;
             lock (_cacheLock) {
                 if (_globalMeshCache.TryGetValue(fullPath, out cachedMeshes)) {
                     foreach (Mesh mesh in cachedMeshes.Values) {
@@ -335,7 +335,7 @@ namespace DotnetGltfRenderer {
             MeshGpuInstancing gpuInstancing = node.GetGpuInstancing();
             if (node.Mesh != null) {
                 if (gpuInstancing != null && gpuInstancing.Count > 0) {
-                    ProcessInstancedNodeWithCachedMeshes(node, gpuInstancing, instances, cachedMeshes);
+                    ProcessInstancedNodeWithCachedMeshes(node, instances, cachedMeshes);
                 }
                 else {
                     for (int i = 0; i < node.Mesh.Primitives.Count; i++) {
@@ -356,7 +356,7 @@ namespace DotnetGltfRenderer {
             }
         }
 
-        void ProcessInstancedNodeWithCachedMeshes(Node node, MeshGpuInstancing gpuInstancing, List<MeshInstance> instances, Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> cachedMeshes) {
+        void ProcessInstancedNodeWithCachedMeshes(Node node, List<MeshInstance> instances, Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> cachedMeshes) {
             if (node.Skin != null) {
                 for (int i = 0; i < node.Mesh.Primitives.Count; i++) {
                     MeshPrimitive primitive = node.Mesh.Primitives[i];
@@ -368,7 +368,6 @@ namespace DotnetGltfRenderer {
                         instances.Add(new MeshInstance(node, mesh, node.Skin));
                     }
                 }
-                return;
             }
         }
 
@@ -392,26 +391,6 @@ namespace DotnetGltfRenderer {
                 if (!ExtensionManager.IsExtensionEnabled(extension)) {
                     throw new Exception($"Detected unsupported or disabled extension: {extension}");
                 }
-            }
-        }
-
-        void PreloadAllScenes() {
-            _sceneNames.Clear();
-            foreach (GltfScene scene in _modelRoot.LogicalScenes) {
-                _sceneNames.Add(scene.Name ?? $"Scene {scene.LogicalIndex}");
-            }
-            if (_sceneNames.Count == 0) {
-                _sceneNames.Add("Default Scene");
-            }
-            _sceneMeshInstances.Clear();
-            _sceneLights.Clear();
-            Dictionary<(int MeshIndex, int PrimitiveIndex), Mesh> primitiveMeshCache = new();
-            for (int sceneIndex = 0; sceneIndex < _modelRoot.LogicalScenes.Count; sceneIndex++) {
-                GltfScene scene = _modelRoot.LogicalScenes[sceneIndex];
-                ProcessScene(scene, sceneIndex, primitiveMeshCache);
-            }
-            if (_modelRoot.LogicalScenes.Count == 0) {
-                ProcessScene(null, 0, primitiveMeshCache);
             }
         }
 

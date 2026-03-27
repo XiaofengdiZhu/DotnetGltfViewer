@@ -10,8 +10,6 @@ namespace DotnetGltfRenderer {
     public class MeshInstanceRenderer {
         readonly UniformBuffer<MaterialCoreData> _materialCoreUBO;
         readonly UniformBuffer<MaterialExtensionData> _materialExtUBO;
-        readonly UniformBuffer<SceneData> _sceneUBO;
-        readonly UniformBuffer<LightsData> _lightsUBO;
         readonly UniformBuffer<RenderStateData> _renderStateUBO;
         readonly UniformBuffer<UVTransformData> _uvTransformUBO;
         readonly UniformBuffer<VolumeScatterData> _volumeScatterUBO;
@@ -58,15 +56,11 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public MeshInstanceRenderer(UniformBuffer<MaterialCoreData> materialCoreUBO,
             UniformBuffer<MaterialExtensionData> materialExtUBO,
-            UniformBuffer<SceneData> sceneUBO,
-            UniformBuffer<LightsData> lightsUBO,
             UniformBuffer<RenderStateData> renderStateUBO,
             UniformBuffer<UVTransformData> uvTransformUBO,
             UniformBuffer<VolumeScatterData> volumeScatterUBO) {
             _materialCoreUBO = materialCoreUBO;
             _materialExtUBO = materialExtUBO;
-            _sceneUBO = sceneUBO;
-            _lightsUBO = lightsUBO;
             _renderStateUBO = renderStateUBO;
             _uvTransformUBO = uvTransformUBO;
             _volumeScatterUBO = volumeScatterUBO;
@@ -283,11 +277,9 @@ namespace DotnetGltfRenderer {
         }
 
         static int GetInstancingVertDefinesHash(Mesh mesh) {
-            unchecked {
-                int hash = mesh.GetVertDefines().ComputeHash();
-                hash ^= "USE_INSTANCING".GetHashCode();
-                return hash;
-            }
+            int hash = mesh.GetVertDefines().ComputeHash();
+            hash ^= "USE_INSTANCING".GetHashCode();
+            return hash;
         }
 
         static Shader CreateInstancingShaderWithDefines(Mesh mesh, Material material, in RenderContext context, string fragShaderName) {

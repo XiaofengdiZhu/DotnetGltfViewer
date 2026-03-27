@@ -236,47 +236,5 @@ namespace DotnetGltfRenderer {
             GlContext.GL.ActiveTexture((TextureUnit)((int)TextureUnit.Texture0 + (int)slot));
             GlContext.GL.BindTexture(TextureTarget.Texture2D, texture);
         }
-
-        /// <summary>
-        /// 设置单个 UV 变换
-        /// </summary>
-        static void SetUVTransform(MaterialTexture matTex, Shader shader, string uniformName) {
-            if (matTex?.HasUVTransform != true) {
-                return;
-            }
-
-            // Convert Matrix3x2 to mat3 (3x3 matrix for UV transform)
-            //
-            // Matrix3x2 stores the 2D affine transform as:
-            // | M11 M12 |
-            // | M21 M22 |
-            // | M31 M32 |  (M31, M32 = translation)
-            //
-            // This corresponds to a 3x3 matrix (row-major):
-            // | M11 M12 0  |
-            // | M21 M22 0  |
-            // | M31 M32 1  |
-            //
-            // For UV transform, we need the translation in the 3rd column (column-major):
-            // | M11 M21 0  |     | sx*cos  -sx*sin  0 |
-            // | M12 M22 0  | --> | sy*sin   sy*cos  0 |
-            // | M31 M32 1  |     | tx       ty      1 |
-            //
-            // But GLSL mat3 * vec3 expects translation in 3rd column:
-            // | sx*cos  -sx*sin  tx |
-            // | sy*sin   sy*cos  ty |
-            // | 0        0       1  |
-            //
-            // So we need to construct the matrix differently:
-            // Column 0: [M11, M21, 0]    (scale*rotation part 1)
-            // Column 1: [M12, M22, 0]    (scale*rotation part 2)
-            // Column 2: [M31, M32, 1]   (translation)
-            shader.SetUniformMatrix3(
-                uniformName,
-                new Vector3(matTex.UVTransform.M11, matTex.UVTransform.M21, 0f),
-                new Vector3(matTex.UVTransform.M12, matTex.UVTransform.M22, 0f),
-                new Vector3(matTex.UVTransform.M31, matTex.UVTransform.M32, 1f)
-            );
-        }
     }
 }

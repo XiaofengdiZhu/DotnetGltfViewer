@@ -4,6 +4,9 @@
 
 几乎完全由 [OpenCode](https://opencode.ai/) + [GLM-5](https://z.ai/blog/glm-5) 编写
 
+默认模型：https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/DamagedHelmet  
+默认环境贴图：https://github.com/KhronosGroup/glTF-Sample-Environments/blob/low_resolution_hdrs/Cannon_Exterior.hdr
+
 ## 支持的扩展
 
 本项目使用的着色器来自 [Khronos glTF Sample Renderer](https://github.com/KhronosGroup/glTF-Sample-Renderer) ，因此它支持的扩展，本项目基本都支持

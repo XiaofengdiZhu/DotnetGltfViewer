@@ -9,7 +9,6 @@ namespace DotnetGltfViewer.Windows.Sidebar {
     /// </summary>
     public static class SidebarPanel {
         static Scene _scene;
-        static Renderer _renderer;
 
         /// <summary>
         /// 侧边栏宽度
@@ -36,7 +35,6 @@ namespace DotnetGltfViewer.Windows.Sidebar {
         /// </summary>
         public static void Initialize(Scene scene, Renderer renderer) {
             _scene = scene;
-            _renderer = renderer;
             State = new SidebarState();
             State.Initialize();
 
