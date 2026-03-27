@@ -24,8 +24,8 @@ namespace DotnetGltfViewer.Windows {
         static Camera _camera;
 
         // 默认路径
-        const string DefaultModelPath = "Assets/DamagedHelmet/glTF/DamagedHelmet.gltf";
-        const string DefaultEnvironmentMapPath = "Assets/Environments/Cannon_Exterior.hdr";
+        const string DefaultModelPath = "Models/DamagedHelmet/glTF/DamagedHelmet.gltf";
+        const string DefaultEnvironmentMapPath = "Environments/Cannon_Exterior.hdr";
         const string ShadersDirectory = "shaders";
 
         public static Vector2D<int> Size { get; private set; }
@@ -90,7 +90,7 @@ namespace DotnetGltfViewer.Windows {
             _camera = _renderer.Camera;
             ImGuiManager.Initialize(_window, input, _camera, _scene);
             OnFramebufferResize(_window.FramebufferSize);
-            ResetCameraToModel();
+            ResetCameraToScene();
             InputManager.Initialize(_camera, input);
             InputManager.SetScene(_scene);
             PerformanceManager.Initialize();
@@ -152,7 +152,7 @@ namespace DotnetGltfViewer.Windows {
         /// <summary>
         /// 重置相机以正视整个场景（启动时调用）
         /// </summary>
-        public static void ResetCameraToModel() {
+        public static void ResetCameraToScene() {
             if (_scene.TryGetSceneBounds(out Vector3 min, out Vector3 max)) {
                 Vector2D<int> size = _window.Size;
                 float aspect = (float)Math.Max(size.X, 1) / Math.Max(size.Y, 1);

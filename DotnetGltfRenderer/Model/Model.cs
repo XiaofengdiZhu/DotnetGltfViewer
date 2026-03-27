@@ -87,6 +87,17 @@ namespace DotnetGltfRenderer {
         public float AnimationDurationSeconds { get; private set; }
 
         /// <summary>
+        /// Current animation time in seconds
+        /// </summary>
+        public float AnimationTimeSeconds {
+            get => _animationTimeSeconds;
+            set {
+                if (_activeAnimation == null || AnimationDurationSeconds <= 0f) return;
+                _animationTimeSeconds = Math.Clamp(value, 0f, AnimationDurationSeconds);
+            }
+        }
+
+        /// <summary>
         /// 动画是否暂停
         /// </summary>
         public bool IsAnimationPaused {

@@ -28,7 +28,10 @@
         <ProjectReference Include="..\DotnetGltfRenderer\DotnetGltfRenderer.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <None Update="Assets/**/*">
+        <None Update="Models/**/*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Environments/**/*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>

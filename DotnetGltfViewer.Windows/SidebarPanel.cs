@@ -149,7 +149,6 @@ namespace DotnetGltfViewer.Windows {
                 if (newModelIndex != _state.SelectedModelIndex) {
                     _state.SelectedModelIndex = newModelIndex;
                     _state.ScanAvailableFlavors();
-                    TryLoadSelectedModel();
                 }
             }
 
@@ -161,10 +160,19 @@ namespace DotnetGltfViewer.Windows {
                 if (ImGui.Combo("##Flavor", ref newFlavorIndex, _state.AvailableFlavors.ToArray(), _state.AvailableFlavors.Count)) {
                     if (newFlavorIndex != _state.SelectedFlavorIndex) {
                         _state.SelectedFlavorIndex = newFlavorIndex;
-                        TryLoadSelectedModel();
                     }
                 }
             }
+
+            if (ImGui.Button("Replace")) {
+                TryLoadSelectedModel(true);
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("Add")) {
+                TryLoadSelectedModel(false);
+            }
+
+            ImGui.Separator();
 
             // Scenes 下拉菜单
             if (_state.AvailableScenes.Count > 0) {
@@ -182,16 +190,20 @@ namespace DotnetGltfViewer.Windows {
             ImGui.EndTabItem();
         }
 
-        static void TryLoadSelectedModel() {
+        static void TryLoadSelectedModel(bool replace = true) {
             string modelPath = _state.GetSelectedModelPath();
             if (string.IsNullOrEmpty(modelPath)) {
                 return;
             }
 
             try {
-                // 只有一个模型时替换，多个模型时添加
-                if (_scene.Models.Count <= 1) {
-                    MainWindow.ClearScene();
+                if (replace) {
+                    if (_scene.ModelCount <= 1) {
+                        _scene.Clear();
+                    }
+                    else {
+                        _scene.RemoveModel(SelectionManager.SelectedModel);
+                    }
                 }
 
                 // 加载模型
@@ -258,6 +270,7 @@ namespace DotnetGltfViewer.Windows {
 
             // IBL Intensity 滑动条（只影响模型反射）
             float iblIntensity = _state.IBLIntensity;
+            ImGui.SetNextItemWidth(380);
             if (ImGui.SliderFloat("IBL Intensity", ref iblIntensity, 0.0f, 10.0f)) {
                 _state.IBLIntensity = iblIntensity;
                 ApplyIBLSetting();
@@ -265,6 +278,7 @@ namespace DotnetGltfViewer.Windows {
 
             // Exposure 滑动条
             float exposure = _state.Exposure;
+            ImGui.SetNextItemWidth(380);
             if (ImGui.SliderFloat("Exposure", ref exposure, 0.0f, 5.0f)) {
                 _state.Exposure = exposure;
                 ApplyExposureSetting();
@@ -293,6 +307,7 @@ namespace DotnetGltfViewer.Windows {
             // Skybox Intensity 滑动条（只影响天空盒亮度）
             if (showSkybox) {
                 float skyboxIntensity = _state.SkyboxIntensity;
+                ImGui.SetNextItemWidth(380);
                 if (ImGui.SliderFloat("Skybox Intensity", ref skyboxIntensity, 0.0f, 10.0f)) {
                     _state.SkyboxIntensity = skyboxIntensity;
                     ApplySkyboxIntensity();
@@ -300,6 +315,7 @@ namespace DotnetGltfViewer.Windows {
 
                 // Skybox Blur 滑动条
                 float skyboxBlur = _state.SkyboxBlur;
+                ImGui.SetNextItemWidth(380);
                 if (ImGui.SliderFloat("Skybox Blur", ref skyboxBlur, 0.0f, 1.0f)) {
                     _state.SkyboxBlur = skyboxBlur;
                     ApplySkyboxBlur();

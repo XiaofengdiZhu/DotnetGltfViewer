@@ -137,18 +137,6 @@ namespace DotnetGltfViewer.Windows {
                     ImGui.MenuItem("Scene Panel", string.Empty, ref _showScenePanel);
                     ImGui.EndMenu();
                 }
-                if (ImGui.BeginMenu("Edit")) {
-                    if (ImGui.MenuItem("Reset Transform", "")) {
-                        GizmoManager.ResetModelMatrix();
-                    }
-                    ImGui.EndMenu();
-                }
-                if (ImGui.BeginMenu("Camera")) {
-                    if (ImGui.MenuItem("Reset to Model", "Home")) {
-                        MainWindow.ResetCameraToModel();
-                    }
-                    ImGui.EndMenu();
-                }
                 ImGui.EndMainMenuBar();
             }
         }
@@ -157,11 +145,13 @@ namespace DotnetGltfViewer.Windows {
             const float buttonWidth = 100f;
             const float buttonHeight = 36f;
             const float padding = 8f;
+            float y = 48f;
+            float h = buttonHeight * 5.6f + padding * 6f;
             // 左侧工具栏
-            ImGui.SetNextWindowPos(new Vector2(padding, 48f));
-            ImGui.SetNextWindowSize(new Vector2(buttonWidth + padding * 2, buttonHeight * 4 + padding * 5));
+            ImGui.SetNextWindowPos(new Vector2(padding, y));
+            ImGui.SetNextWindowSize(new Vector2(buttonWidth + padding * 2f, h));
             ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding, padding));
-            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0, padding));
+            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, padding));
             ImGuiWindowFlags flags = ImGuiWindowFlags.NoTitleBar
                 | ImGuiWindowFlags.NoResize
                 | ImGuiWindowFlags.NoMove
@@ -174,18 +164,22 @@ namespace DotnetGltfViewer.Windows {
                 RenderToolbar1Button("Move", GizmoMode.Translate, "Num 2", buttonWidth, buttonHeight);
                 RenderToolbar1Button("Rotate", GizmoMode.Rotate, "Num 3", buttonWidth, buttonHeight);
                 RenderToolbar1Button("Scale", GizmoMode.Scale, "Num 4", buttonWidth, buttonHeight);
+                RenderToolbar2Button("Reset\nTrans.", "Reset transform to default", () => GizmoManager.ResetModelMatrix(), buttonWidth, buttonHeight * 1.6f);
             }
             ImGui.End();
             ImGui.PopStyleVar(2);
+            y += h + padding;
+            h = buttonHeight * 2.6f + padding * 3f;
 
             // 第二组工具栏
-            ImGui.SetNextWindowPos(new Vector2(padding, 48f + buttonHeight * 4 + padding * 5 + 8f));
-            ImGui.SetNextWindowSize(new Vector2(buttonWidth + padding * 2, buttonHeight * 2 + padding * 3));
+            ImGui.SetNextWindowPos(new Vector2(padding, y));
+            ImGui.SetNextWindowSize(new Vector2(buttonWidth + padding * 2f, h));
             ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding, padding));
-            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0, padding));
+            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, padding));
             if (ImGui.Begin("GizmoToolbar2", flags)) {
                 RenderToolbar2Button("Focus", "Focus camera on selection (F)", () => MainWindow.FocusOnSelection(), buttonWidth, buttonHeight);
-                RenderToolbar2Button("Delete" , "Delete selected object (Del)", () => _scene.RemoveModel(_scene.SelectedModel), buttonWidth, buttonHeight);
+                RenderToolbar2Button("Reset\nCamera", "Reset camera to default", MainWindow.ResetCameraToScene, buttonWidth, buttonHeight * 1.6f);
+                //RenderToolbar2Button("Delete" , "Delete selected object (Del)", () => _scene.RemoveModel(_scene.SelectedModel), buttonWidth, buttonHeight);
             }
             ImGui.End();
             ImGui.PopStyleVar(2);

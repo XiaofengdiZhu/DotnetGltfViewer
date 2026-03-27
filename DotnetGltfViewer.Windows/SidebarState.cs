@@ -9,7 +9,7 @@ namespace DotnetGltfViewer.Windows {
     /// </summary>
     public class SidebarState {
         // ========== Models Tab ==========
-        /// <summary>所有可用模型名称（Assets 文件夹下的子文件夹名称，排除 Environments）</summary>
+        /// <summary>所有可用模型名称（Models 文件夹下的子文件夹名称，排除 Environments）</summary>
         public List<string> AvailableModels { get; private set; } = new();
 
         /// <summary>当前选中的模型索引</summary>
@@ -186,15 +186,12 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         public void ScanAvailableModels() {
             AvailableModels.Clear();
-            string assetsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
-            if (!Directory.Exists(assetsPath)) {
+            string modelsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Models");
+            if (!Directory.Exists(modelsPath)) {
                 return;
             }
-            foreach (string dir in Directory.GetDirectories(assetsPath)) {
+            foreach (string dir in Directory.GetDirectories(modelsPath)) {
                 string name = Path.GetFileName(dir);
-                if (name.Equals("Environments", StringComparison.OrdinalIgnoreCase)) {
-                    continue;
-                }
                 AvailableModels.Add(name);
             }
             AvailableModels.Sort();
@@ -212,7 +209,7 @@ namespace DotnetGltfViewer.Windows {
             }
 
             string modelName = AvailableModels[SelectedModelIndex];
-            string modelPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", modelName);
+            string modelPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Models", modelName);
             if (!Directory.Exists(modelPath)) {
                 return;
             }
@@ -236,7 +233,7 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         public void ScanAvailableEnvironments() {
             AvailableEnvironments.Clear();
-            string envPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Environments");
+            string envPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Environments");
             if (!Directory.Exists(envPath)) {
                 return;
             }
@@ -319,13 +316,13 @@ namespace DotnetGltfViewer.Windows {
             string flavor = AvailableFlavors[SelectedFlavorIndex];
 
             // 尝试 .gltf
-            string gltfPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", modelName, flavor, $"{modelName}.gltf");
+            string gltfPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Models", modelName, flavor, $"{modelName}.gltf");
             if (File.Exists(gltfPath)) {
                 return gltfPath;
             }
 
             // 尝试 .glb
-            string glbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", modelName, flavor, $"{modelName}.glb");
+            string glbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Models", modelName, flavor, $"{modelName}.glb");
             if (File.Exists(glbPath)) {
                 return glbPath;
             }
@@ -341,7 +338,7 @@ namespace DotnetGltfViewer.Windows {
                 return null;
             }
             string envName = AvailableEnvironments[SelectedEnvironmentIndex];
-            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Environments", $"{envName}.hdr");
+            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Environments", $"{envName}.hdr");
         }
     }
 }
