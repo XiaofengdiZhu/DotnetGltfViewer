@@ -27,6 +27,12 @@ namespace DotnetGltfViewer.Windows {
         /// <summary>当前选中的场景索引</summary>
         public int SelectedSceneIndex { get; set; } = -1;
 
+        /// <summary>当前模型的 Variants 列表</summary>
+        public List<string> AvailableVariants { get; private set; } = new();
+
+        /// <summary>当前选中的 Variant 索引（-1 表示无变体或未选择）</summary>
+        public int SelectedVariantIndex { get; set; } = -1;
+
         // ========== Display Tab - Lighting ==========
         /// <summary>Image Based Lighting 开关</summary>
         public bool UseIBL { get; set; } = true;
@@ -300,6 +306,23 @@ namespace DotnetGltfViewer.Windows {
                 AvailableAnimations.Add($"[{i + 1}] {name}");
             }
             SelectedAnimationIndex = AvailableAnimations.Count > 0 ? 0 : -1;
+        }
+
+        /// <summary>
+        /// 更新可用变体列表
+        /// </summary>
+        public void UpdateAvailableVariants(IReadOnlyList<string> variantNames, int activeIndex) {
+            AvailableVariants.Clear();
+            if (variantNames == null) {
+                SelectedVariantIndex = -1;
+                return;
+            }
+            AvailableVariants.Add("None");
+            for (int i = 0; i < variantNames.Count; i++) {
+                string name = string.IsNullOrEmpty(variantNames[i]) ? "Variant" : variantNames[i];
+                AvailableVariants.Add($"[{i + 1}] {name}");
+            }
+            SelectedVariantIndex = activeIndex >= 0 && activeIndex < variantNames.Count ? activeIndex + 1 : 0;
         }
 
         /// <summary>

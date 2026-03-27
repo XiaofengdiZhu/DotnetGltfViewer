@@ -343,6 +343,21 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
+        /// 设置模型的材质变体
+        /// </summary>
+        /// <param name="sceneModel">目标模型</param>
+        /// <param name="variantIndex">变体索引（-1 表示使用默认材质）</param>
+        public void SetModelVariant(SceneModel sceneModel, int variantIndex) {
+            if (sceneModel?.Model == null) {
+                return;
+            }
+            sceneModel.Model.ActiveVariantIndex = variantIndex;
+            foreach (MeshInstance instance in sceneModel.Model.MeshInstances) {
+                instance.UpdateMaterialAndQueueType(variantIndex, this);
+            }
+        }
+
+        /// <summary>
         /// 尝试获取场景边界（用于相机适配）
         /// </summary>
         public bool TryGetSceneBounds(out Vector3 min, out Vector3 max) {

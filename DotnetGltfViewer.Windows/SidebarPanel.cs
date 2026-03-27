@@ -62,6 +62,7 @@ namespace DotnetGltfViewer.Windows {
             if (model?.Model == null) {
                 _state.UpdateAvailableScenes(null);
                 _state.UpdateAvailableAnimations(null);
+                _state.UpdateAvailableVariants(null, -1);
                 _state.SelectedSceneIndex = -1;
                 _state.SelectedAnimationIndex = -1;
                 return;
@@ -75,6 +76,9 @@ namespace DotnetGltfViewer.Windows {
             UpdateAnimationList(model.Model);
             _state.SelectedAnimationIndex = model.Model.ActiveAnimationIndex;
             _state.IsAnimationPaused = model.Model.IsAnimationPaused;
+
+            // 同步变体列表
+            _state.UpdateAvailableVariants(model.Model.Variants, model.Model.ActiveVariantIndex);
 
             // 更新统计信息
             UpdateStatistics();
@@ -187,6 +191,19 @@ namespace DotnetGltfViewer.Windows {
                 }
             }
 
+            // Variants 下拉菜单
+            if (_state.AvailableVariants.Count > 0) {
+                ImGui.Text("Variant");
+                ImGui.SetNextItemWidth(-1);
+                int newVariantIndex = _state.SelectedVariantIndex;
+                if (ImGui.Combo("##Variant", ref newVariantIndex, _state.AvailableVariants.ToArray(), _state.AvailableVariants.Count)) {
+                    if (newVariantIndex != _state.SelectedVariantIndex) {
+                        _state.SelectedVariantIndex = newVariantIndex;
+                        ApplyVariantSelection();
+                    }
+                }
+            }
+
             ImGui.EndTabItem();
         }
 
@@ -198,8 +215,8 @@ namespace DotnetGltfViewer.Windows {
 
             try {
                 if (replace) {
-                    if (_scene.ModelCount <= 1) {
-                        _scene.Clear();
+                    if (_scene.ModelCount == 1) {
+                        _scene.RemoveModel(_scene.Models[0]);
                     }
                     else {
                         _scene.RemoveModel(SelectionManager.SelectedModel);
@@ -218,6 +235,9 @@ namespace DotnetGltfViewer.Windows {
                 // 更新动画列表
                 UpdateAnimationList(sceneModel.Model);
 
+                // 更新变体列表
+                _state.UpdateAvailableVariants(sceneModel.Model.Variants, sceneModel.Model.ActiveVariantIndex);
+
                 // 更新统计信息
                 UpdateStatistics();
             }
@@ -233,6 +253,14 @@ namespace DotnetGltfViewer.Windows {
             _scene.SelectedModel.Model.ActiveSceneIndex = _state.SelectedSceneIndex;
             _renderer.UpdateLightsFromScene();
             UpdateStatistics();
+        }
+
+        static void ApplyVariantSelection() {
+            if (_scene.SelectedModel == null) {
+                return;
+            }
+            int variantIndex = _state.SelectedVariantIndex - 1;
+            _scene.SetModelVariant(_scene.SelectedModel, variantIndex);
         }
 
         #endregion
