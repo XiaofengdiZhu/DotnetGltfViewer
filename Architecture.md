@@ -27,6 +27,11 @@ DotnetGltfViewer/
 │   │   └── Extensions/       # glTF 材质扩展实现
 │   ├── Model/                # glTF 模型加载与处理
 │   ├── Render/               # 渲染器与渲染流程管理
+│   │   ├── Renderer.cs            # 渲染入口
+│   │   ├── RenderPassManager.cs   # 多 Pass 渲染流程
+│   │   ├── MeshInstanceRenderer.cs # 网格实例渲染器
+│   │   ├── DynamicInstancingBatch.cs  # 动态实例化批次
+│   │   └── InstancingBatchManager.cs  # 实例化批次管理
 │   ├── Graphics/             # Shader, Framebuffer, ShaderCache
 │   ├── Lighting/             # 光照系统
 │   ├── Environment/          # IBL 环境贴图
@@ -71,6 +76,24 @@ DotnetGltfViewer/
 2. **Transmission Pass**：渲染场景用于折射效果
 3. **Main Pass**：渲染天空盒、不透明物体、Transmission 物体、透明物体
 
+### 渲染队列分类
+
+`Scene` 维护四种渲染队列，根据材质特性自动分类：
+- `OpaqueInstances`：不透明物体，可利用 Z-buffer 优化
+- `TransparentInstances`：Alpha Blend 透明物体
+- `TransmissionInstances`：使用 KHR_materials_transmission 的物体
+- `ScatterInstances`：使用 KHR_materials_volume_scatter 的物体
+
+透明、Transmission 和 Scatter 物体按深度从远到近排序，确保正确渲染。
+
+### 动态实例化
+
+`InstancingBatchManager` 和 `DynamicInstancingBatch` 实现了运行时动态批处理：
+- 自动合并相同 Mesh 和 Material 的非蒙皮、非 Morph Target 实例
+- 单批次最大 1024 个实例
+- 显著减少 Draw Call，提升渲染性能
+- GPU 实例化着色器变体自动生成
+
 ### 材质系统
 
 `Material` 类封装 PBR 材质属性。每个材质扩展（如 `ClearCoatExtension`）继承自 `MaterialExtension`，负责：
@@ -80,7 +103,7 @@ DotnetGltfViewer/
 
 ### 着色器系统
 
-- `ShaderCache`：着色器缓存与选择
+- `ShaderCache`：着色器缓存与选择，支持 Hash 快速查找
 - `ShaderDefines`：动态生成着色器宏定义
 - 着色器使用 UBO 传递数据，绑定槽位：
   - 0: SceneData
@@ -98,6 +121,15 @@ DotnetGltfViewer/
 - 处理骨骼动画和 Morph Target
 - 支持 GPU 实例化（EXT_mesh_gpu_instancing）
 - 支持材质变体（KHR_materials_variants）
+- 全局 Mesh 缓存，避免重复加载相同模型
+
+### MeshInstance
+
+`MeshInstance` 表示场景中的网格实例：
+- 独立存储 Gizmo 变换矩阵，不受动画覆盖
+- 支持蒙皮动画（JointTexture 纹理存储骨骼矩阵）
+- 自动计算渲染队列类型
+- 支持节点可见性动画（KHR_node_visibility）
 
 ## Windows 应用程序架构
 
