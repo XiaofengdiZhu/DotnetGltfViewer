@@ -9,6 +9,7 @@ using SharpGLTF.Schema2;
 using SharpGLTF.Validation;
 using GltfScene = SharpGLTF.Schema2.Scene;
 using GltfPrimitiveType = SharpGLTF.Schema2.PrimitiveType;
+using SilkPrimitiveType = Silk.NET.OpenGLES.PrimitiveType;
 
 namespace DotnetGltfRenderer {
     public class Model : IDisposable {
@@ -340,9 +341,6 @@ namespace DotnetGltfRenderer {
                 else {
                     for (int i = 0; i < node.Mesh.Primitives.Count; i++) {
                         MeshPrimitive primitive = node.Mesh.Primitives[i];
-                        if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) {
-                            continue;
-                        }
                         (int MeshIndex, int PrimitiveIndex) key = (node.Mesh.LogicalIndex, i);
                         if (cachedMeshes.TryGetValue(key, out Mesh mesh)) {
                             instances.Add(new MeshInstance(node, mesh, node.Skin));
@@ -360,9 +358,6 @@ namespace DotnetGltfRenderer {
             if (node.Skin != null) {
                 for (int i = 0; i < node.Mesh.Primitives.Count; i++) {
                     MeshPrimitive primitive = node.Mesh.Primitives[i];
-                    if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) {
-                        continue;
-                    }
                     (int MeshIndex, int PrimitiveIndex) key = (node.Mesh.LogicalIndex, i);
                     if (cachedMeshes.TryGetValue(key, out Mesh mesh)) {
                         instances.Add(new MeshInstance(node, mesh, node.Skin));
@@ -439,9 +434,6 @@ namespace DotnetGltfRenderer {
                 else {
                     for (int i = 0; i < node.Mesh.Primitives.Count; i++) {
                         MeshPrimitive primitive = node.Mesh.Primitives[i];
-                        if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) {
-                            continue;
-                        }
                         (int LogicalIndex, int i) key = (node.Mesh.LogicalIndex, i);
                         if (!primitiveMeshCache.TryGetValue(key, out Mesh mesh)) {
                             _variantMappings.TryGetValue(key, out Dictionary<int, int> variantMatMapping);
@@ -471,9 +463,6 @@ namespace DotnetGltfRenderer {
             if (node.Skin != null) {
                 for (int i = 0; i < node.Mesh.Primitives.Count; i++) {
                     MeshPrimitive primitive = node.Mesh.Primitives[i];
-                    if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) {
-                        continue;
-                    }
                     (int LogicalIndex, int i) key = (node.Mesh.LogicalIndex, i);
                     if (!primitiveMeshCache.TryGetValue(key, out Mesh mesh)) {
                         _variantMappings.TryGetValue(key, out Dictionary<int, int> variantMatMapping);
@@ -502,9 +491,6 @@ namespace DotnetGltfRenderer {
             }
             for (int primIdx = 0; primIdx < node.Mesh.Primitives.Count; primIdx++) {
                 MeshPrimitive primitive = node.Mesh.Primitives[primIdx];
-                if (primitive.DrawPrimitiveType != GltfPrimitiveType.TRIANGLES) {
-                    continue;
-                }
 
                 // Morph targets 不支持 GPU 实例化
                 if (primitive.MorphTargetsCount > 0) {
@@ -578,8 +564,20 @@ namespace DotnetGltfRenderer {
             UpdateMeshInstanceTransforms();
         }
 
+        static SilkPrimitiveType MapPrimitiveType(GltfPrimitiveType type) => type switch {
+            GltfPrimitiveType.POINTS => SilkPrimitiveType.Points,
+            GltfPrimitiveType.LINES => SilkPrimitiveType.Lines,
+            GltfPrimitiveType.LINE_LOOP => SilkPrimitiveType.LineLoop,
+            GltfPrimitiveType.LINE_STRIP => SilkPrimitiveType.LineStrip,
+            GltfPrimitiveType.TRIANGLES => SilkPrimitiveType.Triangles,
+            GltfPrimitiveType.TRIANGLE_STRIP => SilkPrimitiveType.TriangleStrip,
+            GltfPrimitiveType.TRIANGLE_FAN => SilkPrimitiveType.TriangleFan,
+            _ => SilkPrimitiveType.Triangles
+        };
+
         Mesh ProcessPrimitive(MeshPrimitive primitive, Dictionary<int, int> variantMatMapping) {
             Mesh mesh = new();
+            mesh.GLPrimitiveType = MapPrimitiveType(primitive.DrawPrimitiveType);
             SharpGLTF.Schema2.Material material = primitive.Material;
             IAccessorArray<Vector3> posAcc = primitive.GetVertexAccessor("POSITION")?.AsVector3Array()
                 ?? throw new InvalidOperationException("glTF primitive is missing POSITION accessor.");
@@ -630,45 +628,44 @@ namespace DotnetGltfRenderer {
                 }
             }
 
-            // 没有预计算切线且有索引缓冲区时，先 unweld 再生成切线
-            Vector4[] generatedTangents;
-            if (tangentsAcc == null && originalGltfIndices != null) {
-                uint[] originalIndices = mesh.Indices;
-                List<Vector3> posList = new(posAcc);
-                List<Vector3> nrmList = normalsAcc != null ? new List<Vector3>(normalsAcc) : null;
-                List<Vector2> uv0List = uv0Acc != null ? new List<Vector2>(uv0Acc) : null;
-                List<Vector2> uv1List = uv1Acc != null ? new List<Vector2>(uv1Acc) : null;
-                List<Vector4> colList = colorsAcc != null ? new List<Vector4>(colorsAcc) : null;
+            // 仅三角形类图元做 unweld + tangent 生成（参考 glTF-Sample-Viewer mode > 3）
+            Vector4[] generatedTangents = null;
+            if (mesh.IsTriangleBased) {
+                if (tangentsAcc == null && originalGltfIndices != null) {
+                    uint[] originalIndices = mesh.Indices;
+                    List<Vector3> posList = new(posAcc);
+                    List<Vector3> nrmList = normalsAcc != null ? new List<Vector3>(normalsAcc) : null;
+                    List<Vector2> uv0List = uv0Acc != null ? new List<Vector2>(uv0Acc) : null;
+                    List<Vector2> uv1List = uv1Acc != null ? new List<Vector2>(uv1Acc) : null;
+                    List<Vector4> colList = colorsAcc != null ? new List<Vector4>(colorsAcc) : null;
 
-                mesh.Indices = GltfGeometryProcessor.Unweld(posList, nrmList, uv0List, uv1List, colList, mesh.Indices);
-                mesh.IsUnwelded = true;
-                mesh.VertexCount = posList.Count;
-                positions = posList;
-                normals = nrmList;
-                uv0 = uv0List;
-                uv1 = uv1List;
-                colors = colList;
+                    mesh.Indices = GltfGeometryProcessor.Unweld(posList, nrmList, uv0List, uv1List, colList, mesh.Indices);
+                    mesh.IsUnwelded = true;
+                    mesh.VertexCount = posList.Count;
+                    positions = posList;
+                    normals = nrmList;
+                    uv0 = uv0List;
+                    uv1 = uv1List;
+                    colors = colList;
 
-                // Unweld 蒙皮属性
-                if (jointsAcc != null && weightsAcc != null) {
-                    List<Vector4> jointsList = new(jointsAcc);
-                    List<Vector4> weightsList = new(weightsAcc);
-                    GltfGeometryProcessor.UnweldSkinAttributes(jointsList, weightsList, originalIndices);
-                    joints = jointsList;
-                    weights = weightsList;
+                    // Unweld 蒙皮属性
+                    if (jointsAcc != null && weightsAcc != null) {
+                        List<Vector4> jointsList = new(jointsAcc);
+                        List<Vector4> weightsList = new(weightsAcc);
+                        GltfGeometryProcessor.UnweldSkinAttributes(jointsList, weightsList, originalIndices);
+                        joints = jointsList;
+                        weights = weightsList;
+                    }
+
+                    // Unweld Morph Targets
+                    if (morphTargetCount > 0) {
+                        GltfGeometryProcessor.UnweldMorphTargets(
+                            morphPositions, morphNormals, morphTangentsArr,
+                            morphTexCoords0, morphTexCoords1, morphColors0,
+                            originalIndices);
+                    }
                 }
 
-                // Unweld Morph Targets
-                if (morphTargetCount > 0) {
-                    GltfGeometryProcessor.UnweldMorphTargets(
-                        morphPositions, morphNormals, morphTangentsArr,
-                        morphTexCoords0, morphTexCoords1, morphColors0,
-                        originalIndices);
-                }
-
-                generatedTangents = GltfGeometryProcessor.GenerateTangents(positions, normals, uv0, mesh.Indices);
-            }
-            else {
                 generatedTangents = GltfGeometryProcessor.GenerateTangents(positions, normals, uv0, mesh.Indices);
             }
 

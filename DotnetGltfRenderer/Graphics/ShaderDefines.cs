@@ -55,6 +55,13 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
+        /// 移除匹配前缀的 define
+        /// </summary>
+        public void RemoveDefine(string definePrefix) {
+            _defines.RemoveAll(d => d.StartsWith(definePrefix));
+        }
+
+        /// <summary>
         /// 添加纹理 define（如 "HAS_NORMAL_MAP 1"）
         /// </summary>
         public void AddTextureMap(string textureName) {
@@ -330,6 +337,11 @@ namespace DotnetGltfRenderer {
                 enableSkinning && mesh.HasSkinAttributes
             );
 
+            // 非三角形图元（POINTS, LINES 等）添加 NOT_TRIANGLE define
+            if (!mesh.IsTriangleBased) {
+                defines.Add("NOT_TRIANGLE");
+            }
+
             // 添加 GPU 实例化支持
             if (mesh.UseInstancing) {
                 defines.Add("USE_INSTANCING");
@@ -430,6 +442,15 @@ namespace DotnetGltfRenderer {
                 // 如果启用了 Morphing 且网格有颜色属性，才添加颜色定义
                 if (mesh.HasColor0) {
                     defines.Add("HAS_COLOR_0_VEC4");
+                }
+                // 非三角形图元（POINTS, LINES 等）添加 NOT_TRIANGLE define
+                // 参考 glTF-Sample-Viewer：有 normal 无 tangent 时去掉 normal map
+                if (!mesh.IsTriangleBased) {
+                    defines.Add("NOT_TRIANGLE");
+                    if (mesh.HasSurfaceAttributes && !mesh.UseGeneratedTangents) {
+                        defines.RemoveDefine("HAS_NORMAL_MAP");
+                        defines.RemoveDefine("HAS_CLEARCOAT_NORMAL_MAP");
+                    }
                 }
             }
 

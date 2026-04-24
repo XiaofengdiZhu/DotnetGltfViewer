@@ -83,6 +83,12 @@ namespace DotnetGltfRenderer {
         public bool HasColor0;
         public bool UseGeneratedTangents;
 
+        // Primitive topology
+        public Silk.NET.OpenGLES.PrimitiveType GLPrimitiveType = Silk.NET.OpenGLES.PrimitiveType.Triangles;
+        public bool IsTriangleBased => GLPrimitiveType is Silk.NET.OpenGLES.PrimitiveType.Triangles
+            or Silk.NET.OpenGLES.PrimitiveType.TriangleStrip
+            or Silk.NET.OpenGLES.PrimitiveType.TriangleFan;
+
         // Unwelded mesh state (tangent generation requires unwelded vertices)
         public bool IsUnwelded;
         public int VertexCount;
@@ -361,6 +367,9 @@ namespace DotnetGltfRenderer {
                 }
                 if (HasColor0) {
                     hash = hash * 31 + "HAS_COLOR_0_VEC4 1".GetHashCode();
+                }
+                if (!IsTriangleBased) {
+                    hash = hash * 31 + "NOT_TRIANGLE 1".GetHashCode();
                 }
                 _cachedFragAttrHash = hash;
                 _fragAttrHashValid = true;

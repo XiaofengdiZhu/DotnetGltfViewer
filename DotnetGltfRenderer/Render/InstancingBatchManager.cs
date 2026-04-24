@@ -52,6 +52,9 @@ namespace DotnetGltfRenderer {
             if (instance.Mesh.UseInstancing) {
                 return false;
             }
+            if (!instance.Mesh.IsTriangleBased) {
+                return false;
+            }
             return true;
         }
     }

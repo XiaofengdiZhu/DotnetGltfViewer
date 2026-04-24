@@ -580,12 +580,12 @@ namespace DotnetGltfRenderer {
         /// </summary>
         unsafe void DrawMesh(Mesh mesh) {
             if (mesh.UseInstancing) {
-                if (mesh.IsNegativeScaleInstance) {
+                if (mesh.IsTriangleBased && mesh.IsNegativeScaleInstance) {
                     GlContext.FrontFace(FrontFaceDirection.CW);
                 }
                 if (mesh.IsUnwelded) {
                     GlContext.GL.DrawArraysInstanced(
-                        PrimitiveType.Triangles,
+                        mesh.GLPrimitiveType,
                         0,
                         (uint)mesh.VertexCount,
                         (uint)mesh.InstanceCount
@@ -593,22 +593,22 @@ namespace DotnetGltfRenderer {
                 }
                 else {
                     GlContext.GL.DrawElementsInstanced(
-                        PrimitiveType.Triangles,
+                        mesh.GLPrimitiveType,
                         (uint)mesh.Indices.Length,
                         DrawElementsType.UnsignedInt,
                         null,
                         (uint)mesh.InstanceCount
                     );
                 }
-                if (mesh.IsNegativeScaleInstance) {
+                if (mesh.IsTriangleBased && mesh.IsNegativeScaleInstance) {
                     GlContext.FrontFace(FrontFaceDirection.Ccw);
                 }
             }
             else if (mesh.IsUnwelded) {
-                GlContext.GL.DrawArrays(PrimitiveType.Triangles, 0, (uint)mesh.VertexCount);
+                GlContext.GL.DrawArrays(mesh.GLPrimitiveType, 0, (uint)mesh.VertexCount);
             }
             else {
-                GlContext.GL.DrawElements(PrimitiveType.Triangles, (uint)mesh.Indices.Length, DrawElementsType.UnsignedInt, null);
+                GlContext.GL.DrawElements(mesh.GLPrimitiveType, (uint)mesh.Indices.Length, DrawElementsType.UnsignedInt, null);
             }
         }
     }
