@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace DotnetGltfRenderer {
     public class InstancingBatchManager : IDisposable {
-        readonly Dictionary<(Mesh, Material), DynamicInstancingBatch> _batchesByKey = new();
+        readonly Dictionary<(Mesh, Material, bool), DynamicInstancingBatch> _batchesByKey = new();
         readonly List<DynamicInstancingBatch> _allBatches = new();
         bool _disposed;
 
@@ -27,8 +27,8 @@ namespace DotnetGltfRenderer {
             _disposed = true;
         }
 
-        public DynamicInstancingBatch FindOrCreateBatch(Mesh mesh, Material material) {
-            (Mesh, Material) key = (mesh, material);
+        public DynamicInstancingBatch FindOrCreateBatch(Mesh mesh, Material material, bool isNegativeScale) {
+            (Mesh, Material, bool) key = (mesh, material, isNegativeScale);
 
             if (_batchesByKey.TryGetValue(key, out DynamicInstancingBatch existing)) {
                 if (existing.IsEmpty || existing.CanAddInstance) {

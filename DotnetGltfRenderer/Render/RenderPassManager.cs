@@ -108,7 +108,7 @@ namespace DotnetGltfRenderer {
             _batchManager.Clear();
             _nonBatchedInstances.Clear();
 
-            Dictionary<(Mesh, Material), DynamicInstancingBatch> batchMap = new();
+            Dictionary<(Mesh, Material, bool), DynamicInstancingBatch> batchMap = new();
 
             foreach (MeshInstance instance in instances) {
                 if (!instance.IsVisible) {
@@ -122,10 +122,10 @@ namespace DotnetGltfRenderer {
 
                 Mesh mesh = instance.Mesh;
                 Material material = instance.CurrentMaterial;
-                (Mesh, Material) key = (mesh, material);
+                (Mesh, Material, bool) key = (mesh, material, instance.IsNegativeScale);
 
                 if (!batchMap.TryGetValue(key, out DynamicInstancingBatch batch)) {
-                    batch = _batchManager.FindOrCreateBatch(mesh, material);
+                    batch = _batchManager.FindOrCreateBatch(mesh, material, instance.IsNegativeScale);
                     batchMap[key] = batch;
                 }
 
@@ -133,7 +133,7 @@ namespace DotnetGltfRenderer {
                     batch.AddInstance(instance);
                 }
                 else {
-                    batch = _batchManager.FindOrCreateBatch(mesh, material);
+                    batch = _batchManager.FindOrCreateBatch(mesh, material, instance.IsNegativeScale);
                     batchMap[key] = batch;
                     batch.AddInstance(instance);
                 }

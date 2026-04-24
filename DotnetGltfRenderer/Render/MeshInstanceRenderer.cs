@@ -539,12 +539,12 @@ namespace DotnetGltfRenderer {
         /// 设置剔除模式
         /// </summary>
         void SetCullMode(MeshInstance instance) {
+            GlContext.FrontFace(instance.IsNegativeScale ? FrontFaceDirection.CW : FrontFaceDirection.Ccw);
             if (instance.CurrentMaterial?.DoubleSided == true) {
                 GlContext.DisableCullFace();
             }
             else {
                 GlContext.EnableCullFace();
-                GlContext.FrontFace(instance.IsNegativeScale ? FrontFaceDirection.CW : FrontFaceDirection.Ccw);
             }
         }
 

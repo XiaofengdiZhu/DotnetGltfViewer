@@ -150,11 +150,15 @@ namespace DotnetGltfRenderer {
 
             _mesh.VAO.Bind();
             EnsureVBO();
+
+            // Multiple batches may share the same mesh VAO but have different instance VBOs.
+            // Re-bind this batch's VBO and reconfigure attribute pointers before drawing.
+            GlContext.GL.BindBuffer(BufferTargetARB.ArrayBuffer, _instanceBufferHandle);
+            _mesh.VAO.SetInstancedMatrixAttribute(8);
+
             UpdateNegativeScaleFlag();
 
-            if (_hasNegativeScale) {
-                GlContext.FrontFace(FrontFaceDirection.CW);
-            }
+            GlContext.FrontFace(_hasNegativeScale ? FrontFaceDirection.CW : FrontFaceDirection.Ccw);
 
             GlContext.GL.DrawElementsInstanced(
                 PrimitiveType.Triangles,
@@ -163,10 +167,6 @@ namespace DotnetGltfRenderer {
                 null,
                 (uint)count
             );
-
-            if (_hasNegativeScale) {
-                GlContext.FrontFace(FrontFaceDirection.Ccw);
-            }
 
             GlContext.GL.BindVertexArray(0);
         }
