@@ -183,7 +183,19 @@ namespace DotnetGltfViewer.Windows {
             if (ImGui.Begin("GizmoToolbar2", flags)) {
                 RenderToolbar2Button("Focus", "Focus camera on selection (F)", () => MainWindow.FocusOnSelection(), buttonWidth, buttonHeight);
                 RenderToolbar2Button("Reset\nCamera", "Reset camera to default", MainWindow.ResetCameraToScene, buttonWidth, buttonHeight * 1.6f);
-                //RenderToolbar2Button("Delete" , "Delete selected object (Del)", () => _scene.RemoveModel(_scene.SelectedModel), buttonWidth, buttonHeight);
+            }
+            ImGui.End();
+            ImGui.PopStyleVar(2);
+            y += h + padding;
+            h = buttonHeight + padding * 2f;
+
+            // 第三组工具栏
+            ImGui.SetNextWindowPos(new Vector2(padding, y));
+            ImGui.SetNextWindowSize(new Vector2(buttonWidth + padding * 2f, h));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding, padding));
+            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0f, padding));
+            if (ImGui.Begin("GizmoToolbar3", flags)) {
+                RenderToolbar2Button("Delete" , "Delete selected object (Del)", () => _context?.Scene.RemoveModel(_context?.Scene.SelectedModel), buttonWidth, buttonHeight);
             }
             ImGui.End();
             ImGui.PopStyleVar(2);
