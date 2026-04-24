@@ -83,6 +83,11 @@ namespace DotnetGltfRenderer {
         public bool HasColor0;
         public bool UseGeneratedTangents;
 
+        // Unwelded mesh state (tangent generation requires unwelded vertices)
+        public bool IsUnwelded;
+        public int VertexCount;
+        public int TriangleCount => IsUnwelded ? VertexCount / 3 : (Indices?.Length ?? 0) / 3;
+
         // GPU resources
         public VertexArrayObject<float, uint> VAO;
         public BufferObject<float> BaseVBO;
@@ -280,7 +285,9 @@ namespace DotnetGltfRenderer {
                 VAO.VertexAttributePointer(4, 4, VertexAttribPointerType.Float, SurfaceVertexStride, 3); // Color at offset 3
                 VAO.VertexAttributePointer(3, 4, VertexAttribPointerType.Float, SurfaceVertexStride, 7); // Tangent at offset 7
             }
-            EBO = new BufferObject<uint>(Indices, BufferTargetARB.ElementArrayBuffer);
+            if (!IsUnwelded) {
+                EBO = new BufferObject<uint>(Indices, BufferTargetARB.ElementArrayBuffer);
+            }
             if (HasSkinAttributes) {
                 SkinVBO = new BufferObject<float>(SkinVertices, BufferTargetARB.ArrayBuffer);
                 VAO.VertexAttributePointer(5, 4, VertexAttribPointerType.Float, SkinVertexStride, 0);
@@ -368,7 +375,7 @@ namespace DotnetGltfRenderer {
             SurfaceVBO?.Dispose();
             SkinVBO?.Dispose();
             InstanceVBO?.Dispose();
-            EBO.Dispose();
+            EBO?.Dispose();
             MorphTargetTexture?.Dispose();
         }
     }

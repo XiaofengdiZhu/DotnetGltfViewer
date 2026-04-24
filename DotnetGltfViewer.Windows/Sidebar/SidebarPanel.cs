@@ -175,8 +175,8 @@ namespace DotnetGltfViewer.Windows.Sidebar {
                 }
                 meshCount += sceneModel.Model.MeshInstances.Count;
                 foreach (MeshInstance instance in sceneModel.Model.MeshInstances) {
-                    if (instance.Mesh?.Indices != null) {
-                        triangleCount += instance.Mesh.Indices.Length / 3;
+                    if (instance.Mesh != null) {
+                        triangleCount += instance.Mesh.TriangleCount;
                     }
                     if (instance.Mesh?.Material != null) {
                         if (instance.Mesh.Material.AlphaMode == AlphaMode.Opaque) {

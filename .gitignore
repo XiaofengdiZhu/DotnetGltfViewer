@@ -1,4 +1,5 @@
 .idea/
+glTF-Sample-Viewer/
 DotnetGltfViewer.Windows/Models/
 DotnetGltfViewer.Windows/Environments/
 ## Ignore Visual Studio temporary files, build results, and

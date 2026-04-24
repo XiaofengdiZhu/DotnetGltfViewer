@@ -164,10 +164,116 @@ namespace DotnetGltfRenderer {
                 }
                 t = Vector3.Normalize(t - n * Vector3.Dot(n, t));
                 Vector3 b = Vector3.Cross(n, t);
-                float w = Vector3.Dot(b, tan2[i]) < 0f ? -1f : 1f;
+                // glTF 约定：bitangent = cross(N, T) * w，与 Lengyel 标准公式方向相反
+                float w = Vector3.Dot(b, tan2[i]) < 0f ? 1f : -1f;
                 tangents[i] = new Vector4(t, w);
             }
             return tangents;
+        }
+
+        /// <summary>
+        /// Unweld 网格：移除索引缓冲区，复制所有顶点属性使每个三角形拥有独立顶点
+        /// </summary>
+        public static uint[] Unweld(
+            List<Vector3> positions,
+            List<Vector3> normals,
+            List<Vector2> uv0,
+            List<Vector2> uv1,
+            List<Vector4> colors,
+            uint[] indices) {
+            if (indices == null || indices.Length == 0) {
+                return indices;
+            }
+
+            int indexCount = indices.Length;
+            List<Vector3> newPositions = new(indexCount);
+            List<Vector3> newNormals = normals != null ? new List<Vector3>(indexCount) : null;
+            List<Vector2> newUv0 = uv0 != null ? new List<Vector2>(indexCount) : null;
+            List<Vector2> newUv1 = uv1 != null ? new List<Vector2>(indexCount) : null;
+            List<Vector4> newColors = colors != null ? new List<Vector4>(indexCount) : null;
+
+            for (int i = 0; i < indexCount; i++) {
+                int idx = (int)indices[i];
+                newPositions.Add(positions[idx]);
+                newNormals?.Add(normals[idx]);
+                newUv0?.Add(uv0[idx]);
+                newUv1?.Add(uv1[idx]);
+                newColors?.Add(colors[idx]);
+            }
+
+            positions.Clear();
+            positions.AddRange(newPositions);
+            if (normals != null) { normals.Clear(); normals.AddRange(newNormals); }
+            if (uv0 != null) { uv0.Clear(); uv0.AddRange(newUv0); }
+            if (uv1 != null) { uv1.Clear(); uv1.AddRange(newUv1); }
+            if (colors != null) { colors.Clear(); colors.AddRange(newColors); }
+
+            // Unweld 后索引就是 [0,1,2,...]
+            uint[] newIndices = new uint[indexCount];
+            for (int i = 0; i < indexCount; i++) {
+                newIndices[i] = (uint)i;
+            }
+            return newIndices;
+        }
+
+        /// <summary>
+        /// Unweld 蒙皮属性（joints/weights）
+        /// </summary>
+        public static void UnweldSkinAttributes(
+            List<Vector4> joints0,
+            List<Vector4> weights0,
+            uint[] originalIndices) {
+            if (joints0 == null || weights0 == null || originalIndices == null) {
+                return;
+            }
+            List<Vector4> newJoints = new(originalIndices.Length);
+            List<Vector4> newWeights = new(originalIndices.Length);
+            for (int i = 0; i < originalIndices.Length; i++) {
+                int idx = (int)originalIndices[i];
+                newJoints.Add(joints0[idx]);
+                newWeights.Add(weights0[idx]);
+            }
+            joints0.Clear();
+            joints0.AddRange(newJoints);
+            weights0.Clear();
+            weights0.AddRange(newWeights);
+        }
+
+        /// <summary>
+        /// Unweld Morph Target 数据
+        /// </summary>
+        public static void UnweldMorphTargets(
+            IReadOnlyList<Vector3>[] morphPositions,
+            IReadOnlyList<Vector3>[] morphNormals,
+            IReadOnlyList<Vector4>[] morphTangents,
+            IReadOnlyList<Vector2>[] morphTexCoord0s,
+            IReadOnlyList<Vector2>[] morphTexCoord1s,
+            IReadOnlyList<Vector4>[] morphColors,
+            uint[] originalIndices) {
+            if (originalIndices == null) {
+                return;
+            }
+            int targetCount = morphPositions.Length;
+            for (int t = 0; t < targetCount; t++) {
+                morphPositions[t] = UnweldArray(morphPositions[t], originalIndices);
+                morphNormals[t] = UnweldArray(morphNormals[t], originalIndices);
+                morphTangents[t] = UnweldArray(morphTangents[t], originalIndices);
+                morphTexCoord0s[t] = UnweldArray(morphTexCoord0s[t], originalIndices);
+                morphTexCoord1s[t] = UnweldArray(morphTexCoord1s[t], originalIndices);
+                morphColors[t] = UnweldArray(morphColors[t], originalIndices);
+            }
+        }
+
+        static IReadOnlyList<T> UnweldArray<T>(IReadOnlyList<T> source, uint[] indices) {
+            if (source == null) {
+                return null;
+            }
+            T[] result = new T[indices.Length];
+            for (int i = 0; i < indices.Length; i++) {
+                int idx = (int)indices[i];
+                result[i] = idx < source.Count ? source[idx] : default;
+            }
+            return result;
         }
 
         /// <summary>

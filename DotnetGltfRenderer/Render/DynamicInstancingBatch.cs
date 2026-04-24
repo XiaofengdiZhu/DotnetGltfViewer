@@ -160,13 +160,23 @@ namespace DotnetGltfRenderer {
 
             GlContext.FrontFace(_hasNegativeScale ? FrontFaceDirection.CW : FrontFaceDirection.Ccw);
 
-            GlContext.GL.DrawElementsInstanced(
-                PrimitiveType.Triangles,
-                (uint)_mesh.Indices.Length,
-                DrawElementsType.UnsignedInt,
-                null,
-                (uint)count
-            );
+            if (_mesh.IsUnwelded) {
+                GlContext.GL.DrawArraysInstanced(
+                    PrimitiveType.Triangles,
+                    0,
+                    (uint)_mesh.VertexCount,
+                    (uint)count
+                );
+            }
+            else {
+                GlContext.GL.DrawElementsInstanced(
+                    PrimitiveType.Triangles,
+                    (uint)_mesh.Indices.Length,
+                    DrawElementsType.UnsignedInt,
+                    null,
+                    (uint)count
+                );
+            }
 
             GlContext.GL.BindVertexArray(0);
         }

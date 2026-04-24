@@ -581,22 +581,98 @@ namespace DotnetGltfRenderer {
         Mesh ProcessPrimitive(MeshPrimitive primitive, Dictionary<int, int> variantMatMapping) {
             Mesh mesh = new();
             SharpGLTF.Schema2.Material material = primitive.Material;
-            Accessor posAcc = primitive.GetVertexAccessor("POSITION")
+            IAccessorArray<Vector3> posAcc = primitive.GetVertexAccessor("POSITION")?.AsVector3Array()
                 ?? throw new InvalidOperationException("glTF primitive is missing POSITION accessor.");
-            IAccessorArray<Vector3> positions = posAcc.AsVector3Array();
-            IAccessorArray<Vector3> normals = primitive.GetVertexAccessor("NORMAL")?.AsVector3Array();
-            IAccessorArray<Vector2> uv0 = primitive.GetVertexAccessor("TEXCOORD_0")?.AsVector2Array();
-            IAccessorArray<Vector2> uv1 = primitive.GetVertexAccessor("TEXCOORD_1")?.AsVector2Array();
-            IAccessorArray<Vector4> colors = primitive.GetVertexAccessor("COLOR_0")?.AsColorArray();
-            IAccessorArray<Vector4> tangents = primitive.GetVertexAccessor("TANGENT")?.AsVector4Array();
-            IAccessorArray<Vector4> joints = primitive.GetVertexAccessor("JOINTS_0")?.AsVector4Array();
-            IAccessorArray<Vector4> weights = primitive.GetVertexAccessor("WEIGHTS_0")?.AsVector4Array();
-            mesh.Indices = primitive.GetIndices()?.ToArray() ?? Enumerable.Range(0, positions.Count).Select(i => (uint)i).ToArray();
-            Vector4[] generatedTangents = GltfGeometryProcessor.GenerateTangents(positions, normals, uv0, mesh.Indices);
+            IAccessorArray<Vector3> normalsAcc = primitive.GetVertexAccessor("NORMAL")?.AsVector3Array();
+            IAccessorArray<Vector2> uv0Acc = primitive.GetVertexAccessor("TEXCOORD_0")?.AsVector2Array();
+            IAccessorArray<Vector2> uv1Acc = primitive.GetVertexAccessor("TEXCOORD_1")?.AsVector2Array();
+            IAccessorArray<Vector4> colorsAcc = primitive.GetVertexAccessor("COLOR_0")?.AsColorArray();
+            IAccessorArray<Vector4> tangentsAcc = primitive.GetVertexAccessor("TANGENT")?.AsVector4Array();
+            IAccessorArray<Vector4> jointsAcc = primitive.GetVertexAccessor("JOINTS_0")?.AsVector4Array();
+            IAccessorArray<Vector4> weightsAcc = primitive.GetVertexAccessor("WEIGHTS_0")?.AsVector4Array();
+            uint[] originalGltfIndices = primitive.GetIndices()?.ToArray();
+            mesh.Indices = originalGltfIndices ?? Enumerable.Range(0, posAcc.Count).Select(i => (uint)i).ToArray();
 
-            // Morph Target 纹理化支持
+            // 准备可变顶点数据（用于 unweld 时修改）
+            IReadOnlyList<Vector3> positions = posAcc;
+            IReadOnlyList<Vector3> normals = normalsAcc;
+            IReadOnlyList<Vector2> uv0 = uv0Acc;
+            IReadOnlyList<Vector2> uv1 = uv1Acc;
+            IReadOnlyList<Vector4> colors = colorsAcc;
+            IReadOnlyList<Vector4> joints = jointsAcc;
+            IReadOnlyList<Vector4> weights = weightsAcc;
+            IReadOnlyList<Vector4> tangents = tangentsAcc;
+
+            // Morph Target 数据收集
             int morphTargetCount = primitive.MorphTargetsCount;
             IReadOnlyList<float> morphWeights = primitive.LogicalParent.MorphWeights;
+            IReadOnlyList<Vector3>[] morphPositions = null;
+            IReadOnlyList<Vector3>[] morphNormals = null;
+            IReadOnlyList<Vector4>[] morphTangentsArr = null;
+            IReadOnlyList<Vector2>[] morphTexCoords0 = null;
+            IReadOnlyList<Vector2>[] morphTexCoords1 = null;
+            IReadOnlyList<Vector4>[] morphColors0 = null;
+            if (morphTargetCount > 0) {
+                morphPositions = new IReadOnlyList<Vector3>[morphTargetCount];
+                morphNormals = new IReadOnlyList<Vector3>[morphTargetCount];
+                morphTangentsArr = new IReadOnlyList<Vector4>[morphTargetCount];
+                morphTexCoords0 = new IReadOnlyList<Vector2>[morphTargetCount];
+                morphTexCoords1 = new IReadOnlyList<Vector2>[morphTargetCount];
+                morphColors0 = new IReadOnlyList<Vector4>[morphTargetCount];
+                for (int t = 0; t < morphTargetCount; t++) {
+                    IReadOnlyDictionary<string, Accessor> targetAccessors = primitive.GetMorphTargetAccessors(t);
+                    morphPositions[t] = targetAccessors.TryGetValue("POSITION", out Accessor morphPosAcc) ? morphPosAcc.AsVector3Array() : null;
+                    morphNormals[t] = targetAccessors.TryGetValue("NORMAL", out Accessor morphNrmAcc) ? morphNrmAcc.AsVector3Array() : null;
+                    morphTangentsArr[t] = targetAccessors.TryGetValue("TANGENT", out Accessor morphTanAcc) ? morphTanAcc.AsVector4Array() : null;
+                    morphTexCoords0[t] = targetAccessors.TryGetValue("TEXCOORD_0", out Accessor morphUv0Acc) ? morphUv0Acc.AsVector2Array() : null;
+                    morphTexCoords1[t] = targetAccessors.TryGetValue("TEXCOORD_1", out Accessor morphUv1Acc) ? morphUv1Acc.AsVector2Array() : null;
+                    morphColors0[t] = targetAccessors.TryGetValue("COLOR_0", out Accessor morphColAcc) ? morphColAcc.AsColorArray() : null;
+                }
+            }
+
+            // 没有预计算切线且有索引缓冲区时，先 unweld 再生成切线
+            Vector4[] generatedTangents;
+            if (tangentsAcc == null && originalGltfIndices != null) {
+                uint[] originalIndices = mesh.Indices;
+                List<Vector3> posList = new(posAcc);
+                List<Vector3> nrmList = normalsAcc != null ? new List<Vector3>(normalsAcc) : null;
+                List<Vector2> uv0List = uv0Acc != null ? new List<Vector2>(uv0Acc) : null;
+                List<Vector2> uv1List = uv1Acc != null ? new List<Vector2>(uv1Acc) : null;
+                List<Vector4> colList = colorsAcc != null ? new List<Vector4>(colorsAcc) : null;
+
+                mesh.Indices = GltfGeometryProcessor.Unweld(posList, nrmList, uv0List, uv1List, colList, mesh.Indices);
+                mesh.IsUnwelded = true;
+                mesh.VertexCount = posList.Count;
+                positions = posList;
+                normals = nrmList;
+                uv0 = uv0List;
+                uv1 = uv1List;
+                colors = colList;
+
+                // Unweld 蒙皮属性
+                if (jointsAcc != null && weightsAcc != null) {
+                    List<Vector4> jointsList = new(jointsAcc);
+                    List<Vector4> weightsList = new(weightsAcc);
+                    GltfGeometryProcessor.UnweldSkinAttributes(jointsList, weightsList, originalIndices);
+                    joints = jointsList;
+                    weights = weightsList;
+                }
+
+                // Unweld Morph Targets
+                if (morphTargetCount > 0) {
+                    GltfGeometryProcessor.UnweldMorphTargets(
+                        morphPositions, morphNormals, morphTangentsArr,
+                        morphTexCoords0, morphTexCoords1, morphColors0,
+                        originalIndices);
+                }
+
+                generatedTangents = GltfGeometryProcessor.GenerateTangents(positions, normals, uv0, mesh.Indices);
+            }
+            else {
+                generatedTangents = GltfGeometryProcessor.GenerateTangents(positions, normals, uv0, mesh.Indices);
+            }
+
+            // Morph Target 纹理化
             if (morphTargetCount > 0) {
                 HashSet<string> morphAttributes = new();
                 for (int t = 0; t < morphTargetCount; t++) {
@@ -607,28 +683,13 @@ namespace DotnetGltfRenderer {
                 }
                 mesh.MorphTargetCount = morphTargetCount;
                 mesh.MorphTargetTexture = new MorphTargetTexture(positions.Count, morphTargetCount, morphAttributes);
-                List<IReadOnlyList<Vector3>> morphPositions = new();
-                List<IReadOnlyList<Vector3>> morphNormals = new();
-                List<IReadOnlyList<Vector4>> morphTangents = new();
-                List<IReadOnlyList<Vector2>> morphTexCoords0 = new();
-                List<IReadOnlyList<Vector2>> morphTexCoords1 = new();
-                List<IReadOnlyList<Vector4>> morphColors0 = new();
-                for (int t = 0; t < morphTargetCount; t++) {
-                    IReadOnlyDictionary<string, Accessor> targetAccessors = primitive.GetMorphTargetAccessors(t);
-                    morphPositions.Add(targetAccessors.TryGetValue("POSITION", out Accessor morphPosAcc) ? morphPosAcc.AsVector3Array() : null);
-                    morphNormals.Add(targetAccessors.TryGetValue("NORMAL", out Accessor morphNrmAcc) ? morphNrmAcc.AsVector3Array() : null);
-                    morphTangents.Add(targetAccessors.TryGetValue("TANGENT", out Accessor morphTanAcc) ? morphTanAcc.AsVector4Array() : null);
-                    morphTexCoords0.Add(targetAccessors.TryGetValue("TEXCOORD_0", out Accessor morphUv0Acc) ? morphUv0Acc.AsVector2Array() : null);
-                    morphTexCoords1.Add(targetAccessors.TryGetValue("TEXCOORD_1", out Accessor morphUv1Acc) ? morphUv1Acc.AsVector2Array() : null);
-                    morphColors0.Add(targetAccessors.TryGetValue("COLOR_0", out Accessor morphColAcc) ? morphColAcc.AsColorArray() : null);
-                }
                 mesh.MorphTargetTexture.UploadData(
-                    morphPositions.ToArray(),
-                    morphNormals.ToArray(),
-                    morphTangents.ToArray(),
-                    morphTexCoords0.ToArray(),
-                    morphTexCoords1.ToArray(),
-                    morphColors0.ToArray()
+                    morphPositions,
+                    morphNormals,
+                    morphTangentsArr,
+                    morphTexCoords0,
+                    morphTexCoords1,
+                    morphColors0
                 );
                 mesh.MorphWeights = new float[morphTargetCount];
                 if (morphWeights != null) {
