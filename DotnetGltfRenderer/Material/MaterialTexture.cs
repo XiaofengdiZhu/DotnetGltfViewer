@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 
 namespace DotnetGltfRenderer {
@@ -43,33 +44,18 @@ namespace DotnetGltfRenderer {
         /// glTF 规范要求变换顺序：Scale -> Rotation -> Translation
         /// </summary>
         public static Matrix3x2 CreateUVTransform(Vector2 offset, Vector2 scale, float rotation) {
-            // glTF UV transform 变换顺序：Scale -> Rotation -> Translation
-            // 在 GLSL 中：uv' = T * R * S * uv
-            // 这意味着先应用 Scale，再应用 Rotation，最后应用 Translation
-            // Matrix3x2 使用行向量约定：result = v * M（从右到左应用）
-            // 所以矩阵乘法顺序应该是：translationMatrix * rotationMatrix * scaleMatrix
-            // 这样 v * (T * R * S) = ((v * T) * R) * S，即先 S 再 R 最后 T
-            // 但实际上行向量乘法 v * M 是从右到左应用的，所以顺序相反
-            // 正确顺序是：先 scale，再 rotation，最后 translation
-            // 对于行向量：v * scaleMatrix 先应用 scale
-            // 然后 * rotationMatrix 应用 rotation
-            // 最后 * translationMatrix 应用 translation
-            // 所以我们需要：scaleMatrix * rotationMatrix * translationMatrix
-            // 但是！Matrix3x2 乘法的语义是：result = left * right
-            // 这意味着 left 先被应用，然后 right
-            // 所以我们需要反过来的顺序
-            Matrix3x2 scaleMatrix = Matrix3x2.CreateScale(scale.X, scale.Y);
-            Matrix3x2 rotationMatrix = Matrix3x2.CreateRotation(rotation);
-            Matrix3x2 translationMatrix = Matrix3x2.CreateTranslation(offset.X, offset.Y);
-
-            // 官方渲染器：T * R * S（列主序，应用到向量是 S -> R -> T）
-            // Matrix3x2 是行主序，应用到向量是 M * v，所以顺序相同
-            // 参考：https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_texture_transform
-            // 变换顺序：Scale -> Rotation -> Translation
-            // 对于行向量约定，矩阵乘法顺序是：translationMatrix * rotationMatrix * scaleMatrix
-            // 但 Matrix3x2 的乘法是 result = left * right，left 先应用
-            // 所以正确的顺序是：translationMatrix * rotationMatrix * scaleMatrix
-            return translationMatrix * rotationMatrix * scaleMatrix;
+            // 直接构造 Matrix3x2 匹配参考渲染器的列主序 UV 变换矩阵
+            // glTF 变换顺序：Scale -> Rotation -> Translation
+            // 参考 glTF-Sample-Viewer textureTransform.rs:
+            //   col0 = (sx*cos, sx*sin, 0), col1 = (-sy*sin, sy*cos, 0), col2 = (tx, ty, 1)
+            // .NET Matrix3x2 行主序: M11,M12 = row0, M21,M22 = row1, M31,M32 = row2
+            // 转置后: M11=sx*cos, M12=sx*sin, M21=-sy*sin, M22=sy*cos, M31=tx, M32=ty
+            float cos = MathF.Cos(rotation);
+            float sin = MathF.Sin(rotation);
+            return new Matrix3x2(
+                scale.X * cos, -scale.X * sin,
+                scale.Y * sin, scale.Y * cos,
+                offset.X, offset.Y);
         }
 
         /// <summary>

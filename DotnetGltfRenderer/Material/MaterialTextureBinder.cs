@@ -190,13 +190,12 @@ namespace DotnetGltfRenderer {
                 return UVMatrix3.Identity;
             }
 
-            // Convert Matrix3x2 to mat3 (3x3 matrix for UV transform)
-            // Column 0: [M11, M21, 0]    (scale*rotation part 1)
-            // Column 1: [M12, M22, 0]    (scale*rotation part 2)
-            // Column 2: [M31, M32, 1]    (translation)
+            // Convert Matrix3x2 to GLSL mat3 (column-major)
+            // .NET Transform: x' = x*M11 + y*M21 + M31, y' = x*M12 + y*M22 + M32
+            // 等效列主序矩阵列: Col0=(M11,M12,0), Col1=(M21,M22,0), Col2=(M31,M32,1)
             return new UVMatrix3(
-                new Vector4(matTex.UVTransform.M11, matTex.UVTransform.M21, 0f, 0f),
-                new Vector4(matTex.UVTransform.M12, matTex.UVTransform.M22, 0f, 0f),
+                new Vector4(matTex.UVTransform.M11, matTex.UVTransform.M12, 0f, 0f),
+                new Vector4(matTex.UVTransform.M21, matTex.UVTransform.M22, 0f, 0f),
                 new Vector4(matTex.UVTransform.M31, matTex.UVTransform.M32, 1f, 0f)
             );
         }
