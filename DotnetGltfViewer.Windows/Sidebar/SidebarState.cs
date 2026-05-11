@@ -110,7 +110,11 @@ namespace DotnetGltfViewer.Windows.Sidebar {
             "Clearcoat Roughness",
             "Sheen",
             "Transmission",
-            "Volume Thickness"
+            "Volume Thickness",
+            "Fresnel Dielectric",
+            "IBL Diffuse",
+            "IBL Specular",
+            "IBL Raw"
         ];
 
         /// <summary>Debug Channel UI 索引到枚举值的映射</summary>
@@ -131,7 +135,11 @@ namespace DotnetGltfViewer.Windows.Sidebar {
             DebugChannel.ClearcoatRoughness, // 13
             DebugChannel.Sheen, // 14
             DebugChannel.Transmission, // 15
-            DebugChannel.VolumeThickness // 16
+            DebugChannel.VolumeThickness, // 16
+            DebugChannel.FresnelDielectric,
+            DebugChannel.IblDiffuse,
+            DebugChannel.IblSpecular,
+            DebugChannel.IblRaw
         ];
 
         /// <summary>Skinning 开关</summary>

@@ -230,6 +230,36 @@ void main()
 
     #endif//end USE_IBL
 
+    // Debug: raw IBL output (linear, no tone map, no punctual light)
+    #if DEBUG == DEBUG_IBL_RAW
+    g_finalColor = vec4(max(color, vec3(0.0)), baseColor.a);
+    return;
+    #endif
+
+    // Debug: NdotV (to check Fresnel iso-lines / concentric circles)
+    #if DEBUG == DEBUG_NDOTV
+    g_finalColor = vec4(vec3(NdotV), 1.0);
+    return;
+    #endif
+
+    // Debug: dielectric Fresnel factor (IBL)
+    #if DEBUG == DEBUG_FRESNEL_DIELECTRIC
+    g_finalColor = vec4(f_dielectric_fresnel_ibl, 1.0);
+    return;
+    #endif
+
+    // Debug: diffuse IBL only
+    #if DEBUG == DEBUG_IBL_DIFFUSE
+    g_finalColor = vec4(f_diffuse, 1.0);
+    return;
+    #endif
+
+    // Debug: specular IBL only (dielectric)
+    #if DEBUG == DEBUG_IBL_SPECULAR
+    g_finalColor = vec4(f_specular_dielectric, 1.0);
+    return;
+    #endif
+
     f_diffuse = vec3(0.0);
     f_specular_dielectric = vec3(0.0);
     f_specular_metal = vec3(0.0);
