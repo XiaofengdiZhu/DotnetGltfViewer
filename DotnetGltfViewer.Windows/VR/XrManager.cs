@@ -141,6 +141,8 @@ public unsafe class XrManager : IDisposable {
         LogManager.Logger.ZLogInformation($"OpenXR swapchain size: {_swapchainWidth}x{_swapchainHeight}");
 
         // 6. Create Session
+        // GraphicsBindingOpenGLWin32KHR 传入 WGL context handle，
+        // 实测 OpenXR 运行时接受 GLES context。
         {
             GraphicsBindingOpenGLWin32KHR graphicsBinding = new() {
                 Type = StructureType.GraphicsBindingOpenglWin32Khr,

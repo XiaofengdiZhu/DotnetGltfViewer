@@ -53,10 +53,8 @@ namespace DotnetGltfViewer.Windows {
             InputWindowExtensions.TryAdd("Silk.NET.Input.Glfw");
             WindowOptions options = WindowOptions.Default;
             Rectangle<int> bounds = Monitor.GetMainMonitor(null).Bounds;
-            // VR 模式使用 Desktop OpenGL 4.6，普通模式使用 OpenGL ES 3.0
-            options.API = VREnabled
-                ? new GraphicsAPI(ContextAPI.OpenGL, new APIVersion(4, 6))
-                : new GraphicsAPI(ContextAPI.OpenGLES, new APIVersion(3, 0));
+            // VR 模式也使用 OpenGL ES 3.0
+            options.API = new GraphicsAPI(ContextAPI.OpenGLES, new APIVersion(3, 0));
             Vector2D<int> size = new((int)(bounds.Size.X * 0.8f), (int)(bounds.Size.Y * 0.8f));
             options.Size = size;
             options.Position = bounds.Origin + (bounds.Size - size) / 2;
@@ -86,7 +84,6 @@ namespace DotnetGltfViewer.Windows {
             LogManager.Logger.ZLogInformation($"初始化窗口...");
             _gl = GL.GetApi(_window);
             GlContext.GL = _gl;
-            GlContext.IsGLES = !VREnabled;
 
             IInputContext input = _window.CreateInput();
             LogManager.Logger.ZLogInformation($"窗口初始化完成, Size: {_window.Size.X}x{_window.Size.Y}");

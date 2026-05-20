@@ -175,21 +175,25 @@ namespace DotnetGltfRenderer {
         /// 编译并缓存着色器
         /// </summary>
         static int CompileAndCacheShader(string shaderName, string src, string definesStr, int hash, bool isVert) {
-            string versionLine = GlContext.IsGLES ? "#version 300 es" : "#version 330";
+            // 如果着色器已有 #version，将 defines 插入到 #version 之后
+            // 如果没有 #version，添加默认的 #version 300 es
             string fullSource;
             int versionIndex = src.IndexOf("#version");
             if (versionIndex >= 0) {
-                // 找到 #version 行的结束位置，用当前模式版本替换
+                // 找到 #version 行的结束位置
                 int lineEnd = src.IndexOf('\n', versionIndex);
                 if (lineEnd >= 0) {
-                    fullSource = versionLine + "\n" + definesStr + src.Substring(lineEnd + 1);
+                    // 将 defines 插入到 #version 行之后
+                    fullSource = src.Substring(0, lineEnd + 1) + definesStr + src.Substring(lineEnd + 1);
                 }
                 else {
-                    fullSource = versionLine + "\n" + definesStr;
+                    // #version 是最后一行（不太可能）
+                    fullSource = src + "\n" + definesStr;
                 }
             }
             else {
-                fullSource = versionLine + "\n" + definesStr + src;
+                // 没有 #version，添加默认的
+                fullSource = "#version 300 es\n" + definesStr + src;
             }
             uint shader = CompileShader(isVert ? ShaderType.VertexShader : ShaderType.FragmentShader, fullSource, shaderName);
             _shaderCache[hash] = shader;

@@ -16,9 +16,7 @@
 // [5] "KHR_materials_clearcoat"
 //     https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_clearcoat
 
-#ifdef GL_ES
 precision highp float;
-#endif
 
 // UBO definitions
 #include <ubos.glsl>

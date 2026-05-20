@@ -38,11 +38,6 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
-        /// 是否为 OpenGL ES 模式（false 表示 Desktop OpenGL）
-        /// </summary>
-        public static bool IsGLES { get; set; } = true;
-
-        /// <summary>
         /// 是否已初始化
         /// </summary>
         public static bool IsInitialized => _gl != null;

@@ -1,6 +1,4 @@
-#ifdef GL_ES
 precision highp float;
-#endif
 
 // UBO definitions
 #include <ubos.glsl>
