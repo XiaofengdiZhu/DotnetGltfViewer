@@ -36,5 +36,9 @@
         <None Update="Environments/**/*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <None Update="Native/openxr_loader.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>openxr_loader.dll</Link>
+        </None>
     </ItemGroup>
 </Project>

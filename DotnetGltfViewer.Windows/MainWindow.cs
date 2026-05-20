@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using DotnetGltfRenderer;
 using DotnetGltfViewer.Windows.Sidebar;
@@ -28,6 +29,7 @@ namespace DotnetGltfViewer.Windows {
 
         // VR 模式
         public static bool VREnabled { get; private set; }
+        static Vector3 _vrCameraOffset;
 
         // 默认路径
         const string DefaultModelPath = "Models/DamagedHelmet/glTF/DamagedHelmet.gltf";
@@ -134,6 +136,7 @@ namespace DotnetGltfViewer.Windows {
 
                 if (_xrManager.IsRunning) {
                     _renderer.SetFramebufferSize((int)_xrManager.SwapchainWidth, (int)_xrManager.SwapchainHeight);
+                    ComputeVRCameraOffset();
                     LogManager.Logger.ZLogInformation($"VR 模式已启用，swapchain: {_xrManager.SwapchainWidth}x{_xrManager.SwapchainHeight}");
                 }
                 else {
@@ -148,6 +151,23 @@ namespace DotnetGltfViewer.Windows {
                 _xrManager = null;
                 VREnabled = false;
             }
+        }
+
+        /// <summary>
+        /// 计算 VR 相机偏移，使用户站在模型前方合适距离处
+        /// </summary>
+        static void ComputeVRCameraOffset() {
+            if (!_scene.TryGetSceneBounds(out Vector3 min, out Vector3 max)) {
+                _vrCameraOffset = Vector3.Zero;
+                return;
+            }
+            Vector3 center = (min + max) * 0.5f;
+            Vector3 size = max - min;
+            float maxExtent = Math.Max(Math.Max(size.X, size.Y), size.Z);
+
+            // 用户站在模型中心前方（+Z 方向），看向 -Z 方向面对模型
+            // OpenXR Local space: +X 右, +Y 上, -Z 前
+            _vrCameraOffset = new Vector3(center.X, center.Y, center.Z + maxExtent * 1.5f);
         }
 
         /// <summary>
@@ -195,9 +215,17 @@ namespace DotnetGltfViewer.Windows {
                     _gl.Scissor(0, 0, _xrManager.SwapchainWidth, _xrManager.SwapchainHeight);
                     _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-                    System.Numerics.Matrix4x4 eyeView = VRCamera.CreateViewMatrix(view.Pose);
+                    // 将 HMD 位姿偏移到场景空间的合适位置
+                    Silk.NET.OpenXR.Posef offsetPose = view.Pose;
+                    offsetPose.Position = new() {
+                        X = view.Pose.Position.X + _vrCameraOffset.X,
+                        Y = view.Pose.Position.Y + _vrCameraOffset.Y,
+                        Z = view.Pose.Position.Z + _vrCameraOffset.Z
+                    };
+
+                    System.Numerics.Matrix4x4 eyeView = VRCamera.CreateViewMatrix(offsetPose);
                     System.Numerics.Matrix4x4 eyeProj = VRCamera.CreateProjectionMatrix(view.Fov, 0.1f, 100f);
-                    System.Numerics.Vector3 cameraPos = new(view.Pose.Position.X, view.Pose.Position.Y, view.Pose.Position.Z);
+                    System.Numerics.Vector3 cameraPos = new(offsetPose.Position.X, offsetPose.Position.Y, offsetPose.Position.Z);
 
                     _renderer.Render(eyeView, eyeProj, cameraPos);
 
