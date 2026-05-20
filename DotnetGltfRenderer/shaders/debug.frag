@@ -1,4 +1,6 @@
+#ifdef GL_ES
 precision highp float;
+#endif
 
 in vec2 texCoord;
 out vec4 fragmentColor;

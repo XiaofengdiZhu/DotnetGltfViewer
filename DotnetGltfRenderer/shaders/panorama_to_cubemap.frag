@@ -1,8 +1,9 @@
-#version 300 es
 #define MATH_PI 3.1415926535897932384626433832795
 #define MATH_INV_PI (1.0 / MATH_PI)
 
+#ifdef GL_ES
 precision highp float;
+#endif
 
 
 in vec2 texCoord;

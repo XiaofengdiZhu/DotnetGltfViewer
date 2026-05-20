@@ -3,7 +3,9 @@
 // diffuseTransmissionFactor defines the ratio of diffuse light passing the surface
 // Light which is scattered at the surface is modulated by the single scatter color, while diffuse transmission is additionally modulated by the absorption ratio (1 - singleScatter).
 
+#ifdef GL_ES
 precision highp float;
+#endif
 
 // UBO definitions
 #include <ubos.glsl>

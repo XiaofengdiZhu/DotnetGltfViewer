@@ -28,6 +28,7 @@ namespace DotnetGltfRenderer {
         uint _inputTexture;
         uint _cubemapTexture;
         uint _framebuffer;
+        uint _emptyVAO;
         Shader _panoramaToCubemapShader;
         Shader _iblFilteringShader;
 
@@ -49,6 +50,9 @@ namespace DotnetGltfRenderer {
 
             // 初始化着色器
             InitShaders();
+
+            // 创建空 VAO（Desktop GL Core Profile 要求绑定 VAO 才能绘制）
+            _emptyVAO = GlContext.GL.GenVertexArray();
 
             // 创建输入纹理（从 HDR 数据）
             CreateInputTexture(panorama);
@@ -85,6 +89,7 @@ namespace DotnetGltfRenderer {
             GenerateCharlieLut();
             //SaveLutToBmp("charlie_lut", CharlieLut);
             GlContext.GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            GlContext.GL.BindVertexArray(0);
 
             // 恢复视口设置
             GlContext.GL.Viewport(viewport[0], viewport[1], (uint)viewport[2], (uint)viewport[3]);
@@ -206,7 +211,8 @@ namespace DotnetGltfRenderer {
                 _panoramaToCubemapShader.SetUniform("u_panorama", 0);
                 _panoramaToCubemapShader.SetUniform("u_currentFace", i);
 
-                // 绘制全屏三角形
+                // 绘制全屏三角形（需绑定 VAO，Desktop GL Core Profile 要求）
+                GlContext.GL.BindVertexArray(_emptyVAO);
                 GlContext.GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
             }
             GlContext.GL.BindTexture(TextureTarget.TextureCubeMap, _cubemapTexture);
@@ -267,6 +273,7 @@ namespace DotnetGltfRenderer {
                 _iblFilteringShader.SetUniform("u_isGeneratingLUT", 0);
                 _iblFilteringShader.SetUniform("u_floatTexture", 1);
                 _iblFilteringShader.SetUniform("u_intensityScale", 1.0f);
+                GlContext.GL.BindVertexArray(_emptyVAO);
                 GlContext.GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
             }
         }
@@ -327,9 +334,9 @@ namespace DotnetGltfRenderer {
             _iblFilteringShader.SetUniform("u_isGeneratingLUT", 1);
             _iblFilteringShader.SetUniform("u_floatTexture", 1);
             _iblFilteringShader.SetUniform("u_intensityScale", 1.0f);
+            GlContext.GL.BindVertexArray(_emptyVAO);
             GlContext.GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
         }
-
         #region BMP Saving Methods
 
         /// <summary>
@@ -564,6 +571,9 @@ namespace DotnetGltfRenderer {
             }
             if (_framebuffer != 0) {
                 GlContext.GL.DeleteFramebuffer(_framebuffer);
+            }
+            if (_emptyVAO != 0) {
+                GlContext.GL.DeleteVertexArray(_emptyVAO);
             }
         }
     }

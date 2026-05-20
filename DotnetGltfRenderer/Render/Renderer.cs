@@ -203,17 +203,28 @@ namespace DotnetGltfRenderer {
         }
 
         /// <summary>
-        /// 执行渲染
+        /// 执行渲染（使用内部 Camera）
         /// </summary>
         public void Render() {
             if (Scene == null) {
                 return;
             }
-
-            // 计算视图投影矩阵
             Matrix4x4 view = Camera.ViewMatrix;
             Matrix4x4 projection = Camera.GetProjectionMatrix(_framebufferAspectRatio);
+            RenderInternal(view, projection, Camera.Position);
+        }
 
+        /// <summary>
+        /// 执行渲染（使用外部矩阵，用于 VR 双目渲染）
+        /// </summary>
+        public void Render(Matrix4x4 view, Matrix4x4 projection, Vector3 cameraPosition) {
+            if (Scene == null) {
+                return;
+            }
+            RenderInternal(view, projection, cameraPosition);
+        }
+
+        void RenderInternal(Matrix4x4 view, Matrix4x4 projection, Vector3 cameraPosition) {
             // 排序渲染队列
             Scene.SortByDepth(view);
 
@@ -234,7 +245,7 @@ namespace DotnetGltfRenderer {
             };
 
             // 更新 Scene UBO
-            UpdateSceneUBO();
+            UpdateSceneUBO(cameraPosition);
 
             // 更新 Lights UBO
             LightsData lightsData = LightingSystem.GetLightsData();
@@ -265,18 +276,18 @@ namespace DotnetGltfRenderer {
             );
         }
 
-        void UpdateSceneUBO() {
-            // 计算环境旋转矩阵（绕 Y 轴旋转）
+        void UpdateSceneUBO() => UpdateSceneUBO(Camera.Position);
+
+        void UpdateSceneUBO(Vector3 cameraPosition) {
             float rotRad = EnvironmentRotation * MathF.PI / 180.0f;
             float cosR = MathF.Cos(rotRad);
             float sinR = MathF.Sin(rotRad);
             SceneData sceneData = new() {
-                CameraPos = new Vector4(Camera.Position, 0f),
+                CameraPos = new Vector4(cameraPosition, 0f),
                 Exposure = LightingSystem.Exposure,
                 EnvironmentStrength = IBLManager.EnvironmentStrength,
                 MipCount = IBLManager.MipCount,
                 Padding0 = 0f,
-                // 环境旋转矩阵列
                 EnvRotationCol0 = new Vector4(cosR, 0f, -sinR, 0f),
                 EnvRotationCol1 = new Vector4(0f, 1f, 0f, 0f),
                 EnvRotationCol2 = new Vector4(sinR, 0f, cosR, 0f)

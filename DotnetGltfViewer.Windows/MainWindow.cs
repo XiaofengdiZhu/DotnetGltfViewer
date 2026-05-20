@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using DotnetGltfRenderer;
 using DotnetGltfViewer.Windows.Sidebar;
+using DotnetGltfViewer.Windows.VR;
 using NativeFileDialogCore;
 using Silk.NET.Input;
 using Silk.NET.Maths;
@@ -23,6 +24,10 @@ namespace DotnetGltfViewer.Windows {
         static Renderer _renderer;
         static Camera _camera;
         static AppContext _context;
+        static XrManager _xrManager;
+
+        // VR 模式
+        public static bool VREnabled { get; private set; }
 
         // 默认路径
         const string DefaultModelPath = "Models/DamagedHelmet/glTF/DamagedHelmet.gltf";
@@ -37,17 +42,23 @@ namespace DotnetGltfViewer.Windows {
         /// 初始化主窗口实例。
         /// </summary>
         public static void Initialize() {
+            // 检测 VR 模式
+            VREnabled = Array.Exists(Environment.GetCommandLineArgs(), arg => arg.Equals("-vr", StringComparison.OrdinalIgnoreCase));
+
             Window.ShouldLoadFirstPartyPlatforms(false);
             Window.TryAdd("Silk.NET.Windowing.Glfw");
             InputWindowExtensions.ShouldLoadFirstPartyPlatforms(false);
             InputWindowExtensions.TryAdd("Silk.NET.Input.Glfw");
             WindowOptions options = WindowOptions.Default;
             Rectangle<int> bounds = Monitor.GetMainMonitor(null).Bounds;
-            options.API = new GraphicsAPI(ContextAPI.OpenGLES, new APIVersion(3, 0));
+            // VR 模式使用 Desktop OpenGL 4.6，普通模式使用 OpenGL ES 3.0
+            options.API = VREnabled
+                ? new GraphicsAPI(ContextAPI.OpenGL, new APIVersion(4, 6))
+                : new GraphicsAPI(ContextAPI.OpenGLES, new APIVersion(3, 0));
             Vector2D<int> size = new((int)(bounds.Size.X * 0.8f), (int)(bounds.Size.Y * 0.8f));
             options.Size = size;
             options.Position = bounds.Origin + (bounds.Size - size) / 2;
-            options.Title = "DotnetGltfViewer";
+            options.Title = VREnabled ? "DotnetGltfViewer [VR]" : "DotnetGltfViewer";
             options.VSync = true;
             options.UpdatesPerSecond = 60;
             _window = Window.Create(options);
@@ -72,10 +83,12 @@ namespace DotnetGltfViewer.Windows {
         static void OnLoad() {
             LogManager.Logger.ZLogInformation($"初始化窗口...");
             _gl = GL.GetApi(_window);
-            GlContext.GL = _gl; // 设置全局 GL 上下文
+            GlContext.GL = _gl;
+            GlContext.IsGLES = !VREnabled;
+
             IInputContext input = _window.CreateInput();
             LogManager.Logger.ZLogInformation($"窗口初始化完成, Size: {_window.Size.X}x{_window.Size.Y}");
-            LogManager.Logger.ZLogInformation($"OpenGL ES 版本: {_gl.GetStringS(StringName.Version)}");
+            LogManager.Logger.ZLogInformation($"OpenGL 版本: {_gl.GetStringS(StringName.Version)}");
             LogManager.Logger.ZLogInformation($"渲染器: {_gl.GetStringS(StringName.Renderer)}");
 
             // 初始化场景
@@ -102,6 +115,39 @@ namespace DotnetGltfViewer.Windows {
             InputManager.Initialize(_context, input);
             CameraController.ResetCameraToScene(_scene, _camera, _window.Size);
             PerformanceManager.Initialize();
+
+            // VR 模式：初始化 OpenXR
+            if (VREnabled) {
+                InitializeVR();
+            }
+        }
+
+        static void InitializeVR() {
+            try {
+                nint hwnd = _window.Native?.Win32?.Hwnd ?? IntPtr.Zero;
+                nint hdc = GetDC(hwnd);
+                nint hglrc = wglGetCurrentContext();
+
+                _xrManager = new XrManager();
+                _xrManager.Initialize(hdc, hglrc, _gl);
+                ReleaseDC(hwnd, hdc);
+
+                if (_xrManager.IsRunning) {
+                    _renderer.SetFramebufferSize((int)_xrManager.SwapchainWidth, (int)_xrManager.SwapchainHeight);
+                    LogManager.Logger.ZLogInformation($"VR 模式已启用，swapchain: {_xrManager.SwapchainWidth}x{_xrManager.SwapchainHeight}");
+                }
+                else {
+                    LogManager.Logger.ZLogWarning($"OpenXR 初始化失败，回退到桌面模式");
+                    _xrManager?.Dispose();
+                    _xrManager = null;
+                    VREnabled = false;
+                }
+            }
+            catch (Exception ex) {
+                LogManager.Logger.ZLogError($"OpenXR 初始化异常: {ex.Message}");
+                _xrManager = null;
+                VREnabled = false;
+            }
         }
 
         /// <summary>
@@ -113,6 +159,16 @@ namespace DotnetGltfViewer.Windows {
                 _window.Close();
                 return;
             }
+
+            if (VREnabled && _xrManager?.IsRunning == true) {
+                RenderVR(deltaTime);
+            }
+            else {
+                RenderDesktop(deltaTime);
+            }
+        }
+
+        static void RenderDesktop(double deltaTime) {
             InputManager.Update((float)deltaTime);
             _scene.Update((float)deltaTime);
             _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
@@ -120,6 +176,38 @@ namespace DotnetGltfViewer.Windows {
             RenderUI(deltaTime);
             PerformanceManager.Update(deltaTime);
             _window.SwapBuffers();
+        }
+
+        static void RenderVR(double deltaTime) {
+            _scene.Update((float)deltaTime);
+
+            _xrManager.PollEvents();
+            if (!_xrManager.IsRunning) return;
+
+            if (!_xrManager.BeginFrame()) return;
+
+            if (_xrManager.ShouldRender) {
+                for (int eye = 0; eye < 2; eye++) {
+                    var (fbo, view) = _xrManager.AcquireEye(eye);
+
+                    _gl.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
+                    _gl.Viewport(0, 0, _xrManager.SwapchainWidth, _xrManager.SwapchainHeight);
+                    _gl.Scissor(0, 0, _xrManager.SwapchainWidth, _xrManager.SwapchainHeight);
+                    _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+
+                    System.Numerics.Matrix4x4 eyeView = VRCamera.CreateViewMatrix(view.Pose);
+                    System.Numerics.Matrix4x4 eyeProj = VRCamera.CreateProjectionMatrix(view.Fov, 0.1f, 100f);
+                    System.Numerics.Vector3 cameraPos = new(view.Pose.Position.X, view.Pose.Position.Y, view.Pose.Position.Z);
+
+                    _renderer.Render(eyeView, eyeProj, cameraPos);
+
+                    _xrManager.ReleaseEye(eye);
+                }
+
+                _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            }
+
+            _xrManager.EndFrame();
         }
 
         /// <summary>
@@ -151,6 +239,7 @@ namespace DotnetGltfViewer.Windows {
         /// </summary>
         static void OnClosing() {
             LogManager.Logger.ZLogInformation($"正在关闭窗口...");
+            _xrManager?.Dispose();
             SidebarPanel.Dispose();
             ImGuiManager.Dispose();
             InputManager.Dispose();
@@ -216,5 +305,14 @@ namespace DotnetGltfViewer.Windows {
 
         [DllImport("user32.dll", SetLastError = true)]
         static extern uint GetDpiForWindow(IntPtr hwnd);
+
+        [DllImport("user32.dll")]
+        static extern nint GetDC(nint hWnd);
+
+        [DllImport("user32.dll")]
+        static extern int ReleaseDC(nint hWnd, nint hDC);
+
+        [DllImport("opengl32.dll")]
+        static extern nint wglGetCurrentContext();
     }
 }

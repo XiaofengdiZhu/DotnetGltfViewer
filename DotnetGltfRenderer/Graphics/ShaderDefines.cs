@@ -205,7 +205,10 @@ namespace DotnetGltfRenderer {
         /// </summary>
         public string GetDefinesCode() {
             StringBuilder sb = new(_defines.Count * 32 + 20);
-            sb.AppendLine("#version 300 es");
+            sb.AppendLine(GlContext.IsGLES ? "#version 300 es" : "#version 330");
+            if (GlContext.IsGLES) {
+                sb.AppendLine("#define GL_ES");
+            }
             foreach (string define in _defines) {
                 sb.AppendLine($"#define {define}");
             }
@@ -217,6 +220,9 @@ namespace DotnetGltfRenderer {
         /// </summary>
         internal string GetDefinesCodeWithoutVersion() {
             StringBuilder sb = new(_defines.Count * 32);
+            if (GlContext.IsGLES) {
+                sb.AppendLine("#define GL_ES");
+            }
             foreach (string define in _defines) {
                 sb.AppendLine($"#define {define}");
             }

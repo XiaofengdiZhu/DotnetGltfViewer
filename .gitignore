@@ -1,5 +1,6 @@
 .idea/
 glTF-Sample-Viewer/
+Silk.NET/
 DotnetGltfViewer.Windows/Models/
 DotnetGltfViewer.Windows/Environments/
 ## Ignore Visual Studio temporary files, build results, and
