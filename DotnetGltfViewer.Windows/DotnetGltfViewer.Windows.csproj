@@ -36,6 +36,7 @@
         <None Update="Environments/**/*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <!-- From https://github.com/KhronosGroup/OpenXR-SDK/releases/tag/release-1.1.59 -->
         <None Update="Native/openxr_loader.dll">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <Link>openxr_loader.dll</Link>

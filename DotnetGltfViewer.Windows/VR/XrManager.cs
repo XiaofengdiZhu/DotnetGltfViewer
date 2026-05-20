@@ -76,7 +76,7 @@ public unsafe class XrManager : IDisposable {
             WriteFixedString(appInfo.EngineName, "DotnetGltfViewer", 128);
 
             InstanceCreateInfo createInfo = new() {
-                Type = StructureType.TypeInstanceCreateInfo,
+                Type = StructureType.InstanceCreateInfo,
                 ApplicationInfo = appInfo,
                 EnabledExtensionCount = 1,
                 EnabledExtensionNames = &extName
@@ -94,7 +94,7 @@ public unsafe class XrManager : IDisposable {
 
         // 3. Get System
         SystemGetInfo systemInfo = new() {
-            Type = StructureType.TypeSystemGetInfo,
+            Type = StructureType.SystemGetInfo,
             FormFactor = FormFactor.HeadMountedDisplay
         };
         {
@@ -112,7 +112,7 @@ public unsafe class XrManager : IDisposable {
         }
 
         GraphicsRequirementsOpenGLKHR glReqs = new() {
-            Type = StructureType.TypeGraphicsRequirementsOpenglKhr
+            Type = StructureType.GraphicsRequirementsOpenglKhr
         };
         {
             Result result = _glExt.GetOpenGlgraphicsRequirements(_instance, _systemId, ref glReqs);
@@ -125,7 +125,7 @@ public unsafe class XrManager : IDisposable {
         // 5. Enumerate view configurations
         ViewConfigurationView[] configViews = new ViewConfigurationView[2];
         for (int i = 0; i < 2; i++) {
-            configViews[i] = new() { Type = StructureType.TypeViewConfigurationView };
+            configViews[i] = new() { Type = StructureType.ViewConfigurationView };
         }
         {
             uint viewCount = 2;
@@ -143,13 +143,13 @@ public unsafe class XrManager : IDisposable {
         // 6. Create Session
         {
             GraphicsBindingOpenGLWin32KHR graphicsBinding = new() {
-                Type = StructureType.TypeGraphicsBindingOpenglWin32Khr,
+                Type = StructureType.GraphicsBindingOpenglWin32Khr,
                 HDC = hdc,
                 HGlrc = hglrc
             };
 
             SessionCreateInfo sessionCreateInfo = new() {
-                Type = StructureType.TypeSessionCreateInfo,
+                Type = StructureType.SessionCreateInfo,
                 Next = &graphicsBinding,
                 SystemId = _systemId
             };
@@ -163,7 +163,7 @@ public unsafe class XrManager : IDisposable {
 
         // 7. Create reference space
         ReferenceSpaceCreateInfo spaceInfo = new() {
-            Type = StructureType.TypeReferenceSpaceCreateInfo,
+            Type = StructureType.ReferenceSpaceCreateInfo,
             ReferenceSpaceType = ReferenceSpaceType.Local,
             PoseInReferenceSpace = new() {
                 Orientation = new() { X = 0, Y = 0, Z = 0, W = 1 },
@@ -187,8 +187,8 @@ public unsafe class XrManager : IDisposable {
         _views = new View[2];
         _layerViews = new CompositionLayerProjectionView[2];
         for (int i = 0; i < 2; i++) {
-            _views[i] = new() { Type = StructureType.TypeView };
-            _layerViews[i] = new() { Type = StructureType.TypeCompositionLayerProjectionView };
+            _views[i] = new() { Type = StructureType.View };
+            _layerViews[i] = new() { Type = StructureType.CompositionLayerProjectionView };
         }
 
         _sessionState = SessionState.Idle;
@@ -198,7 +198,7 @@ public unsafe class XrManager : IDisposable {
 
     void CreateSwapchain(int eye) {
         SwapchainCreateInfo swapchainInfo = new() {
-            Type = StructureType.TypeSwapchainCreateInfo,
+            Type = StructureType.SwapchainCreateInfo,
             UsageFlags = SwapchainUsageFlags.ColorAttachmentBit | SwapchainUsageFlags.SampledBit,
             Format = 0x8058, // GL_RGBA8
             SampleCount = 1,
@@ -221,7 +221,7 @@ public unsafe class XrManager : IDisposable {
 
         SwapchainImageOpenGLKHR[] images = new SwapchainImageOpenGLKHR[imageCount];
         for (int i = 0; i < imageCount; i++) {
-            images[i] = new() { Type = StructureType.TypeSwapchainImageOpenglKhr };
+            images[i] = new() { Type = StructureType.SwapchainImageOpenglKhr };
         }
         fixed (SwapchainImageOpenGLKHR* pImages = images) {
             _xr.EnumerateSwapchainImages(_swapchains[eye], imageCount, ref imageCount, ref *(SwapchainImageBaseHeader*)pImages);
@@ -256,9 +256,9 @@ public unsafe class XrManager : IDisposable {
     public void PollEvents() {
         if (!IsRunning) return;
 
-        EventDataBuffer eventData = new() { Type = StructureType.TypeEventDataBuffer };
+        EventDataBuffer eventData = new() { Type = StructureType.EventDataBuffer };
         while (_xr.PollEvent(_instance, ref eventData) == Result.Success) {
-            if (eventData.Type == StructureType.TypeEventDataSessionStateChanged) {
+            if (eventData.Type == StructureType.EventDataSessionStateChanged) {
                 EventDataSessionStateChanged* sessionEvent = (EventDataSessionStateChanged*)&eventData;
                 _sessionState = sessionEvent->State;
                 HandleSessionStateChange();
@@ -285,7 +285,7 @@ public unsafe class XrManager : IDisposable {
 
     void BeginSession() {
         SessionBeginInfo beginInfo = new() {
-            Type = StructureType.TypeSessionBeginInfo,
+            Type = StructureType.SessionBeginInfo,
             PrimaryViewConfigurationType = ViewConfigurationType.PrimaryStereo
         };
         _xr.BeginSession(_session, ref beginInfo);
@@ -301,25 +301,25 @@ public unsafe class XrManager : IDisposable {
     public bool BeginFrame() {
         if (!IsRunning) return false;
 
-        FrameWaitInfo waitInfo = new() { Type = StructureType.TypeFrameWaitInfo };
-        _frameState = new() { Type = StructureType.TypeFrameState };
+        FrameWaitInfo waitInfo = new() { Type = StructureType.FrameWaitInfo };
+        _frameState = new() { Type = StructureType.FrameState };
         Result result = _xr.WaitFrame(_session, ref waitInfo, ref _frameState);
         if (result != Result.Success) return false;
 
-        FrameBeginInfo beginInfo = new() { Type = StructureType.TypeFrameBeginInfo };
+        FrameBeginInfo beginInfo = new() { Type = StructureType.FrameBeginInfo };
         _xr.BeginFrame(_session, ref beginInfo);
 
         if (_frameState.ShouldRender == 0) return true;
 
         // Locate views
         ViewLocateInfo viewLocateInfo = new() {
-            Type = StructureType.TypeViewLocateInfo,
+            Type = StructureType.ViewLocateInfo,
             ViewConfigurationType = ViewConfigurationType.PrimaryStereo,
             DisplayTime = _frameState.PredictedDisplayTime,
             Space = _playSpace
         };
 
-        ViewState viewState = new() { Type = StructureType.TypeViewState };
+        ViewState viewState = new() { Type = StructureType.ViewState };
         uint viewCount = 2;
         _xr.LocateView(_session, ref viewLocateInfo, ref viewState, viewCount, ref viewCount, ref _views[0]);
 
@@ -330,11 +330,11 @@ public unsafe class XrManager : IDisposable {
     /// 获取指定眼睛的 FBO 和 View
     /// </summary>
     public (uint fbo, View view) AcquireEye(int eyeIndex) {
-        SwapchainImageAcquireInfo acquireInfo = new() { Type = StructureType.TypeSwapchainImageAcquireInfo };
+        SwapchainImageAcquireInfo acquireInfo = new() { Type = StructureType.SwapchainImageAcquireInfo };
         _xr.AcquireSwapchainImage(_swapchains[eyeIndex], ref acquireInfo, ref _acquiredImageIndex);
 
         SwapchainImageWaitInfo waitInfo = new() {
-            Type = StructureType.TypeSwapchainImageWaitInfo,
+            Type = StructureType.SwapchainImageWaitInfo,
             Timeout = 1000000000
         };
         _xr.WaitSwapchainImage(_swapchains[eyeIndex], ref waitInfo);
@@ -351,7 +351,7 @@ public unsafe class XrManager : IDisposable {
     /// 释放指定眼睛的 swapchain image
     /// </summary>
     public void ReleaseEye(int eyeIndex) {
-        SwapchainImageReleaseInfo releaseInfo = new() { Type = StructureType.TypeSwapchainImageReleaseInfo };
+        SwapchainImageReleaseInfo releaseInfo = new() { Type = StructureType.SwapchainImageReleaseInfo };
         _xr.ReleaseSwapchainImage(_swapchains[eyeIndex], ref releaseInfo);
     }
 
@@ -376,7 +376,7 @@ public unsafe class XrManager : IDisposable {
             }
 
             CompositionLayerProjection layer = new() {
-                Type = StructureType.TypeCompositionLayerProjection,
+                Type = StructureType.CompositionLayerProjection,
                 Space = _playSpace,
                 ViewCount = 2
             };
@@ -386,7 +386,7 @@ public unsafe class XrManager : IDisposable {
                 layer.Views = pViews;
                 CompositionLayerBaseHeader* pLayer = (CompositionLayerBaseHeader*)&layer;
                 FrameEndInfo endInfo = new() {
-                    Type = StructureType.TypeFrameEndInfo,
+                    Type = StructureType.FrameEndInfo,
                     DisplayTime = _frameState.PredictedDisplayTime,
                     EnvironmentBlendMode = EnvironmentBlendMode.Opaque,
                     LayerCount = 1,
@@ -397,7 +397,7 @@ public unsafe class XrManager : IDisposable {
         }
         else {
             FrameEndInfo endInfo = new() {
-                Type = StructureType.TypeFrameEndInfo,
+                Type = StructureType.FrameEndInfo,
                 DisplayTime = _frameState.PredictedDisplayTime,
                 EnvironmentBlendMode = EnvironmentBlendMode.Opaque,
                 LayerCount = 0,
